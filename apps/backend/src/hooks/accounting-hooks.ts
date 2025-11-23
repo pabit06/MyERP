@@ -1,0 +1,289 @@
+import { hooks } from '../lib/hooks.js';
+import { HookContext } from '../controllers/BaseController.js';
+import { createAuditLog } from '../lib/audit.js';
+
+/**
+ * Register all accounting-related lifecycle hooks
+ * This file should be imported and executed during application startup
+ */
+export function registerAccountingHooks() {
+  // ============================================================
+  // ChartOfAccounts Hooks
+  // ============================================================
+
+  /**
+   * Validate ChartOfAccounts before creation
+   * - Ensures code uniqueness
+   * - Validates parent relationship
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'onValidate',
+    async (data: any, context: HookContext) => {
+      // Additional validation can be added here
+      // The controller already handles most validation, but hooks can add domain-specific rules
+    },
+    50, // Priority 50 - runs early
+    'validate-account-creation'
+  );
+
+  /**
+   * Before creating ChartOfAccounts
+   * - Log the operation
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'beforeCreate',
+    async (data: any, context: HookContext) => {
+      // Pre-creation logic can go here
+    },
+    100,
+    'before-create-account'
+  );
+
+  /**
+   * After creating ChartOfAccounts
+   * - Create audit log
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'afterCreate',
+    async (account: any, context: HookContext) => {
+      // Create audit log for account creation
+      if (context.userId) {
+        await createAuditLog({
+          userId: context.userId,
+          cooperativeId: context.tenantId,
+          action: 'create',
+          entityType: 'chart_of_accounts',
+          entityId: account.id,
+          details: {
+            code: account.code,
+            name: account.name,
+            type: account.type,
+          },
+        });
+      }
+    },
+    100,
+    'audit-account-creation'
+  );
+
+  /**
+   * Before updating ChartOfAccounts
+   * - Prevent changes if account has transactions
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'beforeUpdate',
+    async (data: any, context: HookContext) => {
+      const originalData = context.originalData;
+      if (!originalData) return;
+
+      // Check if account has ledger entries
+      const ledgerCount = await context.tx.ledger.count({
+        where: { accountId: originalData.id },
+      });
+
+      // Prevent changing code or type if account has transactions
+      if (ledgerCount > 0) {
+        if (data.code && data.code !== originalData.code) {
+          throw new Error(
+            'Cannot change account code. Account has existing transactions. Consider creating a new account and migrating.'
+          );
+        }
+        if (data.type && data.type !== originalData.type) {
+          throw new Error(
+            'Cannot change account type. Account has existing transactions. Consider creating a new account and migrating.'
+          );
+        }
+      }
+    },
+    50, // High priority - runs early
+    'validate-account-update'
+  );
+
+  /**
+   * After updating ChartOfAccounts
+   * - Create audit log
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'afterUpdate',
+    async (account: any, context: HookContext) => {
+      if (context.userId) {
+        await createAuditLog({
+          userId: context.userId,
+          cooperativeId: context.tenantId,
+          action: 'update',
+          entityType: 'chart_of_accounts',
+          entityId: account.id,
+          details: {
+            code: account.code,
+            name: account.name,
+            type: account.type,
+            changes: context.originalData ? 'updated' : undefined,
+          },
+        });
+      }
+    },
+    100,
+    'audit-account-update'
+  );
+
+  /**
+   * Before deleting ChartOfAccounts
+   * - Additional validation (controller already checks for children and transactions)
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'beforeDelete',
+    async (account: any, context: HookContext) => {
+      // Additional validation can be added here
+      // Controller already validates no children and no transactions
+    },
+    50,
+    'validate-account-deletion'
+  );
+
+  /**
+   * After deleting ChartOfAccounts
+   * - Create audit log
+   */
+  hooks.register(
+    'ChartOfAccounts',
+    'afterDelete',
+    async (account: any, context: HookContext) => {
+      if (context.userId) {
+        await createAuditLog({
+          userId: context.userId,
+          cooperativeId: context.tenantId,
+          action: 'delete',
+          entityType: 'chart_of_accounts',
+          entityId: account.id,
+          details: {
+            code: account.code,
+            name: account.name,
+            type: account.type,
+          },
+        });
+      }
+    },
+    100,
+    'audit-account-deletion'
+  );
+
+  // ============================================================
+  // JournalEntry Hooks
+  // ============================================================
+
+  /**
+   * Validate JournalEntry before creation
+   * - Double-entry validation (already done in controller, but hook can add more)
+   */
+  hooks.register(
+    'JournalEntry',
+    'onValidate',
+    async (data: any, context: HookContext) => {
+      // Additional validation can be added here
+      // Controller already validates double-entry
+    },
+    50,
+    'validate-journal-entry'
+  );
+
+  /**
+   * Before creating JournalEntry
+   * - Log the operation
+   */
+  hooks.register(
+    'JournalEntry',
+    'beforeCreate',
+    async (data: any, context: HookContext) => {
+      // Pre-creation logic can go here
+      // For example, check if accounts are active
+      if (data.entries && Array.isArray(data.entries)) {
+        for (const entry of data.entries) {
+          const account = await context.tx.chartOfAccounts.findUnique({
+            where: { id: entry.accountId },
+          });
+
+          if (!account) {
+            throw new Error(`Account not found: ${entry.accountId}`);
+          }
+
+          if (!account.isActive) {
+            throw new Error(`Cannot post to inactive account: ${account.code} - ${account.name}`);
+          }
+        }
+      }
+    },
+    50, // High priority - validate early
+    'validate-accounts-active'
+  );
+
+  /**
+   * After creating JournalEntry
+   * - Create audit log
+   * - Note: Ledger entries are created in the controller, not in hooks
+   */
+  hooks.register(
+    'JournalEntry',
+    'afterCreate',
+    async (result: any, context: HookContext) => {
+      if (context.userId && result.journalEntry) {
+        await createAuditLog({
+          userId: context.userId,
+          cooperativeId: context.tenantId,
+          action: 'create',
+          entityType: 'journal_entry',
+          entityId: result.journalEntry.id,
+          details: {
+            entryNumber: result.journalEntry.entryNumber,
+            description: result.journalEntry.description,
+            date: result.journalEntry.date,
+            ledgerCount: result.ledgers?.length || 0,
+          },
+        });
+      }
+    },
+    100,
+    'audit-journal-entry-creation'
+  );
+
+  /**
+   * On JournalEntry submission (after creation)
+   * - This hook runs after the journal entry and ledger entries are created
+   * - Can be used for additional processing like notifications, reporting, etc.
+   */
+  hooks.register(
+    'JournalEntry',
+    'onSubmit',
+    async (result: any, context: HookContext) => {
+      // Post-submission logic
+      // For example:
+      // - Send notifications
+      // - Update reporting caches
+      // - Trigger downstream processes
+    },
+    200, // Lower priority - runs after creation hooks
+    'post-submit-journal-entry'
+  );
+
+  /**
+   * On JournalEntry cancellation (future use)
+   * - Reverse ledger entries
+   */
+  hooks.register(
+    'JournalEntry',
+    'onCancel',
+    async (journalEntry: any, context: HookContext) => {
+      // Future: Implement cancellation logic
+      // This would create reversing entries
+      throw new Error('Journal entry cancellation not yet implemented');
+    },
+    100,
+    'cancel-journal-entry'
+  );
+}
+

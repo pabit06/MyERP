@@ -1,0 +1,48 @@
+{
+  "name": "@myerp/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src --ext .ts",
+    "test": "vitest",
+    "type-check": "tsc --noEmit",
+    "register:coop": "tsx scripts/register-cooperative.ts",
+    "upgrade-plan": "tsx scripts/upgrade-plan.ts",
+    "enable:compliance": "tsx scripts/enable-compliance-module.ts",
+    "enable:governance": "tsx scripts/enable-governance-module.ts",
+    "seed:aml": "tsx scripts/seed-aml-data.ts",
+    "assign:compliance-role": "tsx scripts/assign-compliance-role.ts",
+    "delete:members": "tsx scripts/delete-all-members.ts",
+    "seed:members": "tsx scripts/seed-members.ts"
+  },
+  "dependencies": {
+    "@myerp/db-schema": "workspace:*",
+    "@myerp/shared-types": "workspace:*",
+    "@prisma/client": "^6.19.0",
+    "@types/multer": "^2.0.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^2.0.2",
+    "nepali-date-converter": "^3.4.0",
+    "node-cache": "^5.1.2",
+    "xmlbuilder2": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.11.5",
+    "prisma": "^6.19.0",
+    "tsx": "^4.7.1",
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
+  }
+}

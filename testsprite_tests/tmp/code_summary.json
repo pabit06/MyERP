@@ -1,0 +1,29 @@
+{
+  "tech_stack": {
+    "backend": ["Node.js", "Express", "Prisma", "PostgreSQL", "TypeScript", "JWT", "bcryptjs"],
+    "frontend": [
+      "Next.js",
+      "React",
+      "Tailwind CSS",
+      "TypeScript",
+      "React Hook Form",
+      "Zod",
+      "Recharts",
+      "Lucide React"
+    ],
+    "mobile": ["Expo", "React Native", "TypeScript"],
+    "tools": ["pnpm", "ESLint", "Prettier", "Docker"]
+  },
+  "features": [
+    "Multi-tenant SaaS architecture",
+    "Authentication & Authorization (JWT, Roles, Permissions)",
+    "Core Banking System (CBS): Savings, Loans, Shares, EMI Calculation",
+    "Document Management System (DMS)",
+    "Human Resource Management (HRM): Employees, Payroll, Attendance",
+    "Governance: Meetings, Minutes",
+    "Inventory Management",
+    "Compliance & Audit: AML, KYM, TTR/STR Reporting, Audit Logs",
+    "Subscription Management (Basic, Standard, Premium, Enterprise plans)",
+    "Public Subdomain Profiles"
+  ]
+}

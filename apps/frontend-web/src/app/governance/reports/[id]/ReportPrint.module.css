@@ -1,0 +1,93 @@
+/* Print-specific styles for Manager's Report */
+@media print {
+  /* Hide all navigation, sidebars, buttons, and form inputs */
+  nav,
+  header,
+  aside,
+  button:not(.print-keep),
+  input,
+  select,
+  textarea,
+  .no-print,
+  .report-print-container > div:first-child /* Hide back link and header actions */ {
+    display: none !important;
+  }
+
+  /* Show only report content */
+  body {
+    margin: 0;
+    padding: 20px;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Page setup for A4 */
+  @page {
+    size: A4;
+    margin: 2cm;
+  }
+
+  /* Ensure backgrounds and borders print */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Table styling for print */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Prevent page breaks inside important sections */
+  .report-section {
+    page-break-inside: avoid;
+  }
+
+  /* Ensure proper spacing */
+  .space-y-6 > * + * {
+    margin-top: 1.5rem;
+  }
+
+  /* Hide tabs, show all content */
+  .tab-content {
+    display: block !important;
+  }
+
+  /* Rich text editor content */
+  .ql-editor {
+    padding: 0;
+    border: none;
+  }
+
+  /* Ensure text is readable */
+  .text-gray-500,
+  .text-gray-600 {
+    color: #000 !important;
+  }
+
+  /* Print-friendly borders */
+  .border {
+    border: 1px solid #000 !important;
+  }
+
+  /* Remove shadows for print */
+  .shadow {
+    box-shadow: none !important;
+  }
+}
+
