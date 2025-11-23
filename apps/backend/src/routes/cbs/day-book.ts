@@ -4,7 +4,6 @@ import { requireTenant } from '../../middleware/tenant.js';
 import { isModuleEnabled } from '../../middleware/module.js';
 import { requireRole } from '../../middleware/role.js';
 import {
-  getActiveDay,
   startDay,
   previewSettlement,
   settleTeller,
@@ -13,6 +12,13 @@ import {
   forceCloseDay,
   reopenDay,
 } from '../../services/cbs/day-book.service.js';
+import {
+  generateEODPDF,
+  generateEODCSV,
+  getCooperativeName,
+  fetchJournalEntriesForDay,
+  EODReportOptions,
+} from '../../services/cbs/eod-report.service.js';
 import { prisma } from '../../lib/prisma.js';
 
 const router = Router();
@@ -105,7 +111,12 @@ router.post('/settle/preview', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'tellerId and physicalCash are required' });
     }
 
-    const preview = await previewSettlement(cooperativeId, tellerId, physicalCash, denominationData);
+    const preview = await previewSettlement(
+      cooperativeId,
+      tellerId,
+      physicalCash,
+      denominationData
+    );
     res.json(preview);
   } catch (error: any) {
     console.error('Preview settlement error:', error);
@@ -143,7 +154,7 @@ router.post('/settle', async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error('Settle teller error:', error);
-    
+
     // Handle specific error codes
     if (error.message.includes('TELLER_PENDING_SETTLEMENT')) {
       res.status(400).json({
@@ -200,7 +211,7 @@ router.post('/close', requireRole('Manager'), async (req: Request, res: Response
     });
   } catch (error: any) {
     console.error('Close day error:', error);
-    
+
     // Handle specific error codes
     if (error.message.includes('TELLER_PENDING_SETTLEMENT')) {
       res.status(400).json({
@@ -348,16 +359,37 @@ router.get('/settlements', async (req: Request, res: Response) => {
 
 /**
  * GET /api/cbs/day-book/reports/eod
- * Download consolidated EOD report (PDF/CSV)
- * TODO: Implement PDF/CSV generation
+ * Download consolidated EOD report (PDF/CSV/JSON)
+ * Query params:
+ *   - format: 'pdf', 'csv', or 'json' (default: 'json')
+ *   - day: Date string (default: today)
+ *   - language: 'en', 'ne', or 'both' (default: 'en')
+ *   - dateFormat: 'ad', 'bs', or 'both' (default: 'both')
+ *   - includeTransactions: 'true' or 'false' (default: 'false')
+ *   - includeDenominations: 'true' or 'false' (default: 'false')
  */
 router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Response) => {
   try {
     const cooperativeId = req.user!.tenantId;
-    const { format = 'json', day } = req.query;
+    const {
+      format = 'json',
+      day,
+      language = 'en',
+      dateFormat = 'both',
+      includeTransactions = 'false',
+      includeDenominations = 'false',
+    } = req.query;
 
     const dayDate = day ? new Date(day as string) : new Date();
     dayDate.setHours(0, 0, 0, 0);
+
+    // Parse formatting options
+    const options: EODReportOptions = {
+      language: (language as string).toLowerCase() as 'en' | 'ne' | 'both',
+      dateFormat: (dateFormat as string).toLowerCase() as 'ad' | 'bs' | 'both',
+      includeTransactions: includeTransactions === 'true',
+      includeDenominations: includeDenominations === 'true',
+    };
 
     const dayBook = await prisma.dayBook.findUnique({
       where: {
@@ -418,19 +450,56 @@ router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Res
       return res.status(404).json({ error: 'Day not found' });
     }
 
-    // For now, return JSON. PDF/CSV generation can be added later
-    if (format === 'json') {
+    // Fetch journal entries if requested
+    let journalEntries: any[] | undefined;
+    if (options.includeTransactions) {
+      journalEntries = await fetchJournalEntriesForDay(cooperativeId, dayDate);
+    }
+
+    const cooperativeName = await getCooperativeName(cooperativeId);
+    const reportData = {
+      dayBook,
+      cooperativeName,
+      journalEntries,
+      options,
+    };
+
+    const reportFormat = (format as string).toLowerCase();
+
+    if (reportFormat === 'json') {
+      // Return JSON format
       res.json({
         dayBook,
+        journalEntries: options.includeTransactions ? journalEntries : undefined,
         summary: {
           openingCash: dayBook.openingCash,
           closingCash: dayBook.closingCash,
           transactionsCount: dayBook.transactionsCount,
           settlementsCount: dayBook.settlements.length,
+          journalEntriesCount: journalEntries?.length || 0,
         },
+        options,
       });
+    } else if (reportFormat === 'csv') {
+      // Generate and return CSV
+      const csvContent = generateEODCSV(reportData);
+
+      const filename = `eod-report-${dayBook.date.toISOString().split('T')[0]}.csv`;
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(csvContent);
+    } else if (reportFormat === 'pdf') {
+      // Generate and return PDF
+      const pdfBuffer = await generateEODPDF(reportData);
+
+      const filename = `eod-report-${dayBook.date.toISOString().split('T')[0]}.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(pdfBuffer);
     } else {
-      res.status(400).json({ error: 'Only JSON format is currently supported' });
+      res.status(400).json({
+        error: 'Invalid format. Supported formats: json, csv, pdf',
+      });
     }
   } catch (error: any) {
     console.error('Get EOD report error:', error);
@@ -439,4 +508,3 @@ router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Res
 });
 
 export default router;
-

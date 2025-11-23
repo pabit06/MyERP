@@ -81,6 +81,7 @@ model Cooperative {
   payrolls Payroll[]
   dayBooks DayBook[]
   tellerSettlements TellerSettlement[]
+  notifications Notification[]
 
   @@map("cooperatives")
 }
@@ -139,6 +140,7 @@ model User {
   settlementsExecuted TellerSettlement[] @relation("SettlementExecutedBy")
   settlementsApproved TellerSettlement[] @relation("SettlementApprovedBy")
   mappedAccounts ChartOfAccounts[] @relation("UserAccountMapping")
+  notifications Notification[]
 
   @@map("users")
 }
@@ -1993,5 +1995,54 @@ model TellerSettlement {
   @@index([status])
   @@index([cooperativeId, status])
   @@map("teller_settlements")
+}
+
+// Notifications
+enum NotificationChannel {
+  SMS
+  EMAIL
+  IN_APP
+  PUSH
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+model Notification {
+  id            String              @id @default(cuid())
+  cooperativeId String
+  userId        String?             // Target user (null for broadcast notifications)
+  type          String              // Notification type (e.g., "meeting_scheduled", "loan_approved", "payment_received")
+  channel       NotificationChannel // SMS, EMAIL, IN_APP, PUSH
+  title         String
+  message       String
+  status        NotificationStatus  @default(PENDING)
+  phone         String?             // Phone number for SMS
+  email         String?             // Email address for EMAIL
+  metadata      Json?               // Additional data (e.g., meeting ID, transaction ID)
+  sentAt        DateTime?           // When notification was sent
+  readAt        DateTime?           // When notification was read (for IN_APP)
+  errorMessage  String?             // Error message if status is FAILED
+  retryCount    Int                 @default(0)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([cooperativeId])
+  @@index([userId])
+  @@index([type])
+  @@index([channel])
+  @@index([status])
+  @@index([cooperativeId, userId, status])
+  @@index([cooperativeId, status])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
