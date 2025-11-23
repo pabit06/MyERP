@@ -202,16 +202,23 @@ export function registerAccountingHooks() {
     'JournalEntry',
     'beforeCreate',
     async (data: any, context: HookContext) => {
-      // Constraint 1: Check if day is OPEN
+      // Constraint 1: Check if day is OPEN (not CLOSED or EOD_IN_PROGRESS)
       const activeDay = await context.tx.dayBook.findFirst({
         where: {
           cooperativeId: context.tenantId,
-          status: 'OPEN',
+          status: {
+            in: ['OPEN', 'EOD_IN_PROGRESS'], // Check both statuses
+          },
         },
       });
 
       if (!activeDay) {
         throw new Error('Day is not open. Please perform Day Begin before creating transactions.');
+      }
+
+      // Block transactions if Day End is in progress
+      if (activeDay.status === 'EOD_IN_PROGRESS') {
+        throw new Error('Day End is in progress. Please wait for completion before creating transactions.');
       }
 
       // Constraint 2: Time Handling - Combine DayBook date with current server time
@@ -244,11 +251,6 @@ export function registerAccountingHooks() {
         throw new Error(
           `Transaction date must fall within the active day window (${dayStart.toISOString()} to ${dayEnd.toISOString()})`
         );
-      }
-
-      // Check optimistic locking (if DayBook is locked)
-      if (activeDay.status === 'EOD_IN_PROGRESS') {
-        throw new Error('Day End is in progress. Please wait for completion before creating transactions.');
       }
 
       // Validate accounts are active

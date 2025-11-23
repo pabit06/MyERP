@@ -753,6 +753,8 @@ export async function unsettleTeller(
  */
 export async function closeDay(cooperativeId: string, userId: string) {
   return await prisma.$transaction(async (tx) => {
+    // Find active day and attempt to set EOD_IN_PROGRESS atomically
+    // This prevents concurrent close operations
     const activeDay = await tx.dayBook.findFirst({
       where: {
         cooperativeId,
@@ -764,13 +766,43 @@ export async function closeDay(cooperativeId: string, userId: string) {
       throw new Error('No active day found.');
     }
 
-    // Check for optimistic locking
+    // Atomically update to EOD_IN_PROGRESS to prevent new transactions
+    // This acts as a lock - if another process already set it, this will fail
+    const dayInProgress = await tx.dayBook.updateMany({
+      where: {
+        id: activeDay.id,
+        status: 'OPEN', // Only update if still OPEN (optimistic lock)
+        version: activeDay.version, // Version check for optimistic locking
+      },
+      data: {
+        status: 'EOD_IN_PROGRESS',
+        version: activeDay.version + 1,
+      },
+    });
+
+    // If no rows were updated, another process beat us to it
+    if (dayInProgress.count === 0) {
+      // Re-fetch to see current state
+      const currentState = await tx.dayBook.findUnique({
+        where: { id: activeDay.id },
+      });
+      
+      if (currentState?.status === 'EOD_IN_PROGRESS') {
+        throw new Error('Day End is already in progress by another process.');
+      } else if (currentState?.status === 'CLOSED') {
+        throw new Error('Day has already been closed.');
+      } else {
+        throw new Error('Day has been modified. Please refresh and try again.');
+      }
+    }
+
+    // Fetch the updated record
     const currentDay = await tx.dayBook.findUnique({
       where: { id: activeDay.id },
     });
 
-    if (currentDay?.version !== activeDay.version) {
-      throw new Error('Day has been modified. Please refresh and try again.');
+    if (!currentDay || currentDay.status !== 'EOD_IN_PROGRESS') {
+      throw new Error('Failed to set day to EOD_IN_PROGRESS state.');
     }
 
     // Get all teller accounts
@@ -835,21 +867,21 @@ export async function closeDay(cooperativeId: string, userId: string) {
       where: {
         cooperativeId,
         date: {
-          gte: activeDay.date,
-          lt: new Date(activeDay.date.getTime() + 24 * 60 * 60 * 1000), // Next day
+          gte: currentDay.date,
+          lt: new Date(currentDay.date.getTime() + 24 * 60 * 60 * 1000), // Next day
         },
       },
     });
 
     // Update DayBook status to CLOSED
     return await tx.dayBook.update({
-      where: { id: activeDay.id },
+      where: { id: currentDay.id },
       data: {
         status: 'CLOSED',
         dayEndBy: userId,
         closingCash,
         transactionsCount,
-        version: activeDay.version + 1,
+        version: currentDay.version + 1, // Increment from EOD_IN_PROGRESS version
       },
     });
   });
@@ -913,7 +945,7 @@ export async function forceCloseDay(
       });
     }
 
-    // Process each teller with non-zero balance
+    // Process each teller account with non-zero balance
     for (const tellerAccount of tellerAccounts) {
       const latestLedger = await tx.ledger.findFirst({
         where: { accountId: tellerAccount.id },
@@ -923,38 +955,69 @@ export async function forceCloseDay(
       const balance = latestLedger ? Number(latestLedger.balance) : 0;
 
       if (Math.abs(balance) > 0.01) {
-        // Create suspense entry: Debit Suspense, Credit Teller
-        await createJournalEntryInTx(
-          tx,
-          cooperativeId,
-          `Force Close Adjustment - ${tellerAccount.name} - ${reason}`,
-          [
-            {
-              accountId: suspenseAccount.id,
-              debit: balance,
-              credit: 0,
-            },
-            {
-              accountId: tellerAccount.id,
-              debit: 0,
-              credit: balance,
-            },
-          ],
-          transactionDate
-        );
-
-        // Mark settlement as force closed
-        await tx.tellerSettlement.updateMany({
-          where: {
-            dayBookId: activeDay.id,
-            tellerId: tellerAccount.id, // This is simplified - should map account to teller
-          },
-          data: {
-            isForceClosed: true,
-          },
-        });
+        // Create suspense entry to zero out the teller balance
+        // If balance is positive: Debit Suspense, Credit Teller (to bring teller to 0)
+        // If balance is negative: Credit Suspense, Debit Teller (to bring teller to 0)
+        const absBalance = Math.abs(balance);
+        
+        if (balance > 0) {
+          // Positive balance: Debit Suspense, Credit Teller
+          await createJournalEntryInTx(
+            tx,
+            cooperativeId,
+            `Force Close Adjustment - ${tellerAccount.name} - ${reason}`,
+            [
+              {
+                accountId: suspenseAccount.id,
+                debit: absBalance,
+                credit: 0,
+              },
+              {
+                accountId: tellerAccount.id,
+                debit: 0,
+                credit: absBalance,
+              },
+            ],
+            transactionDate
+          );
+        } else {
+          // Negative balance: Credit Suspense, Debit Teller
+          await createJournalEntryInTx(
+            tx,
+            cooperativeId,
+            `Force Close Adjustment - ${tellerAccount.name} - ${reason}`,
+            [
+              {
+                accountId: suspenseAccount.id,
+                debit: 0,
+                credit: absBalance,
+              },
+              {
+                accountId: tellerAccount.id,
+                debit: absBalance,
+                credit: 0,
+              },
+            ],
+            transactionDate
+          );
+        }
       }
     }
+
+    // Mark all pending/unsettled settlements for this day as force-closed
+    // Since we don't have a direct mapping between accounts and tellers,
+    // we mark all settlements that aren't already approved/reverted
+    await tx.tellerSettlement.updateMany({
+      where: {
+        dayBookId: activeDay.id,
+        status: {
+          notIn: ['APPROVED', 'REVERTED'],
+        },
+      },
+      data: {
+        isForceClosed: true,
+      },
+    });
 
     // Calculate closing summaries
     const mainVaultAccount = await tx.chartOfAccounts.findFirst({
