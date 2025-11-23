@@ -79,6 +79,8 @@ model Cooperative {
   attendances Attendance[]
   leaveRequests LeaveRequest[]
   payrolls Payroll[]
+  dayBooks DayBook[]
+  tellerSettlements TellerSettlement[]
 
   @@map("cooperatives")
 }
@@ -131,6 +133,11 @@ model User {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   role        Role?       @relation(fields: [roleId], references: [id])
   workflowHistory WorkflowHistory[] @relation()
+  dayBooksBegin DayBook[] @relation("DayBeginBy")
+  dayBooksEnd DayBook[] @relation("DayEndBy")
+  tellerSettlements TellerSettlement[] @relation("TellerSettlements")
+  settlementsExecuted TellerSettlement[] @relation("SettlementExecutedBy")
+  settlementsApproved TellerSettlement[] @relation("SettlementApprovedBy")
 
   @@map("users")
 }
@@ -197,6 +204,20 @@ enum ShareTxType {
   RETURN    // Surrender/Return
   TRANSFER  // Member to Member
   BONUS     // Dividend as Share
+}
+
+enum DayBookStatus {
+  OPEN
+  CLOSED
+  EOD_IN_PROGRESS
+}
+
+enum TellerSettlementStatus {
+  PENDING
+  APPROVED
+  AUTO_APPROVED
+  REQUIRES_APPROVAL
+  REVERTED
 }
 
 model Member {
@@ -1905,5 +1926,69 @@ model ManagerReport {
   @@index([cooperativeId, fiscalYear, month])
   @@index([cooperativeId, status])
   @@map("manager_reports")
+}
+
+// Day End / Day Begin (EOD/BOD) Management
+model DayBook {
+  id              String        @id @default(cuid())
+  cooperativeId   String
+  date            DateTime      // The "System Date" for accounting
+  status          DayBookStatus @default(OPEN)
+  dayBeginBy      String?       // User ID
+  dayEndBy        String?       // User ID
+  openingCash     Decimal?      @db.Decimal(18, 2)
+  closingCash     Decimal?      @db.Decimal(18, 2)
+  transactionsCount Int         @default(0)
+  version         Int           @default(1) // Optimistic Locking
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  cooperative     Cooperative   @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  dayBeginByUser  User?         @relation("DayBeginBy", fields: [dayBeginBy], references: [id], onDelete: SetNull)
+  dayEndByUser    User?         @relation("DayEndBy", fields: [dayEndBy], references: [id], onDelete: SetNull)
+  settlements     TellerSettlement[]
+
+  @@unique([cooperativeId, date])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, date])
+  @@map("day_books")
+}
+
+model TellerSettlement {
+  id              String                  @id @default(cuid())
+  dayBookId       String
+  cooperativeId   String                  // Direct relation to Cooperative for performance
+  tellerId        String                  // User ID of the teller
+  physicalCash    Decimal                 @db.Decimal(18, 2)
+  systemCash      Decimal                 @db.Decimal(18, 2)
+  difference      Decimal                 @db.Decimal(18, 2)
+  denominationData Json?                  // Denomination count data
+  status          TellerSettlementStatus  @default(PENDING)
+  settlementRef   String                  @unique // Unique for Idempotency
+  executedBy      String                  // User ID
+  executedAt      DateTime                @default(now())
+  approvalBy      String?                 // User ID (Optional)
+  approvalAt      DateTime?               // DateTime (Optional)
+  attachmentUrl   String?                 // Scan/Proof document URL
+  rejectionReason String?                 // If unsettled/rejected
+  isForceClosed   Boolean                 @default(false)
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+
+  // Relations
+  cooperative     Cooperative             @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  dayBook         DayBook                 @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+  teller          User                    @relation("TellerSettlements", fields: [tellerId], references: [id], onDelete: Restrict)
+  executedByUser  User                    @relation("SettlementExecutedBy", fields: [executedBy], references: [id], onDelete: Restrict)
+  approvalByUser  User?                   @relation("SettlementApprovedBy", fields: [approvalBy], references: [id], onDelete: SetNull)
+
+  @@index([dayBookId])
+  @@index([cooperativeId])
+  @@index([tellerId])
+  @@index([settlementRef])
+  @@index([status])
+  @@index([cooperativeId, status])
+  @@map("teller_settlements")
 }
 

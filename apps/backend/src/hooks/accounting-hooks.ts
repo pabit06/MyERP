@@ -194,14 +194,64 @@ export function registerAccountingHooks() {
 
   /**
    * Before creating JournalEntry
-   * - Log the operation
+   * - Validate DayBook is open
+   * - Enforce system date with time injection
+   * - Check if accounts are active
    */
   hooks.register(
     'JournalEntry',
     'beforeCreate',
     async (data: any, context: HookContext) => {
-      // Pre-creation logic can go here
-      // For example, check if accounts are active
+      // Constraint 1: Check if day is OPEN
+      const activeDay = await context.tx.dayBook.findFirst({
+        where: {
+          cooperativeId: context.tenantId,
+          status: 'OPEN',
+        },
+      });
+
+      if (!activeDay) {
+        throw new Error('Day is not open. Please perform Day Begin before creating transactions.');
+      }
+
+      // Constraint 2: Time Handling - Combine DayBook date with current server time
+      const getTransactionDate = (dayBookDate: Date): Date => {
+        const now = new Date(); // Current Server Time
+        const transactionDate = new Date(dayBookDate);
+
+        // Inject current time into the DayBook date
+        transactionDate.setHours(
+          now.getHours(),
+          now.getMinutes(),
+          now.getSeconds(),
+          now.getMilliseconds()
+        );
+
+        return transactionDate;
+      };
+
+      // Override transaction date to match DayBook date with current time
+      const transactionDate = getTransactionDate(activeDay.date);
+      data.date = transactionDate;
+
+      // Ensure transaction falls within DayBook window (same day)
+      const dayStart = new Date(activeDay.date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(activeDay.date);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      if (transactionDate < dayStart || transactionDate > dayEnd) {
+        throw new Error(
+          `Transaction date must fall within the active day window (${dayStart.toISOString()} to ${dayEnd.toISOString()})`
+        );
+      }
+
+      // Check optimistic locking (if DayBook is locked)
+      if (activeDay.status === 'EOD_IN_PROGRESS') {
+        throw new Error('Day End is in progress. Please wait for completion before creating transactions.');
+      }
+
+      // Validate accounts are active
       if (data.entries && Array.isArray(data.entries)) {
         for (const entry of data.entries) {
           const account = await context.tx.chartOfAccounts.findUnique({
@@ -218,8 +268,8 @@ export function registerAccountingHooks() {
         }
       }
     },
-    50, // High priority - validate early
-    'validate-accounts-active'
+    40, // Higher priority - validate DayBook before account validation
+    'validate-daybook-and-date'
   );
 
   /**

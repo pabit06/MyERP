@@ -19,6 +19,7 @@ import complianceRoutes from './routes/compliance.js';
 import publicRoutes from './routes/public.js';
 import subscriptionRoutes from './routes/subscription.js';
 import accountingRoutes from './routes/accounting.js';
+import dayBookRoutes from './routes/cbs/day-book.js';
 import reportsRoutes from './routes/reports.js';
 import workflowRoutes from './routes/workflow.js';
 import { initializeAmlMonitoring } from './services/aml/monitor.js';
@@ -64,6 +65,7 @@ app.use(`${API_PREFIX}/compliance`, complianceRoutes);
 app.use(`${API_PREFIX}/public`, publicRoutes);
 app.use(`${API_PREFIX}/subscription`, subscriptionRoutes);
 app.use(`${API_PREFIX}/accounting`, accountingRoutes);
+app.use(`${API_PREFIX}/cbs/day-book`, dayBookRoutes);
 app.use(`${API_PREFIX}/reports`, reportsRoutes);
 app.use(`${API_PREFIX}/workflow`, workflowRoutes);
 
