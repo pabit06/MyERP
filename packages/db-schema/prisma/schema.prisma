@@ -230,7 +230,7 @@ model Member {
   lastName      String?  // For individuals: last name. For institutions: null
   institutionName String? // For institutions: institution name. For individuals: null
   fullName      String?  // Auto-generated full name (firstName + middleName + lastName for individuals, institutionName for institutions, uppercase)
-  fullNameNepali String? // Full name in Nepali (selected from autocomplete suggestions)
+  fullNameNepali String // Full name in Nepali (compulsory)
   email         String?
   phone         String?
   cooperativeId String

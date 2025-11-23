@@ -390,13 +390,18 @@ router.get('/summary', async (req: Request, res: Response) => {
 
     // Fast count queries
     const [totalMembers, activeMembers, pendingKYC, membersWithCapitalLedger] = await Promise.all([
+      // Count only actual members (those with member numbers)
       prisma.member.count({
-        where: { cooperativeId: tenantId },
+        where: { 
+          cooperativeId: tenantId,
+          memberNumber: { not: null }
+        },
       }),
       prisma.member.count({
         where: {
           cooperativeId: tenantId,
           isActive: true,
+          memberNumber: { not: null } // Active members must have member numbers
         },
       }),
       prisma.member.count({
@@ -715,7 +720,7 @@ router.get('/list', async (req: Request, res: Response) => {
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { isActive, search, page = '1', limit = '20' } = req.query;
+    const { isActive, search, page = '1', limit = '20', hasMemberNumber } = req.query;
 
     // Parse and validate pagination parameters
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
@@ -728,6 +733,10 @@ router.get('/', async (req: Request, res: Response) => {
 
     if (isActive !== undefined) {
       where.isActive = isActive === 'true';
+    }
+
+    if (hasMemberNumber === 'true') {
+      where.memberNumber = { not: null };
     }
 
     if (search) {
@@ -990,6 +999,59 @@ router.put('/:id/status', async (req: Request, res: Response) => {
         },
       }),
     ]);
+
+    // Auto-post share capital and entry fee when member is approved (active)
+    if (toStatus === 'active' && updatedMember.memberNumber) {
+      try {
+        const kycData = await prisma.memberKYC.findUnique({
+          where: { memberId },
+        });
+
+        // Also check Institution KYC if not found
+        const kyc = kycData || await prisma.institutionKYC.findUnique({
+          where: { memberId },
+        });
+
+        if (kyc) {
+          const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
+          const entryFeeAmount = kyc.initialOtherAmount ? Number(kyc.initialOtherAmount) : 0;
+
+          // check if shares already exist to avoid double posting
+          const existingShares = await prisma.shareAccount.findUnique({
+            where: { memberId },
+          });
+
+          if (initialShareAmount > 0 && !existingShares) {
+            const sharePrice = await getCurrentSharePrice(tenantId, 100);
+            const shares = Math.floor(initialShareAmount / sharePrice);
+
+            if (shares > 0) {
+              const { ShareService } = await import('../services/share.service.js');
+              await ShareService.issueShares({
+                cooperativeId: tenantId,
+                memberId,
+                kitta: shares,
+                amount: initialShareAmount,
+                date: new Date(),
+                paymentMode: 'CASH', // Initial shares are typically cash/entry
+                remarks: 'Initial share purchase upon Membership Approval',
+                userId: staffId,
+              });
+            }
+          }
+
+          // Post entry fee (if not already posted - might need a check, but usually entry fee is one-time)
+          // For now, we assume approval happens once.
+          if (entryFeeAmount > 0) {
+             // Check if entry fee was already posted (optional optimization)
+             await postEntryFee(tenantId, entryFeeAmount, memberId, updatedMember.memberNumber, new Date());
+          }
+        }
+      } catch (err) {
+        console.error('Error posting initial shares/fees on approval:', err);
+        // Don't fail the approval response, but log the error
+      }
+    }
 
     res.json({ member: updatedMember });
   } catch (error: any) {

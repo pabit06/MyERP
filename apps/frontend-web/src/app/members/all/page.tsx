@@ -43,10 +43,11 @@ export default function AllMembersPage() {
 
     setIsLoading(true);
     try {
-      const url = searchTerm
-        ? `${API_URL}/members?search=${encodeURIComponent(searchTerm)}`
-        : `${API_URL}/members`;
-      const response = await fetch(url, {
+      const url = new URL(`${API_URL}/members`);
+      if (searchTerm) url.searchParams.append('search', searchTerm);
+      url.searchParams.append('hasMemberNumber', 'true');
+      
+      const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
 
