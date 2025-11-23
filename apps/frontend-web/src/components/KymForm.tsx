@@ -544,7 +544,12 @@ export const KymForm: React.FC<KymFormProps> = ({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">2. Date of Birth *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    2. Date of Birth *{' '}
+                    <span className="text-xs text-gray-500 font-normal">
+                      (Minimum age: 16 years)
+                    </span>
+                  </label>
                   <Controller
                     name="dateOfBirth"
                     control={control}
@@ -569,6 +574,11 @@ export const KymForm: React.FC<KymFormProps> = ({
                   />
                   {errors.dateOfBirth && (
                     <p className="text-red-500 text-sm mt-1">{errors.dateOfBirth.message}</p>
+                  )}
+                  {!errors.dateOfBirth && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      You must be at least 16 years old to become a cooperative member
+                    </p>
                   )}
                 </div>
                 <div>

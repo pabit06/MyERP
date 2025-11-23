@@ -17,7 +17,8 @@
     "seed:aml": "tsx scripts/seed-aml-data.ts",
     "assign:compliance-role": "tsx scripts/assign-compliance-role.ts",
     "delete:members": "tsx scripts/delete-all-members.ts",
-    "seed:members": "tsx scripts/seed-members.ts"
+    "seed:members": "tsx scripts/seed-members.ts",
+    "reset:members": "tsx scripts/reset-and-seed-members.ts"
   },
   "dependencies": {
     "@myerp/db-schema": "workspace:*",

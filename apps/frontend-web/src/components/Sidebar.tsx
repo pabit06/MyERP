@@ -258,7 +258,7 @@ export default function Sidebar() {
     governance: 'Governance',
   };
 
-  // 2. Fetch Badges (Centralized Logic)
+  // 2. Fetch Badges (Centralized Logic) - Live updates
   useEffect(() => {
     if (!token || !isAuthenticated) return;
 
@@ -277,9 +277,39 @@ export default function Sidebar() {
       }
     };
 
+    // Initial fetch
     fetchBadges();
-    const interval = setInterval(fetchBadges, 300000); // 5 mins
-    return () => clearInterval(interval);
+
+    // Poll every 15 seconds for live updates
+    const interval = setInterval(fetchBadges, 15000); // 15 seconds
+
+    // Refresh when tab becomes visible (user switches back to tab)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchBadges();
+      }
+    };
+
+    // Refresh when window regains focus
+    const handleFocus = () => {
+      fetchBadges();
+    };
+
+    // Listen for custom event to refresh badges immediately (e.g., after member approval)
+    const handleBadgeRefresh = () => {
+      fetchBadges();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('refreshBadges', handleBadgeRefresh);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('refreshBadges', handleBadgeRefresh);
+    };
   }, [token, isAuthenticated]);
 
   // 3. Map badges to Routes (Scalable way)

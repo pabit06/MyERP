@@ -64,6 +64,7 @@ router.get('/dashboard', async (req: Request, res: Response) => {
 /**
  * GET /api/shares/accounts
  * Get all share accounts for the cooperative (replaces /ledgers)
+ * Also creates share accounts for approved members who don't have them yet
  */
 router.get('/accounts', async (req: Request, res: Response) => {
   try {
@@ -76,6 +77,131 @@ router.get('/accounts', async (req: Request, res: Response) => {
 
     if (memberId) {
       where.memberId = memberId as string;
+    }
+
+    // Find approved members who don't have share accounts yet
+    // This handles members who were approved before the fix
+    // Get all active members with member numbers
+    const allActiveMembers = await prisma.member.findMany({
+      where: {
+        cooperativeId: tenantId,
+        workflowStatus: 'active',
+        isActive: true,
+        memberNumber: { not: null },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    // Get all memberIds that already have share accounts
+    const membersWithAccounts = await prisma.shareAccount.findMany({
+      where: { cooperativeId: tenantId },
+      select: { memberId: true },
+    });
+    const memberIdsWithAccounts = new Set(membersWithAccounts.map((acc) => acc.memberId));
+
+    // Filter to get members without share accounts
+    const approvedMembersWithoutAccounts = allActiveMembers.filter(
+      (member) => !memberIdsWithAccounts.has(member.id)
+    );
+
+    // Create share accounts for approved members who don't have them
+    if (approvedMembersWithoutAccounts.length > 0) {
+      const { getCurrentSharePrice } = await import('../services/accounting.js');
+      const unitPrice = await getCurrentSharePrice(tenantId, 100);
+
+      // Get the latest certificate number before the loop to ensure sequential numbering
+      const latestCert = await prisma.shareAccount.findFirst({
+        where: { cooperativeId: tenantId },
+        orderBy: { createdAt: 'desc' },
+        select: { certificateNo: true },
+      });
+
+      let nextCertNumber = 1;
+      if (latestCert?.certificateNo) {
+        const match = latestCert.certificateNo.match(/CERT-(\d+)/);
+        if (match) {
+          nextCertNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      for (const member of approvedMembersWithoutAccounts) {
+        // Check again if account was created by another request
+        const existingAccount = await prisma.shareAccount.findUnique({
+          where: { memberId: member.id },
+        });
+
+        if (!existingAccount) {
+          // Use transaction to ensure unique certificate number generation
+          try {
+            await prisma.$transaction(async (tx) => {
+              // Double-check account doesn't exist (race condition protection)
+              const stillMissing = await tx.shareAccount.findUnique({
+                where: { memberId: member.id },
+              });
+
+              // Always get the current highest certificate number to keep nextCertNumber in sync
+              // This ensures we don't reuse certificate numbers even if account creation is skipped
+              const currentLatest = await tx.shareAccount.findFirst({
+                where: { cooperativeId: tenantId },
+                orderBy: { createdAt: 'desc' },
+                select: { certificateNo: true },
+              });
+
+              let certNumber = nextCertNumber;
+              if (currentLatest?.certificateNo) {
+                const match = currentLatest.certificateNo.match(/CERT-(\d+)/);
+                if (match) {
+                  const latestNum = parseInt(match[1], 10);
+                  certNumber = latestNum >= nextCertNumber ? latestNum + 1 : nextCertNumber;
+                }
+              }
+
+              if (!stillMissing) {
+                const certNo = `CERT-${String(certNumber).padStart(6, '0')}`;
+
+                await tx.shareAccount.create({
+                  data: {
+                    cooperativeId: tenantId,
+                    memberId: member.id,
+                    certificateNo: certNo,
+                    unitPrice,
+                    totalKitta: 0,
+                    totalAmount: 0,
+                    issueDate: new Date(),
+                  },
+                });
+              }
+
+              // Always update nextCertNumber for next iteration, even if account creation was skipped
+              // This prevents duplicate certificate numbers when concurrent requests process the same list
+              nextCertNumber = certNumber + 1;
+            });
+          } catch (err) {
+            // Ignore errors (e.g., if account was created by another request)
+            console.warn(`Failed to create share account for member ${member.id}:`, err);
+            // Still update nextCertNumber to prevent reuse even on error
+            // Query the latest to get the most up-to-date certificate number
+            try {
+              const latestCert = await prisma.shareAccount.findFirst({
+                where: { cooperativeId: tenantId },
+                orderBy: { createdAt: 'desc' },
+                select: { certificateNo: true },
+              });
+              if (latestCert?.certificateNo) {
+                const match = latestCert.certificateNo.match(/CERT-(\d+)/);
+                if (match) {
+                  const latestNum = parseInt(match[1], 10);
+                  nextCertNumber = Math.max(nextCertNumber, latestNum + 1);
+                }
+              }
+            } catch (updateErr) {
+              // If we can't update, continue - the next iteration will query fresh
+            }
+          }
+        }
+      }
     }
 
     const accounts = await prisma.shareAccount.findMany({

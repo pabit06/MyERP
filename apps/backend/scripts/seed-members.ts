@@ -186,7 +186,10 @@ async function seedMembers(cooperativeIdentifier?: string, count: number = 20) {
             kyc: {
               create: {
                 cooperativeId: cooperativeId!,
-                dateOfBirth: new Date(Date.now() - random(500000000000, 1500000000000)), // 16-50 years old
+                // Generate date of birth: 16-50 years old (minimum age requirement)
+                // 16 years = 16 * 365.25 * 24 * 60 * 60 * 1000 = 504,921,600,000 ms
+                // 50 years = 50 * 365.25 * 24 * 60 * 60 * 1000 = 1,577,880,000,000 ms
+                dateOfBirth: new Date(Date.now() - random(504921600000, 1577880000000)), // 16-50 years old
                 gender: Math.random() > 0.5 ? 'MALE' : 'FEMALE',
                 nationality: 'Nepali',
                 citizenshipNumber: `${random(10, 99)}-${random(0, 99)}-${random(1000, 9999)}`,

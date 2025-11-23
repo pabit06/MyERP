@@ -1012,39 +1012,149 @@ router.put('/:id/status', async (req: Request, res: Response) => {
           where: { memberId },
         });
 
+        // Check if share account already exists
+        let existingShares = await prisma.shareAccount.findUnique({
+          where: { memberId },
+        });
+
+        // Create share account for all approved members (even if they have no initial shares)
+        // This ensures they appear on the share register
+        if (!existingShares) {
+          const unitPrice = await getCurrentSharePrice(tenantId, 100);
+
+          // Use transaction to ensure atomic certificate number generation
+          existingShares = await prisma.$transaction(async (tx) => {
+            // Double-check account doesn't exist (race condition protection)
+            const stillMissing = await tx.shareAccount.findUnique({
+              where: { memberId },
+            });
+
+            if (!stillMissing) {
+              // Get the current highest certificate number in this transaction
+              const latestCert = await tx.shareAccount.findFirst({
+                where: { cooperativeId: tenantId },
+                orderBy: { createdAt: 'desc' },
+                select: { certificateNo: true },
+              });
+
+              let certNumber = 1;
+              if (latestCert?.certificateNo) {
+                const match = latestCert.certificateNo.match(/CERT-(\d+)/);
+                if (match) {
+                  certNumber = parseInt(match[1], 10) + 1;
+                }
+              }
+
+              const certNo = `CERT-${String(certNumber).padStart(6, '0')}`;
+
+              return await tx.shareAccount.create({
+                data: {
+                  cooperativeId: tenantId,
+                  memberId,
+                  certificateNo: certNo,
+                  unitPrice,
+                  totalKitta: 0,
+                  totalAmount: 0,
+                  issueDate: new Date(),
+                },
+              });
+            }
+            // If account was created by another request, return null
+            return null;
+          });
+
+          // If account was created by another request, fetch it
+          if (!existingShares) {
+            existingShares = await prisma.shareAccount.findUnique({
+              where: { memberId },
+            });
+          }
+        }
+
         if (kyc) {
           const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
           const entryFeeAmount = kyc.initialOtherAmount ? Number(kyc.initialOtherAmount) : 0;
 
-          // check if shares already exist to avoid double posting
-          const existingShares = await prisma.shareAccount.findUnique({
-            where: { memberId },
-          });
+          // Issue initial shares if amount is specified and shares haven't been issued yet
+          // Check if shares were already issued to prevent duplicate transactions
+          if (initialShareAmount > 0) {
+            // Re-fetch share account to get latest state (in case it was just created or updated)
+            const currentShareAccount = await prisma.shareAccount.findUnique({
+              where: { memberId },
+            });
 
-          if (initialShareAmount > 0 && !existingShares) {
-            const sharePrice = await getCurrentSharePrice(tenantId, 100);
-            const shares = Math.floor(initialShareAmount / sharePrice);
+            // Check if shares have already been issued (account has shares > 0)
+            const hasSharesAlready = currentShareAccount 
+              ? (currentShareAccount.totalKitta > 0 || currentShareAccount.totalAmount > 0)
+              : false;
+            
+            if (!hasSharesAlready) {
+              const sharePrice = await getCurrentSharePrice(tenantId, 100);
+              const shares = Math.floor(initialShareAmount / sharePrice);
 
-            if (shares > 0) {
-              const { ShareService } = await import('../services/share.service.js');
-              await ShareService.issueShares({
-                cooperativeId: tenantId,
-                memberId,
-                kitta: shares,
-                amount: initialShareAmount,
-                date: new Date(),
-                paymentMode: 'CASH', // Initial shares are typically cash/entry
-                remarks: 'Initial share purchase upon Membership Approval',
-                userId: staffId,
-              });
+              if (shares > 0) {
+                const { ShareService } = await import('../services/share.service.js');
+                await ShareService.issueShares({
+                  cooperativeId: tenantId,
+                  memberId,
+                  kitta: shares,
+                  amount: initialShareAmount,
+                  date: new Date(),
+                  paymentMode: 'CASH', // Initial shares are typically cash/entry
+                  remarks: 'Initial share purchase upon Membership Approval',
+                  userId: staffId,
+                });
+              }
             }
           }
 
-          // Post entry fee (if not already posted - might need a check, but usually entry fee is one-time)
-          // For now, we assume approval happens once.
-          if (entryFeeAmount > 0) {
-             // Check if entry fee was already posted (optional optimization)
-             await postEntryFee(tenantId, entryFeeAmount, memberId, updatedMember.memberNumber, new Date());
+          // Post entry fee if not already posted (prevent duplicate postings)
+          // Note: During KYC submission, entry fee is posted with tempMemberId (TEMP-...)
+          // During approval, we check for existing entry fees using memberId and memberNumber
+          if (entryFeeAmount > 0 && updatedMember.memberNumber) {
+            // Check if entry fee was already posted during KYC submission
+            // The description format: "Entry fee (Prabesh Shulka) from applicant ${memberNumber} - Application submitted (Non-refundable)"
+            // During KYC submission, memberNumber is TEMP-${memberId.substring(0, 8)}
+            // During approval, memberNumber is the actual member number
+            // Use case-insensitive matching and check for both patterns to catch all cases
+            const tempMemberIdPattern = `TEMP-${memberId.substring(0, 8)}`;
+            const existingEntryFee = await prisma.journalEntry.findFirst({
+              where: {
+                cooperativeId: tenantId,
+                OR: [
+                  // Check by actual memberNumber (used during approval or if posted after member number is assigned)
+                  {
+                    AND: [
+                      { description: { contains: updatedMember.memberNumber, mode: 'insensitive' as const } },
+                      {
+                        OR: [
+                          { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
+                          { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
+                          { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
+                        ],
+                      },
+                    ],
+                  },
+                  // Check by tempMemberId pattern (used during KYC submission before member number is assigned)
+                  {
+                    AND: [
+                      { description: { contains: tempMemberIdPattern, mode: 'insensitive' as const } },
+                      {
+                        OR: [
+                          { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
+                          { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
+                          { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            });
+
+            if (!existingEntryFee) {
+              await postEntryFee(tenantId, entryFeeAmount, memberId, updatedMember.memberNumber, new Date());
+            }
           }
         }
       } catch (err) {

@@ -86,6 +86,8 @@ export default function KYMApprovalsPage() {
 
       if (response.ok) {
         fetchPendingMembers();
+        // Trigger badge refresh event for immediate sidebar update
+        window.dispatchEvent(new Event('refreshBadges'));
       } else {
         const error = await response.json();
         alert(error.error || 'Failed to update member status');

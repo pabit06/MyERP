@@ -402,6 +402,84 @@ router.get('/accounts/:id/statement', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/accounting/journal-entries/:entryNumber
+ * Get journal entry details by entry number (e.g., JE-2025-000031)
+ */
+router.get('/journal-entries/:entryNumber', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { entryNumber } = req.params;
+
+    const journalEntry = await prisma.journalEntry.findFirst({
+      where: {
+        entryNumber,
+        cooperativeId: tenantId,
+      },
+      include: {
+        ledgers: {
+          include: {
+            account: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                type: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'asc',
+          },
+        },
+      },
+    });
+
+    if (!journalEntry) {
+      return res.status(404).json({ error: 'Journal entry not found' });
+    }
+
+    // Calculate totals
+    const totalDebit = journalEntry.ledgers.reduce(
+      (sum, ledger) => sum + Number(ledger.debit),
+      0
+    );
+    const totalCredit = journalEntry.ledgers.reduce(
+      (sum, ledger) => sum + Number(ledger.credit),
+      0
+    );
+
+    res.json({
+      journalEntry: {
+        id: journalEntry.id,
+        entryNumber: journalEntry.entryNumber,
+        description: journalEntry.description,
+        date: journalEntry.date,
+        createdAt: journalEntry.createdAt,
+      },
+      entries: journalEntry.ledgers.map((ledger) => ({
+        id: ledger.id,
+        account: {
+          id: ledger.account.id,
+          code: ledger.account.code,
+          name: ledger.account.name,
+          type: ledger.account.type,
+        },
+        debit: Number(ledger.debit),
+        credit: Number(ledger.credit),
+        balance: Number(ledger.balance),
+      })),
+      totals: {
+        debit: totalDebit,
+        credit: totalCredit,
+      },
+    });
+  } catch (error: any) {
+    console.error('Get journal entry error:', error);
+    res.status(500).json({ error: error.message || 'Failed to get journal entry' });
+  }
+});
+
+/**
  * POST /api/accounting/migrate-old-accounts
  * Migrate old account codes to NFRS format
  * Consolidates balances from old accounts (1001, 3001, 4001) to NFRS accounts

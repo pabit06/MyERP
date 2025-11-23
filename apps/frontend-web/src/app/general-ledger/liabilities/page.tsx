@@ -362,7 +362,15 @@ export default function LiabilitiesPage() {
     if (accounts.length > 0) {
       buildTree(accounts, expandedNodes, accountBalances);
       // Calculate statistics
-      const totalBalance = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      // Only sum balances from ledger accounts (not groups) to avoid double-counting
+      // Group balances are calculated from their children
+      // For liabilities, use absolute value since balances may be stored as negative
+      // but should be displayed as positive (credits increase liabilities)
+      const totalBalance = Math.abs(
+        accounts
+          .filter((acc) => !acc.isGroup) // Only count ledger accounts
+          .reduce((sum, acc) => sum + (acc.balance || 0), 0)
+      );
       const groupAccounts = accounts.filter((acc) => acc.isGroup).length;
       const ledgerAccounts = accounts.filter((acc) => !acc.isGroup).length;
       setStats({
@@ -438,10 +446,17 @@ export default function LiabilitiesPage() {
   const flatAccountList = flattenAccounts(filteredTree);
 
   // Calculate total balance from flat list
-  const totalDisplayBalance = flatAccountList.reduce((sum, account) => {
-    const balance = account.isGroup ? (account.calculatedBalance ?? 0) : (account.balance ?? 0);
-    return sum + balance;
-  }, 0);
+  // Only count ledger accounts to avoid double-counting (groups are sums of children)
+  // For liabilities, use absolute value since balances may be stored as negative
+  // but should be displayed as positive (credits increase liabilities)
+  const totalDisplayBalance = Math.abs(
+    flatAccountList
+      .filter((account) => !account.isGroup)
+      .reduce((sum, account) => {
+        const balance = account.balance ?? 0;
+        return sum + balance;
+      }, 0)
+  );
 
   if (!hasModule('cbs')) {
     return (

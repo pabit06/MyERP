@@ -1523,6 +1523,8 @@ export default function MeetingDetailPage() {
                         setApprovalDate('');
                         setDecisionNumber('');
                         setRemarks('');
+                        // Trigger badge refresh event for immediate sidebar update
+                        window.dispatchEvent(new Event('refreshBadges'));
                         alert('Member approved successfully!');
                       } else {
                         const errorData = await response.json();

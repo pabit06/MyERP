@@ -104,8 +104,14 @@ export default function GeneralLedgerPage() {
       );
 
       // Calculate statistics
-      const calculateStats = (accounts: any[]) => {
-        const total = accounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
+      const calculateStats = (accounts: any[], accountType?: string) => {
+        // For liabilities, use absolute value since balances may be stored as negative
+        // but should be displayed as positive (credits increase liabilities)
+        const rawTotal = accounts
+          .filter((acc) => !acc.isGroup) // Only count ledger accounts to avoid double-counting
+          .reduce((sum, acc) => sum + (acc.balance || 0), 0);
+        
+        const total = accountType === 'liability' ? Math.abs(rawTotal) : rawTotal;
         const groupCount = accounts.filter((acc) => acc.isGroup).length;
         const ledgerCount = accounts.filter((acc) => !acc.isGroup).length;
         return {
@@ -117,11 +123,11 @@ export default function GeneralLedgerPage() {
       };
 
       setStats({
-        assets: calculateStats(assetsData),
-        liabilities: calculateStats(liabilitiesData),
-        equity: calculateStats(equityData),
-        income: calculateStats(incomeData),
-        expenses: calculateStats(expensesData),
+        assets: calculateStats(assetsData, 'asset'),
+        liabilities: calculateStats(liabilitiesData, 'liability'),
+        equity: calculateStats(equityData, 'equity'),
+        income: calculateStats(incomeData, 'income'),
+        expenses: calculateStats(expensesData, 'expense'),
       });
     } catch (err) {
       setError('Error loading dashboard statistics');

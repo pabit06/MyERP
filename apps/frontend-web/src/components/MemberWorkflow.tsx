@@ -145,6 +145,8 @@ export default function MemberWorkflow({
         setReviewCompleted(false);
         fetchWorkflowData();
         onStatusChange();
+        // Trigger badge refresh event for immediate sidebar update
+        window.dispatchEvent(new Event('refreshBadges'));
       } else {
         const error = await response.json();
         const errorMessage = error.message
@@ -177,6 +179,8 @@ export default function MemberWorkflow({
         setMeetingId('');
         fetchWorkflowData();
         onStatusChange();
+        // Trigger badge refresh event for immediate sidebar update
+        window.dispatchEvent(new Event('refreshBadges'));
       } else {
         const error = await response.json();
         alert(error.error || 'Failed to send to BOD');

@@ -172,9 +172,20 @@ export default function LedgerStatementPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Ledger Statement</h1>
               {statement && (
-                <p className="text-gray-600 mt-1">
-                  {statement.account.code} - {statement.account.name}
-                </p>
+                <>
+                  <p className="text-gray-600 mt-1">
+                    {statement.account.code} - {statement.account.name}
+                  </p>
+                  {statement.account.code === '00-30100-01-00000' && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-800">
+                        <strong>Note:</strong> This statement shows all historical transactions, including those from deleted members. 
+                        The Shares Dashboard shows only current active share accounts. The difference between these two values 
+                        represents historical transactions that may no longer have active member accounts.
+                      </p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -357,7 +368,17 @@ export default function LedgerStatementPage() {
                           {formatEnglishDate(entry.date)}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-600 font-mono">
-                          {entry.entryNumber}
+                          {entry.entryNumber.startsWith('JE-') ? (
+                            <button
+                              onClick={() => router.push(`/general-ledger/journal/${entry.entryNumber}`)}
+                              className="text-indigo-600 hover:text-indigo-800 hover:underline"
+                              title="View Journal Entry Details"
+                            >
+                              {entry.entryNumber}
+                            </button>
+                          ) : (
+                            entry.entryNumber
+                          )}
                         </td>
                         <td className="px-4 py-2 text-xs text-gray-800">{entry.description}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-right text-xs font-semibold text-red-600">
