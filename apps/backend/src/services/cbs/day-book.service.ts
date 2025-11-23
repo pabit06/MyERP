@@ -234,23 +234,19 @@ export async function previewSettlement(
     }
   }
 
-  // Get teller's cash account balance
-  // Teller accounts typically have codes like '00-10100-02-XXXXX'
-  const tellerAccounts = await prisma.chartOfAccounts.findMany({
+  // Get teller's cash account mapped to the user
+  const tellerAccount = await prisma.chartOfAccounts.findFirst({
     where: {
       cooperativeId,
       code: { startsWith: '00-10100-02-' }, // Teller Cash accounts
       type: 'asset',
       isActive: true,
+      mappedUserId: tellerId,
     },
   });
 
-  // For now, we'll need to identify which account belongs to which teller
-  // This is a simplified version - in production, you might have a mapping table
-  const tellerAccount = tellerAccounts[0]; // Simplified - should map tellerId to account
-
   if (!tellerAccount) {
-    throw new Error('Teller cash account not found. Please configure teller accounts.');
+    throw new Error(`Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`);
   }
 
   // Get current balance
@@ -424,20 +420,19 @@ export async function settleTeller(
       }
     }
 
-    // Get teller's cash account
-    const tellerAccounts = await tx.chartOfAccounts.findMany({
+    // Get teller's cash account mapped to the user
+    const tellerAccount = await tx.chartOfAccounts.findFirst({
       where: {
         cooperativeId,
         code: { startsWith: '00-10100-02-' },
         type: 'asset',
         isActive: true,
+        mappedUserId: tellerId,
       },
     });
 
-    const tellerAccount = tellerAccounts[0]; // Simplified - should map tellerId to account
-
     if (!tellerAccount) {
-      throw new Error('Teller cash account not found.');
+      throw new Error(`Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`);
     }
 
     // Get current balance
@@ -620,16 +615,34 @@ export async function unsettleTeller(
     }
 
     // Get teller account
-    const tellerAccounts = await tx.chartOfAccounts.findMany({
+    // Priority 1: Find account mapped to the teller
+    let tellerAccount = await tx.chartOfAccounts.findFirst({
       where: {
         cooperativeId,
         code: { startsWith: '00-10100-02-' },
         type: 'asset',
         isActive: true,
+        mappedUserId: settlement.tellerId,
       },
     });
 
-    const tellerAccount = tellerAccounts[0];
+    // Priority 2: Fallback to legacy behavior (first available teller account)
+    // This handles cases where accounts were not mapped when settlement occurred
+    if (!tellerAccount) {
+      const legacyAccounts = await tx.chartOfAccounts.findMany({
+        where: {
+          cooperativeId,
+          code: { startsWith: '00-10100-02-' },
+          type: 'asset',
+          isActive: true,
+        },
+      });
+      
+      if (legacyAccounts.length > 0) {
+        tellerAccount = legacyAccounts[0];
+      }
+    }
+
     if (!tellerAccount) {
       throw new Error('Teller cash account not found.');
     }
@@ -1107,4 +1120,3 @@ export async function reopenDay(
     },
   });
 }
-

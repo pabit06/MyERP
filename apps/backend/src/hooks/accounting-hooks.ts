@@ -338,4 +338,3 @@ export function registerAccountingHooks() {
     'cancel-journal-entry'
   );
 }
-

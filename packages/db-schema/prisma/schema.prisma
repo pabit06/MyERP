@@ -138,6 +138,7 @@ model User {
   tellerSettlements TellerSettlement[] @relation("TellerSettlements")
   settlementsExecuted TellerSettlement[] @relation("SettlementExecutedBy")
   settlementsApproved TellerSettlement[] @relation("SettlementApprovedBy")
+  mappedAccounts ChartOfAccounts[] @relation("UserAccountMapping")
 
   @@map("users")
 }
@@ -639,6 +640,8 @@ model ChartOfAccounts {
   parent        ChartOfAccounts? @relation("AccountHierarchy", fields: [parentId], references: [id])
   children      ChartOfAccounts[] @relation("AccountHierarchy")
   ledgerEntries Ledger[]
+  mappedUserId  String?
+  mappedUser    User?   @relation("UserAccountMapping", fields: [mappedUserId], references: [id])
 
   @@unique([cooperativeId, code])
   @@map("chart_of_accounts")
