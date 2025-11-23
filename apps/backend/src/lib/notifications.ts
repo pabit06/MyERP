@@ -5,6 +5,8 @@
 
 import { prisma } from './prisma.js';
 import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
+import nodemailer from 'nodemailer';
+import twilio from 'twilio';
 
 export interface NotificationData {
   cooperativeId: string;
@@ -60,7 +62,7 @@ async function updateNotificationStatus(
   status: NotificationStatus,
   errorMessage?: string
 ): Promise<void> {
-  const updateData: any = {
+  const updateData: Prisma.NotificationUpdateInput = {
     status,
     updatedAt: new Date(),
   };
@@ -81,10 +83,34 @@ async function updateNotificationStatus(
 }
 
 /**
- * Send SMS notification
- * TODO: Integrate with actual SMS gateway
+ * Get SMS provider client (Twilio or local)
  */
-export async function sendSMS(data: NotificationData): Promise<void> {
+function getSMSClient() {
+  const provider = process.env.SMS_PROVIDER || 'console';
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+  if (provider === 'twilio' && accountSid && authToken && fromNumber) {
+    return {
+      type: 'twilio' as const,
+      client: twilio(accountSid, authToken),
+      fromNumber,
+    };
+  }
+
+  return {
+    type: 'console' as const,
+    client: null,
+    fromNumber: null,
+  };
+}
+
+/**
+ * Send SMS notification
+ * Supports Twilio and console logging (for development)
+ */
+export async function sendSMS(data: NotificationData): Promise<any> {
   if (!data.phone) {
     throw new Error('Phone number is required for SMS notification');
   }
@@ -93,18 +119,34 @@ export async function sendSMS(data: NotificationData): Promise<void> {
   const notification = await createNotificationRecord(data, NotificationStatus.PENDING);
 
   try {
-    // TODO: Integrate with SMS gateway (e.g., Twilio, Nexmo, local SMS provider)
-    // Example:
-    // await smsGateway.send({
-    //   to: data.phone,
-    //   message: data.message,
-    // });
+    const smsClient = getSMSClient();
 
-    // For now, log to console
-    console.log(`[SMS Notification] To: ${data.phone}, Message: ${data.message}`);
+    if (smsClient.type === 'twilio' && smsClient.client && smsClient.fromNumber) {
+      // Send via Twilio
+      const message = await smsClient.client.messages.create({
+        body: data.message,
+        from: smsClient.fromNumber,
+        to: data.phone,
+      });
 
-    // Update status to SENT (in production, update after actual SMS is sent)
-    await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+      console.log(`[SMS Notification] Sent via Twilio. SID: ${message.sid}`);
+      await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+
+      // Fetch updated notification to return current status
+      return await prisma.notification.findUnique({
+        where: { id: notification.id },
+      });
+    } else {
+      // Console logging for development/local testing
+      // Keep as PENDING since notification was not actually sent to external service
+      console.log(`[SMS Notification] To: ${data.phone}, Message: ${data.message}`);
+      console.log(
+        `[SMS Notification] Configure TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER to send real SMS`
+      );
+      // Do not mark as SENT - keep as PENDING so it can be retried when service is configured
+      // Return current notification (still PENDING)
+      return notification;
+    }
   } catch (error: any) {
     console.error(`[SMS Notification] Failed to send SMS:`, error);
     await updateNotificationStatus(
@@ -117,10 +159,35 @@ export async function sendSMS(data: NotificationData): Promise<void> {
 }
 
 /**
- * Send Email notification
- * TODO: Integrate with email service
+ * Get email transporter (SMTP via Nodemailer)
  */
-export async function sendEmail(data: NotificationData): Promise<void> {
+function getEmailTransporter() {
+  const smtpHost = process.env.SMTP_HOST;
+  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
+  const smtpSecure = process.env.SMTP_SECURE === 'true';
+
+  if (smtpHost && smtpUser && smtpPass) {
+    return nodemailer.createTransport({
+      host: smtpHost,
+      port: smtpPort,
+      secure: smtpSecure, // true for 465, false for other ports
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+  }
+
+  return null;
+}
+
+/**
+ * Send Email notification
+ * Supports SMTP via Nodemailer (works with Gmail, SendGrid, AWS SES, etc.)
+ */
+export async function sendEmail(data: NotificationData): Promise<any> {
   if (!data.email) {
     throw new Error('Email address is required for email notification');
   }
@@ -129,21 +196,39 @@ export async function sendEmail(data: NotificationData): Promise<void> {
   const notification = await createNotificationRecord(data, NotificationStatus.PENDING);
 
   try {
-    // TODO: Integrate with email service (e.g., SendGrid, AWS SES, Nodemailer)
-    // Example:
-    // await emailService.send({
-    //   to: data.email,
-    //   subject: data.title,
-    //   html: data.message,
-    // });
+    const transporter = getEmailTransporter();
+    const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@myerp.com';
 
-    // For now, log to console
-    console.log(
-      `[Email Notification] To: ${data.email}, Subject: ${data.title}, Message: ${data.message}`
-    );
+    if (transporter) {
+      // Send via SMTP
+      const info = await transporter.sendMail({
+        from: smtpFrom,
+        to: data.email,
+        subject: data.title,
+        html: data.message,
+        text: data.message.replace(/<[^>]*>/g, ''), // Strip HTML for plain text version
+      });
 
-    // Update status to SENT (in production, update after actual email is sent)
-    await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+      console.log(`[Email Notification] Sent via SMTP. Message ID: ${info.messageId}`);
+      await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+
+      // Fetch updated notification to return current status
+      return await prisma.notification.findUnique({
+        where: { id: notification.id },
+      });
+    } else {
+      // Console logging for development/local testing
+      // Keep as PENDING since notification was not actually sent to external service
+      console.log(
+        `[Email Notification] To: ${data.email}, Subject: ${data.title}, Message: ${data.message}`
+      );
+      console.log(
+        `[Email Notification] Configure SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS to send real emails`
+      );
+      // Do not mark as SENT - keep as PENDING so it can be retried when service is configured
+      // Return current notification (still PENDING)
+      return notification;
+    }
   } catch (error: any) {
     console.error(`[Email Notification] Failed to send email:`, error);
     await updateNotificationStatus(
@@ -169,28 +254,162 @@ export async function createInAppNotification(data: NotificationData): Promise<a
   // For in-app notifications, mark as SENT immediately since they're stored in DB
   await updateNotificationStatus(notification.id, NotificationStatus.SENT);
 
-  return notification;
+  // Fetch updated notification to return current status
+  return await prisma.notification.findUnique({
+    where: { id: notification.id },
+  });
+}
+
+/**
+ * Get FCM admin instance (if configured)
+ */
+async function getFCMAdmin() {
+  const fcmProjectId = process.env.FCM_PROJECT_ID;
+  const fcmPrivateKey = process.env.FCM_PRIVATE_KEY;
+  const fcmClientEmail = process.env.FCM_CLIENT_EMAIL;
+  const fcmPrivateKeyPath = process.env.FCM_PRIVATE_KEY_PATH;
+
+  if (!fcmProjectId) {
+    return null;
+  }
+
+  try {
+    // Dynamic import to avoid requiring firebase-admin if not configured
+    const admin = await import('firebase-admin');
+
+    if (!admin.apps.length) {
+      // Initialize Firebase Admin if not already initialized
+      const credential = fcmPrivateKeyPath
+        ? admin.credential.cert(fcmPrivateKeyPath)
+        : fcmPrivateKey && fcmClientEmail
+          ? admin.credential.cert({
+              projectId: fcmProjectId,
+              privateKey: fcmPrivateKey.replace(/\\n/g, '\n'),
+              clientEmail: fcmClientEmail,
+            })
+          : null;
+
+      if (credential) {
+        admin.initializeApp({
+          credential,
+          projectId: fcmProjectId,
+        });
+      } else {
+        console.warn('[Push Notification] FCM credentials incomplete');
+        return null;
+      }
+    }
+
+    return admin;
+  } catch (error) {
+    console.warn('[Push Notification] Firebase Admin not installed. Run: pnpm add firebase-admin');
+    return null;
+  }
+}
+
+/**
+ * Send Push notification
+ * Supports FCM (Firebase Cloud Messaging) and basic storage
+ * Can be extended with APNs for iOS
+ */
+async function sendPushNotification(data: NotificationData): Promise<any> {
+  if (!data.userId) {
+    throw new Error('User ID is required for push notification');
+  }
+
+  // Create notification record
+  const notification = await createNotificationRecord(data, NotificationStatus.PENDING);
+
+  try {
+    // Try to get user's device tokens from database
+    // Note: You'll need to add a UserDeviceToken table to store FCM tokens
+    // For now, we'll check if FCM is configured and log accordingly
+
+    const fcmAdmin = await getFCMAdmin();
+
+    if (fcmAdmin) {
+      // FCM is configured - attempt to send push notification
+      // Note: You need to store device tokens in your database
+      // Example query:
+      // const deviceTokens = await prisma.userDeviceToken.findMany({
+      //   where: { userId: data.userId, isActive: true },
+      //   select: { token: true, platform: true },
+      // });
+
+      // For now, log that FCM is configured
+      console.log(`[Push Notification] FCM configured. User: ${data.userId}, Title: ${data.title}`);
+      console.log(
+        `[Push Notification] To send actual push, store device tokens in UserDeviceToken table`
+      );
+
+      // Example FCM send code (uncomment when device tokens are available):
+      // if (deviceTokens.length > 0) {
+      //   const tokens = deviceTokens.map((dt) => dt.token);
+      //   const message = {
+      //     notification: {
+      //       title: data.title,
+      //       body: data.message,
+      //     },
+      //     data: {
+      //       type: data.type,
+      //       notificationId: notification.id,
+      //       ...data.metadata,
+      //     },
+      //     tokens,
+      //   };
+      //   const response = await fcmAdmin.messaging().sendEachForMulticast(message);
+      //   console.log(`[Push Notification] Sent to ${response.successCount} devices`);
+      // }
+    } else {
+      // FCM not configured - log to console
+      // Keep as PENDING since notification was not actually sent to external service
+      console.log(
+        `[Push Notification] User: ${data.userId}, Title: ${data.title}, Message: ${data.message}`
+      );
+      console.log(
+        `[Push Notification] Configure FCM_PROJECT_ID, FCM_PRIVATE_KEY, and FCM_CLIENT_EMAIL to enable FCM`
+      );
+      // Do not mark as SENT - keep as PENDING so it can be retried when service is configured
+      return notification;
+    }
+
+    // Mark as sent only after actual push is sent (when FCM is configured and device tokens are available)
+    // For now, if FCM is configured but no device tokens are available, keep as PENDING
+    // TODO: Uncomment the following when device tokens are implemented:
+    // if (deviceTokens.length > 0 && response.successCount > 0) {
+    //   await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+    // }
+
+    // For now, keep as PENDING since we're not actually sending
+    return notification;
+  } catch (error: any) {
+    console.error(`[Push Notification] Failed to send push:`, error);
+    await updateNotificationStatus(
+      notification.id,
+      NotificationStatus.FAILED,
+      error.message || 'Failed to send push notification'
+    );
+    throw error;
+  }
 }
 
 /**
  * Send notification via specified channel(s)
+ * Returns the notification object for all channels
  */
 export async function sendNotification(data: NotificationData): Promise<any> {
   switch (data.channel) {
     case 'SMS':
-      await sendSMS(data);
-      break;
+      return await sendSMS(data);
     case 'EMAIL':
-      await sendEmail(data);
-      break;
+      return await sendEmail(data);
     case 'IN_APP':
       return await createInAppNotification(data);
     case 'PUSH':
-      // TODO: Implement push notification
-      console.warn('Push notifications not yet implemented');
-      break;
+      return await sendPushNotification(data);
     default:
       console.warn(`Unknown notification channel: ${data.channel}`);
+      throw new Error(`Unknown notification channel: ${data.channel}`);
   }
 }
 
@@ -201,37 +420,47 @@ export async function getNotifications(options: NotificationQueryOptions): Promi
   notifications: any[];
   total: number;
 }> {
-  const where: any = {
+  const where: Prisma.NotificationWhereInput = {
     cooperativeId: options.cooperativeId,
   };
 
-  if (options.userId) {
-    where.userId = options.userId;
-  }
+  // Check for logical contradiction first (status=READ and unreadOnly=true)
+  if (options.status === NotificationStatus.READ && options.unreadOnly) {
+    // Return empty result by creating an impossible condition
+    where.id = 'impossible-id-that-does-not-exist';
+  } else {
+    // Build base filters that apply to all notifications
+    const baseFilters: Prisma.NotificationWhereInput = {};
 
-  if (options.type) {
-    where.type = options.type;
-  }
-
-  if (options.channel) {
-    where.channel = options.channel;
-  }
-
-  // Handle status and unreadOnly - combine with AND logic if both are provided
-  if (options.status && options.unreadOnly) {
-    // Validate: if status is READ, unreadOnly would create a contradiction
-    if (options.status === NotificationStatus.READ) {
-      // If status is READ and unreadOnly is true, this is a logical contradiction
-      // Return empty result by creating an impossible condition
-      where.id = 'impossible-id-that-does-not-exist';
-    } else {
-      // If both are provided and status is not READ, combine them: status must match AND not be READ
-      where.AND = [{ status: options.status }, { status: { not: NotificationStatus.READ } }];
+    if (options.type) {
+      baseFilters.type = options.type;
     }
-  } else if (options.status) {
-    where.status = options.status;
-  } else if (options.unreadOnly) {
-    where.status = { not: NotificationStatus.READ };
+
+    if (options.channel) {
+      baseFilters.channel = options.channel;
+    }
+
+    // Handle status and unreadOnly - combine with AND logic if both are provided
+    if (options.status && options.unreadOnly) {
+      // If both are provided and status is not READ, combine them: status must match AND not be READ
+      baseFilters.AND = [{ status: options.status }, { status: { not: NotificationStatus.READ } }];
+    } else if (options.status) {
+      baseFilters.status = options.status;
+    } else if (options.unreadOnly) {
+      baseFilters.status = { not: NotificationStatus.READ };
+    }
+
+    // Include both user-specific notifications and broadcast notifications (userId is null)
+    // Apply base filters to each branch of the OR condition to ensure proper scoping
+    if (options.userId) {
+      where.OR = [
+        { userId: options.userId, ...baseFilters },
+        { userId: null, ...baseFilters }, // Broadcast notifications
+      ];
+    } else {
+      // If no userId filter, apply base filters directly
+      Object.assign(where, baseFilters);
+    }
   }
 
   const [notifications, total] = await Promise.all([
@@ -266,7 +495,10 @@ export async function getUnreadCount(cooperativeId: string, userId: string): Pro
   return await prisma.notification.count({
     where: {
       cooperativeId,
-      userId,
+      OR: [
+        { userId }, // User-specific notifications
+        { userId: null }, // Broadcast notifications
+      ],
       status: { not: NotificationStatus.READ },
       channel: NotificationChannel.IN_APP,
     },
@@ -276,8 +508,12 @@ export async function getUnreadCount(cooperativeId: string, userId: string): Pro
 /**
  * Mark notification as read
  */
-export async function markAsRead(notificationId: string, userId: string): Promise<void> {
-  // Verify notification belongs to user
+export async function markAsRead(
+  notificationId: string,
+  userId: string,
+  cooperativeId: string
+): Promise<void> {
+  // Verify notification belongs to user or is a broadcast notification
   const notification = await prisma.notification.findUnique({
     where: { id: notificationId },
   });
@@ -286,7 +522,15 @@ export async function markAsRead(notificationId: string, userId: string): Promis
     throw new Error('Notification not found');
   }
 
-  if (notification.userId !== userId) {
+  // Verify notification belongs to the same cooperative
+  if (notification.cooperativeId !== cooperativeId) {
+    throw new Error('Notification does not belong to user');
+  }
+
+  // Allow access if:
+  // 1. Notification is a broadcast (userId is null) - accessible to all users in cooperative
+  // 2. Notification belongs to the user (userId matches)
+  if (notification.userId !== null && notification.userId !== userId) {
     throw new Error('Notification does not belong to user');
   }
 
@@ -310,7 +554,10 @@ export async function markAllAsRead(cooperativeId: string, userId: string): Prom
   const result = await prisma.notification.updateMany({
     where: {
       cooperativeId,
-      userId,
+      OR: [
+        { userId }, // User-specific notifications
+        { userId: null }, // Broadcast notifications
+      ],
       status: { not: NotificationStatus.READ },
       channel: NotificationChannel.IN_APP,
     },
@@ -326,8 +573,12 @@ export async function markAllAsRead(cooperativeId: string, userId: string): Prom
 /**
  * Delete notification
  */
-export async function deleteNotification(notificationId: string, userId: string): Promise<void> {
-  // Verify notification belongs to user
+export async function deleteNotification(
+  notificationId: string,
+  userId: string,
+  cooperativeId: string
+): Promise<void> {
+  // Verify notification belongs to user or is a broadcast notification
   const notification = await prisma.notification.findUnique({
     where: { id: notificationId },
   });
@@ -336,7 +587,15 @@ export async function deleteNotification(notificationId: string, userId: string)
     throw new Error('Notification not found');
   }
 
-  if (notification.userId !== userId) {
+  // Verify notification belongs to the same cooperative
+  if (notification.cooperativeId !== cooperativeId) {
+    throw new Error('Notification does not belong to user');
+  }
+
+  // Allow access if:
+  // 1. Notification is a broadcast (userId is null) - accessible to all users in cooperative
+  // 2. Notification belongs to the user (userId matches)
+  if (notification.userId !== null && notification.userId !== userId) {
     throw new Error('Notification does not belong to user');
   }
 
@@ -347,6 +606,7 @@ export async function deleteNotification(notificationId: string, userId: string)
 
 /**
  * Send meeting notification to all attendees
+ * Returns the number of unique attendees notified (not total notifications sent)
  */
 export async function sendMeetingNotifications(
   cooperativeId: string,
@@ -362,9 +622,20 @@ export async function sendMeetingNotifications(
 
   const message = `Namaste. ${meetingTitle} scheduled for ${dateStr} at ${timeStr}. Location: ${locationStr}`;
 
-  let sentCount = 0;
+  // Track unique attendees notified (by userId if available, otherwise by phone/email)
+  const notifiedAttendees = new Set<string>();
 
   for (const attendee of attendees) {
+    // Use userId as unique identifier if available, otherwise use phone or email
+    const attendeeId = attendee.userId || attendee.phone || attendee.email || null;
+
+    if (!attendeeId) {
+      // Skip if no identifier available
+      continue;
+    }
+
+    let attendeeNotified = false;
+
     // Send SMS if phone is available
     if (attendee.phone) {
       try {
@@ -383,7 +654,7 @@ export async function sendMeetingNotifications(
             location,
           },
         });
-        sentCount++;
+        attendeeNotified = true;
       } catch (error) {
         console.error(`Failed to send SMS to ${attendee.phone}:`, error);
       }
@@ -406,12 +677,17 @@ export async function sendMeetingNotifications(
             location,
           },
         });
-        sentCount++;
+        attendeeNotified = true;
       } catch (error) {
         console.error(`Failed to send in-app notification to user ${attendee.userId}:`, error);
       }
     }
+
+    // Count attendee as notified if at least one notification was sent successfully
+    if (attendeeNotified) {
+      notifiedAttendees.add(attendeeId);
+    }
   }
 
-  return sentCount;
+  return notifiedAttendees.size;
 }

@@ -1438,15 +1438,57 @@ export async function postShareCapital(
     // Use provided bank account
     debitAccountId = bankAccountId;
   } else if (paymentMode === 'SAVING' && savingAccountId) {
-    // For saving account, we need to debit a control account
-    // This represents the member's saving account balance being reduced
-    // In practice, you might have a "Member Savings Control" account
-    debitAccountId = await getOrCreateAccount(
-      cooperativeId,
-      '1002',
-      'Member Savings Control',
-      'asset'
-    );
+    // For saving account, get the saving account and its product's GL mapping
+    const savingAccount = await prisma.savingAccount.findUnique({
+      where: { id: savingAccountId },
+      include: {
+        product: true,
+      },
+    });
+
+    if (!savingAccount) {
+      throw new Error('Saving account not found');
+    }
+
+    // Get the product's GL mapping to find the deposit GL account
+    const productGLMap = await prisma.productGLMap.findUnique({
+      where: {
+        cooperativeId_productType_productId: {
+          cooperativeId,
+          productType: 'saving',
+          productId: savingAccount.productId,
+        },
+      },
+    });
+
+    if (productGLMap && productGLMap.depositGLCode) {
+      // Use the mapped deposit GL account
+      const depositAccount = await prisma.chartOfAccounts.findFirst({
+        where: {
+          cooperativeId,
+          code: productGLMap.depositGLCode,
+          type: 'liability',
+          isActive: true,
+        },
+      });
+
+      if (depositAccount) {
+        debitAccountId = depositAccount.id;
+      } else {
+        throw new Error(
+          `Deposit GL account ${productGLMap.depositGLCode} not found for saving product ${savingAccount.product.code}`
+        );
+      }
+    } else {
+      // Fallback: Use default deposit account or create a generic one
+      // This should ideally be configured, but we'll use a standard code
+      debitAccountId = await getOrCreateAccount(
+        cooperativeId,
+        '00-20100-01-00001', // NFRS code for Member Deposits
+        'Member Deposits (सदस्य जम्मा)',
+        'liability'
+      );
+    }
   } else {
     // Default to Cash - use NFRS code
     let cashAccount = await prisma.chartOfAccounts.findFirst({
@@ -1911,12 +1953,7 @@ export async function transferAdvancePayment(
 
   const description = `Transfer entry fee from advance payment for member ${memberNumber}`;
 
-  const { journalEntry } = await createJournalEntry(
-    cooperativeId,
-    description,
-    entries,
-    date
-  );
+  const { journalEntry } = await createJournalEntry(cooperativeId, description, entries, date);
 
   return journalEntry.id;
 }
@@ -1940,7 +1977,7 @@ export async function refundOrWaiveEntryFee(
   }
 
   // Get Entry Fee Income account
-  let entryFeeAccount = await prisma.chartOfAccounts.findFirst({
+  const entryFeeAccount = await prisma.chartOfAccounts.findFirst({
     where: {
       cooperativeId,
       code: '00-40300-00-00002',
@@ -2026,12 +2063,7 @@ export async function refundOrWaiveEntryFee(
 
   const description = `Entry fee ${refundCash ? 'refund' : 'waiver'} for member ${memberNumber} - ${reason}`;
 
-  const { journalEntry } = await createJournalEntry(
-    cooperativeId,
-    description,
-    entries,
-    date
-  );
+  const { journalEntry } = await createJournalEntry(cooperativeId, description, entries, date);
 
   return journalEntry.id;
 }
@@ -2142,7 +2174,7 @@ export async function postMeetingAllowance(
   }
 
   // Calculate totals
-  const totalAllowance = meeting.meetingAttendees.reduce(
+  const _totalAllowance = meeting.meetingAttendees.reduce(
     (sum, attendee) => sum + Number(attendee.allowance || 0),
     0
   );
@@ -2222,7 +2254,7 @@ export async function getCurrentSharePrice(
 
 /**
  * Chart of Accounts Management Service
- * 
+ *
  * @deprecated Most methods have been moved to AccountingController.
  * Use accountingController from '../controllers/AccountingController' instead.
  * This service is kept for backward compatibility and utility functions.
@@ -3022,7 +3054,7 @@ export const AccountingService = {
         }
 
         // Get current balance of new account
-        const newBalance =
+        const _newBalance =
           newAccount.ledgerEntries.length > 0 ? Number(newAccount.ledgerEntries[0].balance) : 0;
 
         // Calculate difference to transfer

@@ -18,7 +18,9 @@
     "assign:compliance-role": "tsx scripts/assign-compliance-role.ts",
     "delete:members": "tsx scripts/delete-all-members.ts",
     "seed:members": "tsx scripts/seed-members.ts",
-    "reset:members": "tsx scripts/reset-and-seed-members.ts"
+    "reset:members": "tsx scripts/reset-and-seed-members.ts",
+    "test:notifications": "tsx scripts/test-notifications.ts",
+    "test:permissions": "tsx scripts/test-permissions.ts"
   },
   "dependencies": {
     "@myerp/db-schema": "workspace:*",
@@ -33,6 +35,9 @@
     "multer": "^2.0.2",
     "nepali-date-converter": "^3.4.0",
     "node-cache": "^5.1.2",
+    "nodemailer": "^7.0.10",
+    "pdfkit": "^0.17.2",
+    "twilio": "^5.10.6",
     "xmlbuilder2": "^3.0.2"
   },
   "devDependencies": {
@@ -41,6 +46,7 @@
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.11.5",
+    "@types/nodemailer": "^7.0.4",
     "prisma": "^6.19.0",
     "tsx": "^4.7.1",
     "typescript": "^5.3.3",

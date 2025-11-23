@@ -1,5 +1,13 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+import {
+  hasPermission,
+  hasAnyPermission,
+  hasAllPermissions,
+  hasRole,
+  hasAnyRole,
+  type Permission,
+} from '../lib/permissions.js';
 
 /**
  * Hook context passed to lifecycle hooks
@@ -52,25 +60,109 @@ export abstract class BaseController {
   /**
    * Validate user permissions for an action
    * Can be overridden by subclasses for domain-specific permissions
+   *
+   * @param userId - User ID
+   * @param tenantId - Tenant/Cooperative ID
+   * @param permission - Permission string (e.g., "members:view", "loans:approve")
+   * @returns true if user has permission, false otherwise
    */
   protected async validatePermissions(
     userId: string,
     tenantId: string,
-    action: string
+    permission: Permission
   ): Promise<boolean> {
-    // Basic implementation - can be extended with role-based checks
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: { role: true },
-    });
+    return await hasPermission(userId, tenantId, permission);
+  }
 
-    if (!user || user.cooperativeId !== tenantId || !user.isActive) {
-      return false;
+  /**
+   * Validate user has any of the specified permissions
+   */
+  protected async validateAnyPermission(
+    userId: string,
+    tenantId: string,
+    permissions: Permission[]
+  ): Promise<boolean> {
+    return await hasAnyPermission(userId, tenantId, permissions);
+  }
+
+  /**
+   * Validate user has all of the specified permissions
+   */
+  protected async validateAllPermissions(
+    userId: string,
+    tenantId: string,
+    permissions: Permission[]
+  ): Promise<boolean> {
+    return await hasAllPermissions(userId, tenantId, permissions);
+  }
+
+  /**
+   * Validate user has a specific role
+   */
+  protected async validateRole(
+    userId: string,
+    tenantId: string,
+    roleName: string
+  ): Promise<boolean> {
+    return await hasRole(userId, tenantId, roleName);
+  }
+
+  /**
+   * Validate user has any of the specified roles
+   */
+  protected async validateAnyRole(
+    userId: string,
+    tenantId: string,
+    roleNames: string[]
+  ): Promise<boolean> {
+    return await hasAnyRole(userId, tenantId, roleNames);
+  }
+
+  /**
+   * Require permission - throws error if user doesn't have permission
+   */
+  protected async requirePermission(
+    userId: string,
+    tenantId: string,
+    permission: Permission,
+    errorMessage?: string
+  ): Promise<void> {
+    const hasAccess = await this.validatePermissions(userId, tenantId, permission);
+    if (!hasAccess) {
+      throw new Error(errorMessage || `Access denied: Requires permission '${permission}'`);
     }
+  }
 
-    // TODO: Implement role-based permission checks
-    // For now, return true if user exists and is active
-    return true;
+  /**
+   * Require any permission - throws error if user doesn't have any of the permissions
+   */
+  protected async requireAnyPermission(
+    userId: string,
+    tenantId: string,
+    permissions: Permission[],
+    errorMessage?: string
+  ): Promise<void> {
+    const hasAccess = await this.validateAnyPermission(userId, tenantId, permissions);
+    if (!hasAccess) {
+      throw new Error(
+        errorMessage || `Access denied: Requires one of permissions: ${permissions.join(', ')}`
+      );
+    }
+  }
+
+  /**
+   * Require role - throws error if user doesn't have the role
+   */
+  protected async requireRole(
+    userId: string,
+    tenantId: string,
+    roleName: string,
+    errorMessage?: string
+  ): Promise<void> {
+    const hasAccess = await this.validateRole(userId, tenantId, roleName);
+    if (!hasAccess) {
+      throw new Error(errorMessage || `Access denied: Requires role '${roleName}'`);
+    }
   }
 
   /**
@@ -112,4 +204,3 @@ export abstract class BaseController {
     }
   }
 }
-

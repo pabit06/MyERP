@@ -78,33 +78,9 @@ router.get('/unread-count', async (req: Request, res: Response) => {
 });
 
 /**
- * PUT /api/notifications/:id/read
- * Mark a notification as read
- */
-router.put('/:id/read', async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const { id } = req.params;
-
-    await markAsRead(id, userId);
-
-    res.json({ message: 'Notification marked as read' });
-  } catch (error: any) {
-    console.error('Mark as read error:', error);
-    if (
-      error.message === 'Notification not found' ||
-      error.message === 'Notification does not belong to user'
-    ) {
-      res.status(404).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: error.message || 'Failed to mark notification as read' });
-    }
-  }
-});
-
-/**
  * PUT /api/notifications/read-all
  * Mark all notifications as read for the current user
+ * NOTE: This route must be defined before /:id/read to avoid route matching conflicts
  */
 router.put('/read-all', async (req: Request, res: Response) => {
   try {
@@ -124,15 +100,42 @@ router.put('/read-all', async (req: Request, res: Response) => {
 });
 
 /**
+ * PUT /api/notifications/:id/read
+ * Mark a notification as read
+ */
+router.put('/:id/read', async (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const cooperativeId = req.user!.tenantId;
+    const { id } = req.params;
+
+    await markAsRead(id, userId, cooperativeId);
+
+    res.json({ message: 'Notification marked as read' });
+  } catch (error: any) {
+    console.error('Mark as read error:', error);
+    if (
+      error.message === 'Notification not found' ||
+      error.message === 'Notification does not belong to user'
+    ) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: error.message || 'Failed to mark notification as read' });
+    }
+  }
+});
+
+/**
  * DELETE /api/notifications/:id
  * Delete a notification
  */
 router.delete('/:id', async (req: Request, res: Response) => {
   try {
     const userId = req.user!.userId;
+    const cooperativeId = req.user!.tenantId;
     const { id } = req.params;
 
-    await deleteNotification(id, userId);
+    await deleteNotification(id, userId, cooperativeId);
 
     res.json({ message: 'Notification deleted' });
   } catch (error: any) {

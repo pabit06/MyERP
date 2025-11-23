@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
 import { hooks } from './hooks.js';
 import { HookContext } from '../controllers/BaseController.js';
+import { hasAnyRole } from './permissions.js';
 
 /**
  * Workflow State Definition
@@ -83,7 +84,9 @@ class WorkflowRegistry {
     // Check if initial state exists
     const initialState = definition.states.find((s) => s.name === definition.initialState);
     if (!initialState) {
-      throw new Error(`Initial state '${definition.initialState}' not found in workflow '${definition.name}'`);
+      throw new Error(
+        `Initial state '${definition.initialState}' not found in workflow '${definition.name}'`
+      );
     }
 
     // Check if all transition states exist
@@ -92,10 +95,14 @@ class WorkflowRegistry {
       const toState = definition.states.find((s) => s.name === transition.to);
 
       if (!fromState) {
-        throw new Error(`Transition from state '${transition.from}' not found in workflow '${definition.name}'`);
+        throw new Error(
+          `Transition from state '${transition.from}' not found in workflow '${definition.name}'`
+        );
       }
       if (!toState) {
-        throw new Error(`Transition to state '${transition.to}' not found in workflow '${definition.name}'`);
+        throw new Error(
+          `Transition to state '${transition.to}' not found in workflow '${definition.name}'`
+        );
       }
     }
   }
@@ -141,7 +148,8 @@ export class WorkflowEngine {
       throw new Error(`${entityType} with id '${entityId}' not found`);
     }
 
-    const currentState = (entity as any).workflowStatus || (entity as any).status || workflow.initialState;
+    const currentState =
+      (entity as any).workflowStatus || (entity as any).status || workflow.initialState;
 
     // Find transition
     const transition = workflow.transitions.find(
@@ -159,13 +167,19 @@ export class WorkflowEngine {
       for (const condition of transition.conditions) {
         const fieldValue = (entity as any)[condition.field];
         if (!this.evaluateCondition(fieldValue, condition.operator, condition.value)) {
-          throw new Error(`Transition condition not met: ${condition.field} ${condition.operator} ${condition.value}`);
+          throw new Error(
+            `Transition condition not met: ${condition.field} ${condition.operator} ${condition.value}`
+          );
         }
       }
     }
 
     // Check roles (if required)
     if (transition.requiredRoles && transition.requiredRoles.length > 0) {
+      if (!context.userId) {
+        throw new Error('User ID is required for role-based transition');
+      }
+
       const user = await (context.tx || prisma).user.findUnique({
         where: { id: context.userId },
         include: { role: true },
@@ -175,12 +189,21 @@ export class WorkflowEngine {
         throw new Error('User role not found');
       }
 
-      // TODO: Implement role checking logic
-      // For now, we'll skip this check
+      // Check if user has any of the required roles
+      const hasRequiredRole = await hasAnyRole(
+        context.userId,
+        context.tenantId,
+        transition.requiredRoles
+      );
+
+      if (!hasRequiredRole) {
+        throw new Error(
+          `Access denied: Transition requires one of these roles: ${transition.requiredRoles.join(', ')}`
+        );
+      }
     }
 
     // Execute transition within transaction
-    const tx = context.tx || prisma;
     if (context.tx) {
       // Already in a transaction, use it directly
       return await this.executeTransition(
@@ -262,7 +285,12 @@ export class WorkflowEngine {
     }
 
     // Execute generic before transition hook
-    await hooks.execute(workflow.entityType, 'beforeTransition', { ...entity, toState }, hookContext);
+    await hooks.execute(
+      workflow.entityType,
+      'beforeTransition',
+      { ...entity, toState },
+      hookContext
+    );
 
     // Update entity state
     const stateField = entityType === 'Member' ? 'workflowStatus' : 'status';
@@ -308,10 +336,7 @@ export class WorkflowEngine {
   /**
    * Get available transitions for current state
    */
-  static getAvailableTransitions(
-    workflowName: string,
-    currentState: string
-  ): WorkflowTransition[] {
+  static getAvailableTransitions(workflowName: string, currentState: string): WorkflowTransition[] {
     const workflow = registry.get(workflowName);
     if (!workflow) {
       return [];
@@ -363,11 +388,7 @@ export class WorkflowEngine {
   /**
    * Evaluate condition
    */
-  private static evaluateCondition(
-    fieldValue: any,
-    operator: string,
-    expectedValue: any
-  ): boolean {
+  private static evaluateCondition(fieldValue: any, operator: string, expectedValue: any): boolean {
     switch (operator) {
       case 'equals':
         return fieldValue === expectedValue;
@@ -397,7 +418,11 @@ export function registerDefaultWorkflows() {
     entityType: 'Member',
     initialState: 'application',
     states: [
-      { name: 'application', label: 'Application', description: 'Member application submitted, awaiting review' },
+      {
+        name: 'application',
+        label: 'Application',
+        description: 'Member application submitted, awaiting review',
+      },
       { name: 'under_review', label: 'Under Review', description: 'KYM under review' },
       { name: 'approved', label: 'Approved', description: 'Member approved' },
       { name: 'bod_pending', label: 'BOD Pending', description: 'Pending BOD approval' },
@@ -446,7 +471,12 @@ export function registerDefaultWorkflows() {
       { name: 'under_review', label: 'Under Review', description: 'Application under review' },
       { name: 'approved', label: 'Approved', description: 'Application approved' },
       { name: 'disbursed', label: 'Disbursed', description: 'Loan disbursed', isTerminal: false },
-      { name: 'rejected', label: 'Rejected', description: 'Application rejected', isTerminal: true },
+      {
+        name: 'rejected',
+        label: 'Rejected',
+        description: 'Application rejected',
+        isTerminal: true,
+      },
     ],
     transitions: [
       {
@@ -477,4 +507,3 @@ export function registerDefaultWorkflows() {
 
 // Export registry for direct access if needed
 export const workflowRegistry = registry;
-
