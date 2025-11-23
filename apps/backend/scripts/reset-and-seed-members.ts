@@ -514,4 +514,3 @@ if (cooperativeIdentifier) {
       });
   }, 5000);
 }
-
