@@ -145,28 +145,35 @@
 
 ### 4. HRM Module Completion (HRM मोड्युल पूरा गर्ने)
 
-**Status:** Frontend exists, backend incomplete
+**Status:** ✅ **COMPLETE** - All features implemented!
 
 **HRM Dashboard:**
 
-- [ ] Create backend endpoint for HRM dashboard stats
-- [ ] Currently shows placeholder data (line 17 in `apps/frontend-web/src/app/hrm/dashboard/page.tsx`)
+- [x] ✅ Created backend endpoint for HRM dashboard stats (`GET /api/hrm/dashboard/stats`)
+- [x] ✅ Updated frontend to display real statistics
+- [x] ✅ Shows total employees, active employees, pending leave requests, employees on leave, recent attendance, pending payroll runs, and department distribution
 
 **HRM Payroll:**
 
-- [ ] Implement preview modal functionality
-- [ ] Currently has TODO comment (line 53 in `apps/frontend-web/src/app/hrm/payroll/page.tsx`)
+- [x] ✅ Created payroll preview modal component (`PayrollPreviewModal.tsx`)
+- [x] ✅ Integrated preview modal into payroll page
+- [x] ✅ Modal displays employee-wise breakdown and totals summary
 
 **HRM Training:**
 
-- [ ] Create backend endpoint for training
-- [ ] Frontend expects endpoint that doesn't exist (line 41 in `apps/frontend-web/src/app/hrm/training/page.tsx`)
+- [x] ✅ Training endpoints already existed in backend
+- [x] ✅ Removed outdated comment from frontend
+- [x] ✅ Frontend properly integrated with existing endpoints
 
 **Files:**
 
-- `apps/frontend-web/src/app/hrm/dashboard/page.tsx`
-- `apps/frontend-web/src/app/hrm/payroll/page.tsx`
-- `apps/frontend-web/src/app/hrm/training/page.tsx`
+- `apps/backend/src/routes/hrm.ts` - Added dashboard stats endpoint
+- `apps/frontend-web/src/app/hrm/dashboard/page.tsx` - Updated with real data
+- `apps/frontend-web/src/components/PayrollPreviewModal.tsx` - New component
+- `apps/frontend-web/src/app/hrm/payroll/page.tsx` - Integrated preview modal
+- `apps/frontend-web/src/app/hrm/training/page.tsx` - Removed outdated comment
+
+**Note:** The HRM module is now fully functional with all required features!
 
 ---
 

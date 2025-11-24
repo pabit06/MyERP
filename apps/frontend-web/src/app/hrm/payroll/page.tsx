@@ -3,8 +3,31 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import Link from 'next/link';
+import PayrollPreviewModal from '../../../components/PayrollPreviewModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+interface PayrollPreview {
+  preview: Array<{
+    employeeId: string;
+    employeeCode: string;
+    employeeName: string;
+    basicSalary: number;
+    allowances: number;
+    grossSalary: number;
+    ssfEmployee: number;
+    ssfEmployer: number;
+    taxTds: number;
+    loanDeduction: number;
+    netSalary: number;
+  }>;
+  totals: {
+    totalBasic: number;
+    totalNetPay: number;
+    totalSSF: number;
+    totalTDS: number;
+  };
+}
 
 export default function PayrollPage() {
   const { token } = useAuth();
@@ -12,6 +35,9 @@ export default function PayrollPage() {
   const [loading, setLoading] = useState(true);
   const [fiscalYear, setFiscalYear] = useState('2082/83');
   const [monthBs, setMonthBs] = useState(4); // Shrawan
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<PayrollPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -38,6 +64,8 @@ export default function PayrollPage() {
   };
 
   const handlePreview = async () => {
+    setPreviewLoading(true);
+    setShowPreview(true);
     try {
       const response = await fetch(`${API_URL}/hrm/payroll/runs/preview`, {
         method: 'POST',
@@ -49,11 +77,18 @@ export default function PayrollPage() {
       });
       if (response.ok) {
         const data = await response.json();
-        console.log('Preview:', data);
-        // TODO: Show preview modal
+        setPreviewData(data);
+      } else {
+        const error = await response.json();
+        alert(error.error || 'Failed to load preview');
+        setShowPreview(false);
       }
     } catch (error) {
       console.error('Error previewing payroll:', error);
+      alert('Failed to load preview');
+      setShowPreview(false);
+    } finally {
+      setPreviewLoading(false);
     }
   };
 
@@ -113,6 +148,15 @@ export default function PayrollPage() {
 
   return (
     <div className="p-6">
+      <PayrollPreviewModal
+        isOpen={showPreview}
+        onClose={() => {
+          setShowPreview(false);
+          setPreviewData(null);
+        }}
+        preview={previewData}
+        loading={previewLoading}
+      />
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Payroll Management</h1>
         <div className="flex gap-4">

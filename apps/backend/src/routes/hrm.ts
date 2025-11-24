@@ -7,10 +7,8 @@ import { calculateEmployeePayroll } from '../services/hrm/payroll-calculator.js'
 import { createPayrollJournalEntry } from '../services/hrm/journal-service.js';
 import { markAttendance } from '../services/hrm/attendance-service.js';
 import {
-  getOrCreateLeaveBalance,
   updateLeaveBalanceOnApproval,
   getEmployeeLeaveBalances,
-  initializeEmployeeLeaveBalances,
 } from '../services/hrm/leave-service.js';
 
 const router = Router();
@@ -1206,6 +1204,110 @@ router.post('/attendance/mark', async (req: Request, res: Response) => {
     res.json({ attendance: result });
   } catch (error) {
     console.error('Mark attendance error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ==================== Dashboard Stats ====================
+
+/**
+ * GET /api/hrm/dashboard/stats
+ * Get HRM dashboard statistics
+ */
+router.get('/dashboard/stats', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+
+    // Get total employees
+    const totalEmployees = await prisma.employee.count({
+      where: { cooperativeId: tenantId },
+    });
+
+    // Get active employees
+    const activeEmployees = await prisma.employee.count({
+      where: { cooperativeId: tenantId, status: 'active' },
+    });
+
+    // Get pending leave requests
+    const pendingLeaveRequests = await prisma.leaveRequest.count({
+      where: {
+        cooperativeId: tenantId,
+        status: 'PENDING',
+      },
+    });
+
+    // Get employees on leave today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const employeesOnLeave = await prisma.leaveRequest.count({
+      where: {
+        cooperativeId: tenantId,
+        status: 'APPROVED',
+        startDate: { lte: today }, // Only count leaves that have already started
+        endDate: { gte: today },
+      },
+    });
+
+    // Get recent attendance (last 7 days including today)
+    // Subtract 6 days to get exactly 7 days: today + 6 previous days = 7 total days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    const recentAttendance = await prisma.attendance.count({
+      where: {
+        cooperativeId: tenantId,
+        date: { gte: sevenDaysAgo },
+        status: 'PRESENT',
+      },
+    });
+
+    // Get pending payroll runs
+    const pendingPayrollRuns = await prisma.payrollRun.count({
+      where: {
+        cooperativeId: tenantId,
+        status: 'DRAFT',
+      },
+    });
+
+    // Get department distribution
+    const departmentStats = await prisma.employee.groupBy({
+      by: ['departmentId'],
+      where: { cooperativeId: tenantId, status: 'active' },
+      _count: { id: true },
+    });
+
+    const departments = await prisma.department.findMany({
+      where: { cooperativeId: tenantId },
+      select: { id: true, name: true },
+    });
+
+    const departmentMap = new Map(departments.map((d) => [d.id, d.name]));
+    const departmentDistribution = departmentStats.map((stat) => ({
+      departmentId: stat.departmentId,
+      departmentName: stat.departmentId
+        ? departmentMap.get(stat.departmentId) || 'Unassigned'
+        : 'Unassigned',
+      count: stat._count.id,
+    }));
+
+    res.json({
+      stats: {
+        totalEmployees,
+        activeEmployees,
+        inactiveEmployees: totalEmployees - activeEmployees,
+        pendingLeaveRequests,
+        employeesOnLeave,
+        recentAttendance,
+        pendingPayrollRuns,
+        departmentDistribution,
+      },
+    });
+  } catch (error) {
+    console.error('Get HRM dashboard stats error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -607,6 +607,10 @@ export async function deleteNotification(
 /**
  * Send meeting notification to all attendees
  * Returns the number of unique attendees notified (not total notifications sent)
+ *
+ * Handles cases where:
+ * - Same person appears with different identifiers (userId vs phone/email)
+ * - Same userId appears multiple times with different contact methods
  */
 export async function sendMeetingNotifications(
   cooperativeId: string,
@@ -622,31 +626,130 @@ export async function sendMeetingNotifications(
 
   const message = `Namaste. ${meetingTitle} scheduled for ${dateStr} at ${timeStr}. Location: ${locationStr}`;
 
-  // Track unique attendees notified (by userId if available, otherwise by phone/email)
+  // Build maps for cross-referencing identifiers
+  // Maps phone/email to userId to identify same person with different identifiers
+  const phoneToUserId = new Map<string, string>();
+  const emailToUserId = new Map<string, string>();
+
+  // Collect all contact methods for each userId (not just the last one)
+  // This ensures we send notifications to all contact methods even if userId appears multiple times
+  const userIdToContactMethods = new Map<
+    string,
+    { phones: Set<string>; emails: Set<string>; hasUserId: boolean }
+  >();
+
+  // First pass: collect all userIds and their associated contact info
+  for (const attendee of attendees) {
+    if (attendee.userId) {
+      // Initialize or get existing contact methods for this userId
+      if (!userIdToContactMethods.has(attendee.userId)) {
+        userIdToContactMethods.set(attendee.userId, {
+          phones: new Set<string>(),
+          emails: new Set<string>(),
+          hasUserId: true,
+        });
+      }
+      const contactMethods = userIdToContactMethods.get(attendee.userId)!;
+
+      // Add all contact methods (accumulate, don't overwrite)
+      if (attendee.phone) {
+        contactMethods.phones.add(attendee.phone);
+        phoneToUserId.set(attendee.phone, attendee.userId);
+      }
+      if (attendee.email) {
+        contactMethods.emails.add(attendee.email);
+        emailToUserId.set(attendee.email, attendee.userId);
+      }
+    }
+  }
+
+  // Track unique attendees notified using userId as primary key
   const notifiedAttendees = new Set<string>();
 
-  for (const attendee of attendees) {
-    // Use userId as unique identifier if available, otherwise use phone or email
-    const attendeeId = attendee.userId || attendee.phone || attendee.email || null;
+  // Track which contact methods have already been notified to prevent duplicates
+  // when different userIds share the same phone/email
+  const notifiedPhones = new Set<string>();
+  const notifiedEmails = new Set<string>();
 
-    if (!attendeeId) {
+  // Second pass: process all attendees and send notifications
+  for (const attendee of attendees) {
+    // Determine the unique identifier for this attendee
+    // Priority: userId > userId found via phone/email lookup > phone > email
+    let uniqueAttendeeId: string | null = null;
+
+    if (attendee.userId) {
+      // Direct userId match - most reliable
+      uniqueAttendeeId = attendee.userId;
+    } else if (attendee.phone && phoneToUserId.has(attendee.phone)) {
+      // Phone matches a known userId - use that userId
+      uniqueAttendeeId = phoneToUserId.get(attendee.phone)!;
+    } else if (attendee.email && emailToUserId.has(attendee.email)) {
+      // Email matches a known userId - use that userId
+      uniqueAttendeeId = emailToUserId.get(attendee.email)!;
+    } else if (attendee.phone) {
+      // No userId found, use phone as fallback (prefixed to avoid collisions)
+      uniqueAttendeeId = `phone:${attendee.phone}`;
+    } else if (attendee.email) {
+      // No userId found, use email as fallback (prefixed to avoid collisions)
+      uniqueAttendeeId = `email:${attendee.email}`;
+    }
+
+    if (!uniqueAttendeeId) {
       // Skip if no identifier available
       continue;
     }
 
+    // Skip if we've already processed this unique attendee
+    // (we'll send all their notifications in one go below)
+    if (notifiedAttendees.has(uniqueAttendeeId)) {
+      continue;
+    }
+
+    // Get all contact methods for this unique attendee
+    let phonesToNotify: string[] = [];
+    let emailsToNotify: string[] = [];
+    let userIdForNotifications: string | undefined = undefined;
+
+    if (uniqueAttendeeId.startsWith('phone:')) {
+      // Fallback case: no userId, just phone
+      const phone = uniqueAttendeeId.replace('phone:', '');
+      phonesToNotify = [phone];
+    } else if (uniqueAttendeeId.startsWith('email:')) {
+      // Fallback case: no userId, just email
+      const email = uniqueAttendeeId.replace('email:', '');
+      emailsToNotify = [email];
+    } else {
+      // userId-based: use all collected contact methods
+      userIdForNotifications = uniqueAttendeeId;
+      const contactMethods = userIdToContactMethods.get(uniqueAttendeeId);
+      if (contactMethods) {
+        phonesToNotify = Array.from(contactMethods.phones);
+        emailsToNotify = Array.from(contactMethods.emails);
+      } else {
+        // Fallback: use current attendee's contact info
+        if (attendee.phone) phonesToNotify = [attendee.phone];
+        if (attendee.email) emailsToNotify = [attendee.email];
+      }
+    }
+
+    // Filter out contact methods that have already been notified
+    // This prevents duplicate notifications when different userIds share the same phone/email
+    phonesToNotify = phonesToNotify.filter((phone) => !notifiedPhones.has(phone));
+    emailsToNotify = emailsToNotify.filter((email) => !notifiedEmails.has(email));
+
     let attendeeNotified = false;
 
-    // Send SMS if phone is available
-    if (attendee.phone) {
+    // Send SMS to all phone numbers for this attendee (that haven't been notified yet)
+    for (const phone of phonesToNotify) {
       try {
         await sendNotification({
           cooperativeId,
-          userId: attendee.userId,
+          userId: userIdForNotifications,
           type: 'meeting_scheduled',
           title: 'Meeting Scheduled',
           message,
           channel: 'SMS',
-          phone: attendee.phone,
+          phone,
           metadata: {
             meetingTitle,
             meetingDate: meetingDate.toISOString(),
@@ -654,18 +757,19 @@ export async function sendMeetingNotifications(
             location,
           },
         });
+        notifiedPhones.add(phone); // Mark this phone as notified
         attendeeNotified = true;
       } catch (error) {
-        console.error(`Failed to send SMS to ${attendee.phone}:`, error);
+        console.error(`Failed to send SMS to ${phone}:`, error);
       }
     }
 
-    // Send in-app notification if userId is available
-    if (attendee.userId) {
+    // Send in-app notification if userId is available (only once per userId)
+    if (userIdForNotifications) {
       try {
         await sendNotification({
           cooperativeId,
-          userId: attendee.userId,
+          userId: userIdForNotifications,
           type: 'meeting_scheduled',
           title: 'Meeting Scheduled',
           message,
@@ -679,13 +783,16 @@ export async function sendMeetingNotifications(
         });
         attendeeNotified = true;
       } catch (error) {
-        console.error(`Failed to send in-app notification to user ${attendee.userId}:`, error);
+        console.error(
+          `Failed to send in-app notification to user ${userIdForNotifications}:`,
+          error
+        );
       }
     }
 
     // Count attendee as notified if at least one notification was sent successfully
     if (attendeeNotified) {
-      notifiedAttendees.add(attendeeId);
+      notifiedAttendees.add(uniqueAttendeeId);
     }
   }
 

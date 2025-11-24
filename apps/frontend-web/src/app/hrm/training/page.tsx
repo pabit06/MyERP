@@ -38,7 +38,6 @@ export default function TrainingLog() {
 
   const fetchSessions = async () => {
     try {
-      // Note: You'll need to create this endpoint in the HRM routes
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hrm/training`, {
         headers: { Authorization: `Bearer ${token}` },
       });
