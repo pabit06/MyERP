@@ -16,8 +16,8 @@ export default function SourceOfFundsModal({
   isOpen,
   onClose,
   onSubmit,
-  transactionId: _transactionId,
-  memberId: _memberId,
+  transactionId,
+  memberId,
   amount,
 }: SourceOfFundsModalProps) {
   const { token } = useAuth();
@@ -52,6 +52,34 @@ export default function SourceOfFundsModal({
         }
       }
 
+      // Submit SOF declaration to backend with all required fields
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/compliance/aml/source-of-funds`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            transactionId,
+            memberId,
+            declaredText,
+            attachmentPath,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit source of funds declaration');
+      }
+
+      // Call the onSubmit callback for notification/cleanup purposes
       await onSubmit(declaredText, attachmentPath);
       setDeclaredText('');
       setAttachment(null);
