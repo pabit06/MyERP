@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import ProtectedRoute from '../../../../components/ProtectedRoute';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,7 +79,6 @@ const COMMITTEE_TYPES = [
 
 export default function CommitteeDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'members' | 'tenure' | 'settings'>('members');
   const [committee, setCommittee] = useState<Committee | null>(null);
@@ -98,6 +97,10 @@ export default function CommitteeDetailPage() {
     endDate: '',
     isActing: false,
   });
+
+  // Member search/filter state
+  const [memberSearchTerm, setMemberSearchTerm] = useState('');
+  const [memberPositionFilter, setMemberPositionFilter] = useState<string>('');
 
   // Tenure management state
   const [showAddTenureModal, setShowAddTenureModal] = useState(false);
@@ -372,7 +375,40 @@ export default function CommitteeDetailPage() {
     );
   }
 
-  const currentMembers = committee.members.filter((m) => m.isActive);
+  // Filter and search members
+  const currentMembers = committee.members
+    .filter((m) => m.isActive)
+    .filter((m) => {
+      // Search filter
+      if (memberSearchTerm) {
+        const searchLower = memberSearchTerm.toLowerCase();
+        const memberName =
+          m.member.memberType === 'INSTITUTION'
+            ? m.member.institutionName || ''
+            : `${m.member.firstName || ''} ${m.member.middleName || ''} ${m.member.lastName || ''}`.trim();
+        const memberNumber = m.member.memberNumber || '';
+        const position = m.position || '';
+        const positionNepali = m.positionNepali || '';
+
+        if (
+          !memberName.toLowerCase().includes(searchLower) &&
+          !memberNumber.toLowerCase().includes(searchLower) &&
+          !position.toLowerCase().includes(searchLower) &&
+          !positionNepali.toLowerCase().includes(searchLower)
+        ) {
+          return false;
+        }
+      }
+
+      // Position filter
+      if (memberPositionFilter) {
+        if (m.position !== memberPositionFilter && m.positionNepali !== memberPositionFilter) {
+          return false;
+        }
+      }
+
+      return true;
+    });
 
   return (
     <ProtectedRoute requiredModule="governance">
@@ -443,6 +479,47 @@ export default function CommitteeDetailPage() {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Search and Filter */}
+              <div className="mb-6 space-y-4">
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <Input
+                      type="text"
+                      placeholder="Search by name, member number, or position..."
+                      value={memberSearchTerm}
+                      onChange={(e) => setMemberSearchTerm(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="w-48">
+                    <select
+                      value={memberPositionFilter}
+                      onChange={(e) => setMemberPositionFilter(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      <option value="">All Positions</option>
+                      {Array.from(
+                        new Set(
+                          committee.members
+                            .filter((m) => m.isActive)
+                            .map((m) => m.position || m.positionNepali)
+                            .filter(Boolean)
+                        )
+                      ).map((position) => (
+                        <option key={position} value={position}>
+                          {position}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {(memberSearchTerm || memberPositionFilter) && (
+                  <div className="text-sm text-gray-600">
+                    Showing {currentMembers.length} of{' '}
+                    {committee.members.filter((m) => m.isActive).length} members
+                  </div>
+                )}
+              </div>
               {currentMembers.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">
                   No active members in this committee.

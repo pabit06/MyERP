@@ -82,6 +82,7 @@ model Cooperative {
   dayBooks DayBook[]
   tellerSettlements TellerSettlement[]
   notifications Notification[]
+  genericWorkflowHistory GenericWorkflowHistory[]
 
   @@map("cooperatives")
 }
@@ -134,6 +135,7 @@ model User {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   role        Role?       @relation(fields: [roleId], references: [id])
   workflowHistory WorkflowHistory[] @relation()
+  genericWorkflowHistory GenericWorkflowHistory[] @relation()
   dayBooksBegin DayBook[] @relation("DayBeginBy")
   dayBooksEnd DayBook[] @relation("DayEndBy")
   tellerSettlements TellerSettlement[] @relation("TellerSettlements")
@@ -2044,5 +2046,31 @@ model Notification {
   @@index([cooperativeId, status])
   @@index([createdAt])
   @@map("notifications")
+}
+
+// Generic Workflow History - for tracking workflow transitions for any entity type
+model GenericWorkflowHistory {
+  id            String    @id @default(uuid())
+  cooperativeId String
+  entityType    String    // e.g., 'Member', 'LoanApplication', 'Meeting', etc.
+  entityId      String    // ID of the entity that transitioned
+  workflowName  String    // Name of the workflow (e.g., 'member-onboarding', 'loan-approval')
+  fromStatus    String?   // Previous state (null for initial creation)
+  toStatus      String    // New state
+  changedById   String?   // ID of the user who made the change
+  changedBy     User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  remarks       String?   // Optional remarks about the transition
+  metadata      Json?     // Additional metadata about the transition
+  changedAt     DateTime  @default(now())
+
+  // Relations
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+
+  @@index([cooperativeId])
+  @@index([entityType, entityId])
+  @@index([workflowName])
+  @@index([cooperativeId, entityType, entityId])
+  @@index([changedAt])
+  @@map("generic_workflow_history")
 }
 

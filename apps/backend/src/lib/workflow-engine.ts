@@ -301,6 +301,7 @@ export class WorkflowEngine {
 
     // Create workflow history (use appropriate model based on entity type)
     if (entityType === 'Member') {
+      // Use member-specific workflow history for backward compatibility
       await transactionClient.workflowHistory.create({
         data: {
           cooperativeId: context.tenantId,
@@ -311,11 +312,22 @@ export class WorkflowEngine {
           remarks: context.metadata?.remarks,
         },
       });
-    } else {
-      // For other entity types, use memberWorkflowHistory or create a generic history
-      // For now, we'll skip history for non-member entities
-      // TODO: Create generic workflow history table
     }
+
+    // Always create generic workflow history for all entity types
+    await transactionClient.genericWorkflowHistory.create({
+      data: {
+        cooperativeId: context.tenantId,
+        entityType,
+        entityId,
+        workflowName: workflow.name,
+        fromStatus: currentState,
+        toStatus: toState,
+        changedById: context.userId,
+        remarks: context.metadata?.remarks,
+        metadata: context.metadata ? (context.metadata as any) : null,
+      },
+    });
 
     // Execute after transition hook
     if (transition.hooks?.after) {

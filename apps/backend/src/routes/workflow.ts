@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
-import { WorkflowEngine } from '../lib/workflow-engine.js';
+import { WorkflowEngine, workflowRegistry } from '../lib/workflow-engine.js';
 
 const router: Router = Router();
 
@@ -51,7 +51,10 @@ router.get('/:workflowName/transitions', async (req: Request, res: Response) => 
       return res.status(400).json({ error: 'currentState query parameter is required' });
     }
 
-    const transitions = WorkflowEngine.getAvailableTransitions(workflowName, currentState as string);
+    const transitions = WorkflowEngine.getAvailableTransitions(
+      workflowName,
+      currentState as string
+    );
 
     res.json({ transitions });
   } catch (error: any) {
@@ -86,9 +89,8 @@ router.get('/:workflowName', async (req: Request, res: Response) => {
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // This would require exposing the registry, for now return empty
-    // TODO: Expose workflow registry
-    res.json({ workflows: [] });
+    const workflows = workflowRegistry.getAll();
+    res.json({ workflows });
   } catch (error: any) {
     console.error('Get workflows error:', error);
     res.status(500).json({ error: error.message || 'Failed to get workflows' });
@@ -96,4 +98,3 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 export default router;
-

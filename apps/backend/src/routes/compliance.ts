@@ -728,14 +728,17 @@ router.get(
       const { year } = req.query;
 
       const reportYear = year ? parseInt(year as string) : new Date().getFullYear();
-      const _startDate = new Date(reportYear, 0, 1);
-      const _endDate = new Date(reportYear, 11, 31, 23, 59, 59);
+      const endDate = new Date(reportYear, 11, 31, 23, 59, 59);
 
       // Aggregate by risk category and factors
+      // Filter members who existed by the end of the report year
       const members = await prisma.member.findMany({
         where: {
           cooperativeId: tenantId,
           isActive: true,
+          createdAt: {
+            lte: endDate, // Members who existed by the end of the report year
+          },
         },
         select: {
           riskCategory: true,
@@ -743,8 +746,8 @@ router.get(
           pepStatus: true,
           kyc: {
             select: {
-              country: true,
-              state: true,
+              nationality: true,
+              permanentProvince: true,
               occupation: true,
             },
           },
@@ -777,8 +780,8 @@ router.get(
 
       // Aggregate by geography
       members.forEach((member) => {
-        const country = member.kyc?.country || 'Unknown';
-        report.byGeography[country] = (report.byGeography[country] || 0) + 1;
+        const geography = member.kyc?.nationality || member.kyc?.permanentProvince || 'Unknown';
+        report.byGeography[geography] = (report.byGeography[geography] || 0) + 1;
       });
 
       // Aggregate by occupation

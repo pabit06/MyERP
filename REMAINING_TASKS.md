@@ -212,16 +212,30 @@
 
 ### 6. Governance Module Search & Filtering (शासन मोड्युल खोज र फिल्टर)
 
-**Status:** Core features complete, search/filter missing
+**Status:** ✅ **COMPLETE** - All search and filtering features implemented!
 
-**Missing Features:**
+**Backend:**
 
-- [ ] Committees: Search by name, filter by type
-- [ ] Meetings: Search by title, filter by type, status, date range
-- [ ] AGM: Search by fiscal year, filter by status, date range
-- [ ] Committee Members: Search by member name, filter by position
+- [x] ✅ Committees: Search by name/description, filter by type and statutory status (already implemented)
+- [x] ✅ Meetings: Search by title/description/location, filter by type, status, date range (already implemented)
+- [x] ✅ AGM: Search by fiscal year/location/notes, filter by status, fiscal year, date range (already implemented)
 
-**Note:** Listed as optional enhancement in `.cursor/plans/governance-implementation-status.md`
+**Frontend:**
+
+- [x] ✅ Committees: Search and filter UI implemented
+- [x] ✅ Meetings: Search and filter UI implemented
+- [x] ✅ AGM: Search and filter UI implemented
+- [x] ✅ Committee Members: Search by name/member number/position, filter by position (NEW)
+
+**Files:**
+
+- `apps/backend/src/routes/governance.ts` - Backend search/filter support (already existed)
+- `apps/frontend-web/src/app/governance/committees/page.tsx` - Committees search/filter UI (already existed)
+- `apps/frontend-web/src/app/governance/meetings/page.tsx` - Meetings search/filter UI (already existed)
+- `apps/frontend-web/src/app/governance/agm/page.tsx` - AGM search/filter UI (already existed)
+- `apps/frontend-web/src/app/governance/committees/[id]/page.tsx` - Committee members search/filter (NEW)
+
+**Note:** All governance search and filtering features are now complete!
 
 ---
 
@@ -281,31 +295,47 @@
 
 ### 10. Workflow History Table (वर्कफ्लो इतिहास तालिका)
 
-**Status:** Commented as TODO
+**Status:** ✅ **COMPLETE** - Generic workflow history table created!
+
+**Database Schema:**
+
+- [x] ✅ Created `GenericWorkflowHistory` model in Prisma schema
+- [x] ✅ Supports any entity type (Member, LoanApplication, Meeting, etc.)
+- [x] ✅ Tracks workflow name, entity type, entity ID, from/to status
+- [x] ✅ Includes user tracking, remarks, and metadata
+- [x] ✅ Proper indexes for efficient querying
 
 **Workflow Engine:**
 
-- [ ] Create generic workflow history table
-- [ ] Currently has TODO comment (line 289 in `apps/backend/src/lib/workflow-engine.ts`)
+- [x] ✅ Updated workflow engine to create generic history for all entity types
+- [x] ✅ Maintains backward compatibility with member-specific WorkflowHistory
+- [x] ✅ Stores workflow name, entity type, and metadata
 
 **Files:**
 
-- `apps/backend/src/lib/workflow-engine.ts`
+- `packages/db-schema/prisma/schema.prisma` - GenericWorkflowHistory model added
+- `apps/backend/src/lib/workflow-engine.ts` - Updated to create generic history
+
+**Note:** Generic workflow history is now tracked for all entity types, not just members!
 
 ---
 
 ### 11. Workflow Registry Exposure (वर्कफ्लो रजिस्ट्री एक्सपोज)
 
-**Status:** Commented as TODO
+**Status:** ✅ **COMPLETE** - Workflow registry endpoint exposed!
 
-**Workflow Routes:**
+**Backend:**
 
-- [ ] Expose workflow registry endpoint
-- [ ] Currently has TODO comment (line 90 in `apps/backend/src/routes/workflow.ts`)
+- [x] ✅ Exposed workflow registry in workflow routes
+- [x] ✅ `GET /api/workflow` now returns all registered workflows
+- [x] ✅ Uses `workflowRegistry.getAll()` to fetch all workflows
 
 **Files:**
 
-- `apps/backend/src/routes/workflow.ts`
+- `apps/backend/src/routes/workflow.ts` - Updated to expose registry
+- `apps/backend/src/lib/workflow-engine.ts` - Registry already exported
+
+**Note:** The workflow registry endpoint is now functional and returns all registered workflows!
 
 ---
 
