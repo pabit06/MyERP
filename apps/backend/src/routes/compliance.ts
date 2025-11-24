@@ -728,16 +728,18 @@ router.get(
       const { year } = req.query;
 
       const reportYear = year ? parseInt(year as string) : new Date().getFullYear();
-      const endDate = new Date(reportYear, 11, 31, 23, 59, 59);
+      const startDate = new Date(reportYear, 0, 1, 0, 0, 0); // January 1st of the report year
+      const endDate = new Date(reportYear, 11, 31, 23, 59, 59); // December 31st of the report year
 
       // Aggregate by risk category and factors
-      // Filter members who existed by the end of the report year
+      // Filter members created during the report year
       const members = await prisma.member.findMany({
         where: {
           cooperativeId: tenantId,
           isActive: true,
           createdAt: {
-            lte: endDate, // Members who existed by the end of the report year
+            gte: startDate, // Members created on or after January 1st of the report year
+            lte: endDate, // Members created on or before December 31st of the report year
           },
         },
         select: {
