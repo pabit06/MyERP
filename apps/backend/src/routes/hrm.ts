@@ -897,6 +897,7 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
             ssfEmployer: payroll.ssfEmployer,
             taxTds: payroll.taxTds,
             loanDeduction: payroll.loanDeduction,
+            festivalBonus: payroll.festivalBonus,
             netSalary: payroll.netSalary,
           };
         } catch (error) {
