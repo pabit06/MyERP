@@ -5,10 +5,29 @@ import { requireTenant } from '../middleware/tenant.js';
 import { isModuleEnabled } from '../middleware/module.js';
 import { requireRole, logSensitiveDataAccess } from '../middleware/role.js';
 import { generateTtrXml, generateStrXml } from '../services/aml/goaml.js';
-import { screenMember, rescreenAllMembers } from '../services/aml/watchlist.js';
+import { screenMember } from '../services/aml/watchlist.js';
 import { updateMemberRisk } from '../services/aml/risk.js';
+import { saveUploadedFile, deleteFile } from '../lib/upload.js';
+import multer from 'multer';
 import * as fs from 'fs/promises';
-import * as path from 'path';
+
+// Configure multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max file size
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow only PDF and image files
+    const allowedMimes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only PDF, JPEG, JPG, and PNG files are allowed.'));
+    }
+  },
+});
 
 const router = Router();
 
@@ -603,6 +622,38 @@ router.post(
 );
 
 /**
+ * POST /api/compliance/aml/source-of-funds/upload
+ * Upload a file for source of funds declaration
+ */
+router.post(
+  '/aml/source-of-funds/upload',
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
+
+      const tenantId = req.user!.tenantId;
+
+      // Save file to disk
+      const fileInfo = await saveUploadedFile(req.file, 'sof', tenantId);
+
+      res.status(200).json({
+        filePath: fileInfo.filePath,
+        fileName: fileInfo.fileName,
+        fileSize: fileInfo.fileSize,
+        mimeType: fileInfo.mimeType,
+      });
+    } catch (error: any) {
+      console.error('File upload error:', error);
+      res.status(400).json({ error: error.message || 'Failed to upload file' });
+    }
+  }
+);
+
+/**
  * POST /api/compliance/aml/source-of-funds
  * Create or update source of funds declaration
  */
@@ -628,6 +679,16 @@ router.post('/aml/source-of-funds', async (req: Request, res: Response) => {
 
     let sof;
     if (existing) {
+      // Delete old file if new one is provided
+      if (attachmentPath && existing.attachmentPath && attachmentPath !== existing.attachmentPath) {
+        try {
+          await deleteFile(existing.attachmentPath);
+        } catch (error) {
+          console.error('Error deleting old file:', error);
+          // Continue even if deletion fails
+        }
+      }
+
       sof = await prisma.sourceOfFundsDeclaration.update({
         where: { id: existing.id },
         data: {
@@ -667,8 +728,8 @@ router.get(
       const { year } = req.query;
 
       const reportYear = year ? parseInt(year as string) : new Date().getFullYear();
-      const startDate = new Date(reportYear, 0, 1);
-      const endDate = new Date(reportYear, 11, 31, 23, 59, 59);
+      const _startDate = new Date(reportYear, 0, 1);
+      const _endDate = new Date(reportYear, 11, 31, 23, 59, 59);
 
       // Aggregate by risk category and factors
       const members = await prisma.member.findMany({

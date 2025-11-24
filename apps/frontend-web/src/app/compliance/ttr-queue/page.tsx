@@ -173,7 +173,7 @@ export default function TtrQueue() {
                           </p>
                           {ttr.sourceOfFunds.attachmentPath && (
                             <a
-                              href={ttr.sourceOfFunds.attachmentPath}
+                              href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3001'}${ttr.sourceOfFunds.attachmentPath}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline text-xs"

@@ -179,16 +179,34 @@
 
 ### 5. Source of Funds File Upload (स्रोत फाइल अपलोड)
 
-**Status:** UI exists, upload not implemented
+**Status:** ✅ **COMPLETE** - File upload fully implemented!
 
-**SourceOfFundsModal:**
+**Backend:**
 
-- [ ] Implement file upload to server
-- [ ] Currently returns placeholder path (line 49 in `apps/frontend-web/src/components/SourceOfFundsModal.tsx`)
+- [x] ✅ File upload endpoint created (`POST /api/compliance/aml/source-of-funds/upload`)
+- [x] ✅ Multer configured for file handling
+- [x] ✅ File validation (PDF, JPEG, JPG, PNG only)
+- [x] ✅ File size limit (10MB)
+- [x] ✅ Files stored in `uploads/sof/{cooperativeId}/` directory
+- [x] ✅ Old files deleted when updating SOF declaration
+- [x] ✅ File serving via static middleware (`/uploads`)
+
+**Frontend:**
+
+- [x] ✅ File upload implementation in `SourceOfFundsModal`
+- [x] ✅ Upload progress indicator
+- [x] ✅ Error handling and display
+- [x] ✅ File size and format validation
+- [x] ✅ File selection display
+- [x] ✅ Integration with AuthContext for token
 
 **Files:**
 
-- `apps/frontend-web/src/components/SourceOfFundsModal.tsx`
+- `apps/backend/src/routes/compliance.ts` - Upload endpoint added
+- `apps/frontend-web/src/components/SourceOfFundsModal.tsx` - Upload functionality implemented
+- `apps/frontend-web/src/app/compliance/ttr-queue/page.tsx` - Document link updated
+
+**Note:** The file upload feature is fully functional. Users can upload supporting documents (PDF, images) when declaring source of funds, and files are securely stored and accessible.
 
 ---
 
