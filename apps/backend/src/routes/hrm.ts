@@ -879,11 +879,25 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
             },
             0 // TODO: Get loan deduction from loan module
           );
+          // Transform allowances from Record<string, number> to total number for frontend
+          const allowancesObj = payroll.allowances as Record<string, number>;
+          const totalAllowances = Object.values(allowancesObj).reduce(
+            (sum, val) => sum + (val || 0),
+            0
+          );
+
           return {
             employeeId: emp.id,
             employeeCode: emp.code,
             employeeName: `${emp.firstName} ${emp.lastName}`,
-            ...payroll,
+            basicSalary: payroll.basicSalary,
+            allowances: totalAllowances, // Convert to number for frontend
+            grossSalary: payroll.grossSalary,
+            ssfEmployee: payroll.ssfEmployee,
+            ssfEmployer: payroll.ssfEmployer,
+            taxTds: payroll.taxTds,
+            loanDeduction: payroll.loanDeduction,
+            netSalary: payroll.netSalary,
           };
         } catch (error) {
           console.error(`Error calculating payroll for ${emp.id}:`, error);

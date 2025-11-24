@@ -764,6 +764,31 @@ export async function sendMeetingNotifications(
       }
     }
 
+    // Send email to all email addresses for this attendee (that haven't been notified yet)
+    for (const email of emailsToNotify) {
+      try {
+        await sendNotification({
+          cooperativeId,
+          userId: userIdForNotifications,
+          type: 'meeting_scheduled',
+          title: 'Meeting Scheduled',
+          message,
+          channel: 'EMAIL',
+          email,
+          metadata: {
+            meetingTitle,
+            meetingDate: meetingDate.toISOString(),
+            meetingTime,
+            location,
+          },
+        });
+        notifiedEmails.add(email); // Mark this email as notified
+        attendeeNotified = true;
+      } catch (error) {
+        console.error(`Failed to send email to ${email}:`, error);
+      }
+    }
+
     // Send in-app notification if userId is available (only once per userId)
     if (userIdForNotifications) {
       try {
