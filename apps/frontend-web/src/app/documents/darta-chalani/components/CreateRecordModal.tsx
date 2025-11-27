@@ -15,7 +15,7 @@ export default function CreateRecordModal({
   isOpen, 
   onClose, 
   onSuccess, 
-  initialTab = 'darta' as 'darta' | 'chalani' 
+  initialTab: _initialTab = 'darta' 
 }: CreateRecordModalProps) {
   const { token } = useAuth();
   const [showSelection, setShowSelection] = useState(true); // Show selection screen first
