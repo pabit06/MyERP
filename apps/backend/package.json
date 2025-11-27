@@ -18,6 +18,7 @@
     "assign:compliance-role": "tsx scripts/assign-compliance-role.ts",
     "delete:members": "tsx scripts/delete-all-members.ts",
     "seed:members": "tsx scripts/seed-members.ts",
+    "seed:darta-chalani": "tsx scripts/seed-darta-chalani.ts",
     "reset:members": "tsx scripts/reset-and-seed-members.ts",
     "test:notifications": "tsx scripts/test-notifications.ts",
     "test:permissions": "tsx scripts/test-permissions.ts"

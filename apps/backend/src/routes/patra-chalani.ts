@@ -9,6 +9,25 @@ import { getCurrentNepaliFiscalYear } from '../lib/nepali-fiscal-year.js';
 
 const router = Router();
 
+// Map frontend status values to ChalaniStatus enum values
+const mapChalaniStatus = (status: string): string | undefined => {
+  const statusMap: Record<string, string> = {
+    'DRAFT': 'DRAFT',
+    'PENDING': 'PENDING',
+    'IN_PROGRESS': 'IN_PROGRESS',
+    'APPROVED': 'APPROVED',
+    'SENT': 'SENT',
+    'COMPLETED': 'COMPLETED',
+    'ARCHIVED': 'ARCHIVED',
+    'CANCELLED': 'CANCELLED',
+    // Map invalid statuses that might come from frontend
+    'ACTIVE': 'PENDING',        // Frontend "ACTIVE" maps to "PENDING" for Chalani
+    'PROCESSING': 'IN_PROGRESS', // Frontend "PROCESSING" maps to "IN_PROGRESS" for Chalani
+    'DONE': 'COMPLETED',        // Frontend "DONE" maps to "COMPLETED"
+  };
+  return statusMap[status.toUpperCase()];
+};
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -47,7 +66,7 @@ router.use(isModuleEnabled('dms'));
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { type, status, category, search, startDate, endDate, page = '1', limit = '20' } = req.query;
+    const { type, status, category, search, fiscalYear, startDate, endDate, page = '1', limit = '20' } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
@@ -62,11 +81,18 @@ router.get('/', async (req: Request, res: Response) => {
     }
 
     if (status) {
-      where.status = status as string;
+      const mappedStatus = mapChalaniStatus(status as string);
+      if (mappedStatus) {
+        where.status = mappedStatus;
+      }
     }
 
     if (category) {
       where.category = category as string;
+    }
+
+    if (fiscalYear) {
+      where.fiscalYear = fiscalYear as string;
     }
 
     if (search) {
@@ -74,8 +100,8 @@ router.get('/', async (req: Request, res: Response) => {
         { subject: { contains: search as string, mode: 'insensitive' } },
         { chalaniNumber: { contains: search as string, mode: 'insensitive' } },
         { patraNumber: { contains: search as string, mode: 'insensitive' } },
-        { from: { contains: search as string, mode: 'insensitive' } },
-        { to: { contains: search as string, mode: 'insensitive' } },
+        { receiverName: { contains: search as string, mode: 'insensitive' } },
+        { senderName: { contains: search as string, mode: 'insensitive' } },
       ];
     }
 
@@ -178,8 +204,11 @@ router.post('/', async (req: Request, res: Response) => {
     const {
       type,
       subject,
-      from,
-      to,
+      content,
+      receiverName,
+      receiverAddress,
+      senderName,
+      senderAddress,
       date,
       receivedDate,
       sentDate,
@@ -187,6 +216,9 @@ router.post('/', async (req: Request, res: Response) => {
       category,
       patraNumber,
       remarks,
+      bodhartha,
+      transportMode,
+      fiscalYear,
     } = req.body;
 
     if (!type || !subject || !date) {
@@ -194,41 +226,67 @@ router.post('/', async (req: Request, res: Response) => {
       return;
     }
 
+    if (!receiverName) {
+      res.status(400).json({ error: 'Receiver name is required' });
+      return;
+    }
+
     // Generate chalani number
     // Use actual Nepali fiscal year (starts on Shrawan 1, approximately mid-July)
     // Fiscal year runs from Shrawan (month 4) to Ashad (month 3 of next year)
-    const fiscalYear = getCurrentNepaliFiscalYear();
-    const nepaliYear = fiscalYear.bsYear;
-    const fiscalYearStart = fiscalYear.startDate;
+    const currentFiscalYear = getCurrentNepaliFiscalYear();
+    const fiscalYearStr = fiscalYear || currentFiscalYear.label.replace('FY ', '');
     
-    // Count documents created in the current Nepali fiscal year
-    // This ensures the count matches the Nepali year used in the document number
+    // Parse fiscal year string (e.g., "080/081" or "2081/82") to get BS year
+    // Format: "YY/YY" or "YYYY/YY" where first part is starting year
+    let bsYear: number;
+    if (fiscalYearStr.includes('/')) {
+      const [startYearStr] = fiscalYearStr.split('/');
+      if (startYearStr.length === 2) {
+        // Format "080/081" - convert to full year (2080)
+        bsYear = 2000 + parseInt(startYearStr);
+      } else {
+        // Format "2081/82" - use as is
+        bsYear = parseInt(startYearStr);
+      }
+    } else {
+      // Fallback to current fiscal year
+      bsYear = currentFiscalYear.bsYear;
+    }
+    
+    // Count documents with the same fiscalYear string (not by date, to handle custom fiscal years)
+    // This ensures the count matches the fiscal year used in the document number
     const count = await prisma.patraChalani.count({
       where: {
         cooperativeId: tenantId,
         type: type as string,
-        createdAt: {
-          gte: fiscalYearStart,
-        },
+        fiscalYear: fiscalYearStr,
       },
     });
-    const chalaniNumber = `PC-${nepaliYear}-${String(count + 1).padStart(3, '0')}`;
+    const chalaniNumber = `PC-${String(bsYear).slice(-2)}-${String(count + 1).padStart(3, '0')}`;
 
     const patraChalani = await prisma.patraChalani.create({
       data: {
         cooperativeId: tenantId,
+        fiscalYear: fiscalYearStr,
+        serialNo: count + 1,
         chalaniNumber,
         type,
         subject,
-        from,
-        to,
+        content,
+        receiverName,
+        receiverAddress,
+        senderName,
+        senderAddress,
         date: new Date(date),
         receivedDate: receivedDate ? new Date(receivedDate) : null,
         sentDate: sentDate ? new Date(sentDate) : null,
-        priority: priority || 'normal',
+        priority: (priority || 'NORMAL').toUpperCase(),
         category,
         patraNumber,
         remarks,
+        bodhartha,
+        transportMode,
         createdBy: req.user!.userId,
       },
       include: {
@@ -254,8 +312,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
       subject,
-      from,
-      to,
+      content,
+      receiverName,
+      receiverAddress,
+      senderName,
+      senderAddress,
       date,
       receivedDate,
       sentDate,
@@ -264,6 +325,8 @@ router.put('/:id', async (req: Request, res: Response) => {
       category,
       patraNumber,
       remarks,
+      bodhartha,
+      transportMode,
     } = req.body;
 
     const patraChalani = await prisma.patraChalani.findFirst({
@@ -280,16 +343,24 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     const updateData: any = {};
     if (subject) updateData.subject = subject;
-    if (from !== undefined) updateData.from = from;
-    if (to !== undefined) updateData.to = to;
+    if (content !== undefined) updateData.content = content;
+    if (receiverName !== undefined) updateData.receiverName = receiverName;
+    if (receiverAddress !== undefined) updateData.receiverAddress = receiverAddress;
+    if (senderName !== undefined) updateData.senderName = senderName;
+    if (senderAddress !== undefined) updateData.senderAddress = senderAddress;
     if (date) updateData.date = new Date(date);
     if (receivedDate !== undefined) updateData.receivedDate = receivedDate ? new Date(receivedDate) : null;
     if (sentDate !== undefined) updateData.sentDate = sentDate ? new Date(sentDate) : null;
-    if (priority) updateData.priority = priority;
+    if (priority) updateData.priority = (priority as string).toUpperCase();
+    if (bodhartha !== undefined) updateData.bodhartha = bodhartha;
+    if (transportMode !== undefined) updateData.transportMode = transportMode;
     if (status) {
-      updateData.status = status;
-      if (status === 'completed') {
-        updateData.completedAt = new Date();
+      const mappedStatus = mapChalaniStatus(status as string);
+      if (mappedStatus) {
+        updateData.status = mappedStatus;
+        if (mappedStatus === 'COMPLETED') {
+          updateData.completedAt = new Date();
+        }
       }
     }
     if (category !== undefined) updateData.category = category;

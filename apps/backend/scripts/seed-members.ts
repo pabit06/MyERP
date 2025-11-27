@@ -56,7 +56,7 @@ const occupationDetails = {
   'RETIRED': ['Pensioner', 'Social Security'],
   'OTHERS': ['Freelancer', 'Artist', 'Driver']
 };
-const relations = ['FATHER', 'MOTHER', 'SPOUSE', 'SON', 'DAUGHTER', 'BROTHER', 'SISTER'];
+const _relations = ['FATHER', 'MOTHER', 'SPOUSE', 'SON', 'DAUGHTER', 'BROTHER', 'SISTER'];
 const familyTypes = ['JOINT_ONE_KITCHEN', 'JOINT_SEPARATE_KITCHEN', 'NUCLEAR'];
 const incomeRanges = ['BELOW_2_LAKH', '2_TO_5_LAKH', '5_TO_10_LAKH', 'ABOVE_10_LAKH'];
 const villageToles = ['Galkopakha', 'Naya Bazar', 'Thamel', 'Lazimpat', 'Kalanki', 'Banasthali', 'Balaju', 'Swoyambhu'];
@@ -260,15 +260,43 @@ async function seedMembers(cooperativeIdentifier?: string, count: number = 20) {
 }
 
 // Get args
-const cooperativeIdentifier = process.argv[2];
-const count = process.argv[3] ? parseInt(process.argv[3]) : 20;
+// Usage: [cooperativeId] [count]
+// - If two args: first is cooperativeId, second is count
+// - If one arg: if numeric, it's count; if not numeric, it's cooperativeId
+// - If no args: use defaults
+const arg1 = process.argv[2];
+const arg2 = process.argv[3];
+
+const isFirstArgNumeric = arg1 && !isNaN(parseInt(arg1));
+const isSecondArgNumeric = arg2 && !isNaN(parseInt(arg2));
+
+let cooperativeIdentifier: string | undefined;
+let count: number;
+
+if (arg1 && arg2) {
+  // Two args provided: first is cooperativeId, second is count (per documented usage)
+  cooperativeIdentifier = arg1;
+  count = isSecondArgNumeric ? parseInt(arg2) : 20;
+} else if (arg1) {
+  // Only one arg provided
+  if (isFirstArgNumeric) {
+    // Numeric: treat as count
+    cooperativeIdentifier = undefined;
+    count = parseInt(arg1);
+  } else {
+    // Non-numeric: treat as cooperative identifier
+    cooperativeIdentifier = arg1;
+    count = 20;
+  }
+} else {
+  // No args provided, use defaults
+  cooperativeIdentifier = undefined;
+  count = 20;
+}
 
 if (cooperativeIdentifier) {
   seedMembers(cooperativeIdentifier, count);
 } else {
-  console.log('⚠️  Please provide a cooperative identifier (subdomain or ID)');
-  console.log('Usage: npx tsx apps/backend/scripts/seed-members.ts <cooperativeIdentifier> [count]');
-  // Optional: Try to use default if none provided for ease of use in dev
-  // seedMembers(undefined, count);
+  seedMembers(undefined, count);
 }
 

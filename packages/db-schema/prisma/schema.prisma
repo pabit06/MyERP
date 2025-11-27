@@ -41,9 +41,11 @@ model Cooperative {
   dartas          Darta[]
   dartaDocuments  DartaDocument[]
   dartaMovements  DartaMovement[]
+  dartaSerialCounters DartaSerialCounter[]
   patraChalanis   PatraChalani[]
   patraChalaniDocuments PatraChalaniDocument[]
   patraChalaniActions PatraChalaniAction[]
+  chalaniSerialCounters ChalaniSerialCounter[]
   employees       Employee[]
   payrollLogs     PayrollLog[]
   attendanceLogs  AttendanceLog[]
@@ -143,6 +145,20 @@ model User {
   settlementsApproved TellerSettlement[] @relation("SettlementApprovedBy")
   mappedAccounts ChartOfAccounts[] @relation("UserAccountMapping")
   notifications Notification[]
+  // DMS Relations
+  createdDartas Darta[] @relation("DartaCreatedBy")
+  updatedDartas Darta[] @relation("DartaUpdatedBy")
+  closedDartas Darta[] @relation("DartaClosedBy")
+  dartaMovementsFrom DartaMovement[] @relation("DartaMovementFrom")
+  dartaMovementsTo DartaMovement[] @relation("DartaMovementTo")
+  dartaMovementsBy DartaMovement[] @relation("DartaMovementBy")
+  createdChalanis PatraChalani[] @relation("ChalaniCreatedBy")
+  updatedChalanis PatraChalani[] @relation("ChalaniUpdatedBy")
+  completedChalanis PatraChalani[] @relation("ChalaniCompletedBy")
+  chalaniActionsBy PatraChalaniAction[] @relation("ChalaniActionBy")
+  chalaniActionsTo PatraChalaniAction[] @relation("ChalaniActionTo")
+  uploadedDartaDocuments DartaDocument[] @relation("DartaDocumentUploadedBy")
+  uploadedChalaniDocuments PatraChalaniDocument[] @relation("ChalaniDocumentUploadedBy")
 
   @@map("users")
 }
@@ -223,6 +239,89 @@ enum TellerSettlementStatus {
   AUTO_APPROVED
   REQUIRES_APPROVAL
   REVERTED
+}
+
+// DMS Enums
+enum DartaStatus {
+  ACTIVE
+  PROCESSING
+  COMPLETED
+  ARCHIVED
+  CANCELLED
+}
+
+enum ChalaniStatus {
+  DRAFT
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  SENT
+  COMPLETED
+  ARCHIVED
+  CANCELLED
+}
+
+enum DocumentPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum ChalaniType {
+  INCOMING
+  OUTGOING
+  INTERNAL
+}
+
+enum DartaCategory {
+  GOVERNMENT_NOTICE
+  LOAN_REQUEST
+  MEMBER_APPLICATION
+  COMPLAINT
+  LEGAL_DOCUMENT
+  FINANCIAL_REPORT
+  MEETING_MINUTE
+  OTHER
+}
+
+enum ChalaniCategory {
+  OFFICIAL_CORRESPONDENCE
+  MEMBER_COMMUNICATION
+  GOVERNMENT_REPLY
+  INTERNAL_MEMO
+  FINANCIAL_DOCUMENT
+  LEGAL_DOCUMENT
+  OTHER
+}
+
+enum DartaMovementType {
+  CREATE
+  FORWARD
+  TRANSFER
+  RETURN
+  APPROVE
+  REJECT
+  CLOSE
+  ARCHIVE
+}
+
+enum ChalaniActionType {
+  FORWARD
+  REPLY
+  NOTE
+  APPROVE
+  REJECT
+  COMPLETE
+  ARCHIVE
+  CANCEL
+}
+
+enum StorageProvider {
+  LOCAL
+  S3
+  AZURE_BLOB
+  GCS
 }
 
 model Member {
@@ -973,31 +1072,129 @@ model OfficialDocument {
   @@map("official_documents")
 }
 
+// ============================================================================
+// DMS (Document Management System) - Darta & Patra Chalani
+// ============================================================================
+// 
+// ATOMIC SERIAL NUMBER GENERATION:
+// - Use DartaSerialCounter/ChalaniSerialCounter tables for race-condition safe numbering
+// - Transaction flow: BEGIN -> SELECT FOR UPDATE -> INCREMENT -> COMMIT
+// - Example: UPDATE darta_serial_counters SET lastSerialNo = lastSerialNo + 1 
+//            WHERE cooperativeId = ? AND fiscalYear = ? RETURNING lastSerialNo;
+//
+// DATE VALIDATION CONSTRAINTS (Application-level, not DB-level):
+// - Darta: senderChalaniDate <= receivedDate (if both provided)
+// - PatraChalani: receivedDate <= date (for incoming), date <= sentDate (for outgoing)
+// - These should be enforced in application code or via Prisma middleware
+//
+// FULL-TEXT SEARCH:
+// - Add PostgreSQL GIN indexes via raw SQL migration:
+//   CREATE INDEX idx_darta_title_gin ON dartas USING gin(to_tsvector('nepali', title));
+//   CREATE INDEX idx_darta_subject_gin ON dartas USING gin(to_tsvector('nepali', subject));
+//   CREATE INDEX idx_chalani_subject_gin ON patra_chalanis USING gin(to_tsvector('nepali', subject));
+//
+// ============================================================================
+
+// Serial Number Counter for Atomic Generation (Race-condition safe)
+model DartaSerialCounter {
+  id            String   @id @default(cuid())
+  cooperativeId String
+  fiscalYear    String   // e.g., "2081/82"
+  lastSerialNo  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+
+  @@unique([cooperativeId, fiscalYear])
+  @@index([cooperativeId, fiscalYear])
+  @@map("darta_serial_counters")
+}
+
+model ChalaniSerialCounter {
+  id            String   @id @default(cuid())
+  cooperativeId String
+  fiscalYear    String   // e.g., "2081/82"
+  lastSerialNo  Int      @default(0)
+  updatedAt     DateTime @updatedAt
+
+  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+
+  @@unique([cooperativeId, fiscalYear])
+  @@index([cooperativeId, fiscalYear])
+  @@map("chalani_serial_counters")
+}
+
 // Darta (File/Record Management System)
 model Darta {
   id            String   @id @default(cuid())
   cooperativeId String
-  dartaNumber   String   // Auto-generated darta number (e.g., "D-2081-001")
+  
+  // Smart Numbering (Atomic via Counter Table)
+  fiscalYear    String   // e.g., "2081/82" (Use for resets)
+  serialNo      Int      // e.g., 1 (Resets every fiscal year, generated atomically)
+  dartaNumber   String   @unique // Auto-generated formatted (e.g., "D-081/82-001")
+
+  // Document Details
   title         String
-  description   String?
-  category      String?  // Category of the file
-  subject       String?  // Subject matter
-  status        String   @default("active") // "active", "closed", "archived"
-  priority      String   @default("normal") // "low", "normal", "high", "urgent"
-  remarks       String?
-  createdBy     String?  // User ID who created
+  description   String?  @db.Text
+  subject       String?  // Subject matter (विषय)
+  category      DartaCategory?
+  status        DartaStatus @default(ACTIVE)
+  priority      DocumentPriority @default(NORMAL)
+  remarks       String?  @db.Text
+  
+  // Source Info (पत्र पठाउनेको विवरण)
+  senderName    String   // Received From (Organization/Person Name)
+  senderAddress String?  // Sender's address
+  senderChalaniNo   String?   // प्राप्त पत्रको चलानी नं. (Reference from sender)
+  senderChalaniDate DateTime? // प्राप्त पत्रको मिति
+  receivedDate  DateTime @default(now()) // दर्ता मिति (Registration Date)
+
+  // Tracking & Public Access
+  qrCode        String?  @unique // QR code for public tracking
+  trackingCode  String?  @unique // Public tracking code (e.g., "TRK-ABC123")
+  publicTrackingEnabled Boolean @default(false) // Allow public tracking page
+
+  // Audit Trail
+  createdBy     String?
+  createdByUser User?    @relation("DartaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedBy     String?
+  updatedByUser User?    @relation("DartaUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  closedBy      String?
+  closedByUser  User?    @relation("DartaClosedBy", fields: [closedBy], references: [id], onDelete: SetNull)
+  
+  // Soft Delete & Archival
+  deletedAt     DateTime?
+  deletedBy     String?
+  isArchived    Boolean  @default(false)
+  archivedAt    DateTime?
+  archivedBy    String?
+  retentionUntil DateTime? // Auto-archive after this date
+
+  // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   closedAt      DateTime?
-  closedBy      String?
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   documents   DartaDocument[]
   movements   DartaMovement[]
+  generatedChalanis PatraChalani[] @relation("DartaToChalani") // Chalani generated from this Darta
 
-  @@unique([cooperativeId, dartaNumber])
+  // Constraints & Indexes
+  @@unique([cooperativeId, fiscalYear, serialNo]) // Ensures numbering is unique per Cooperative per Fiscal Year
   @@index([cooperativeId, status])
+  @@index([cooperativeId, fiscalYear])
+  @@index([cooperativeId, receivedDate])
+  @@index([cooperativeId, category])
+  @@index([cooperativeId, priority])
+  @@index([cooperativeId, isArchived, deletedAt])
+  @@index([dartaNumber]) // Fast lookup by number
+  @@index([trackingCode]) // Public tracking lookup
+  @@index([qrCode]) // QR code lookup
+  // Note: Full-text search indexes (GIN for title, subject, description) should be added via raw SQL migration
+  // Example: CREATE INDEX idx_darta_title_gin ON dartas USING gin(to_tsvector('nepali', title));
   @@map("dartas")
 }
 
@@ -1005,14 +1202,44 @@ model DartaDocument {
   id            String   @id @default(cuid())
   dartaId       String
   cooperativeId String
+  
+  // Document Metadata
   title         String
   fileName      String
-  filePath      String
-  fileSize      Int?
-  mimeType      String?
   description   String?
+  
+  // Storage Information
+  storageProvider StorageProvider @default(LOCAL)
+  filePath      String   // Local path or S3 key
+  fileUrl       String?  // Public/Pre-signed URL
+  fileSize      Int?     // Size in bytes
+  mimeType      String?
+  contentDisposition String? // "inline" or "attachment"
+  
+  // S3/Cloud Storage Metadata
+  bucket        String?  // S3 bucket name
+  key           String?  // S3 object key
+  region        String?  // AWS region
+  fileHash      String?  // SHA-256 hash for integrity
+  etag          String?  // S3 ETag
+  
+  // Versioning
+  version       Int      @default(1)
+  isLatest      Boolean  @default(true)
+  previousVersionId String? // Link to previous version
+  
+  // Audit
   uploadedBy    String?
+  uploadedByUser User?   @relation("DartaDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
   uploadedAt    DateTime @default(now())
+  
+  // Soft Delete
+  deletedAt     DateTime?
+  deletedBy     String?
+  
+  // Retention
+  retentionUntil DateTime? // Auto-delete after this date
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1020,6 +1247,9 @@ model DartaDocument {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   darta       Darta       @relation(fields: [dartaId], references: [id], onDelete: Cascade)
 
+  @@index([dartaId])
+  @@index([cooperativeId, deletedAt])
+  @@index([fileHash]) // For duplicate detection
   @@map("darta_documents")
 }
 
@@ -1027,20 +1257,31 @@ model DartaMovement {
   id            String   @id @default(cuid())
   dartaId       String
   cooperativeId String
+  
+  // Movement Details
+  movementType  DartaMovementType
   fromUserId    String?  // User who sent/transferred
   toUserId      String?  // User who received
   fromDepartment String? // Department/office from
   toDepartment  String?  // Department/office to
-  movementType  String   // "create", "transfer", "forward", "return", "close"
-  remarks       String?
-  movedAt       DateTime @default(now())
+  remarks       String?  @db.Text
+  
+  // Audit
   movedBy       String?  // User who performed the movement
+  movedAt       DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   darta       Darta       @relation(fields: [dartaId], references: [id], onDelete: Cascade)
+  fromUser    User?       @relation("DartaMovementFrom", fields: [fromUserId], references: [id], onDelete: SetNull)
+  toUser      User?       @relation("DartaMovementTo", fields: [toUserId], references: [id], onDelete: SetNull)
+  movedByUser User?       @relation("DartaMovementBy", fields: [movedBy], references: [id], onDelete: SetNull)
 
   @@index([dartaId])
+  @@index([cooperativeId, movedAt])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([movementType])
   @@map("darta_movements")
 }
 
@@ -1048,20 +1289,63 @@ model DartaMovement {
 model PatraChalani {
   id            String   @id @default(cuid())
   cooperativeId String
-  chalaniNumber String   // Auto-generated chalani number (e.g., "PC-2081-001")
-  patraNumber   String?  // Reference letter number
-  type          String   // "incoming", "outgoing", "internal"
+  
+  // Smart Numbering (Atomic via Counter Table)
+  fiscalYear    String   // e.g., "2081/82"
+  serialNo      Int      // e.g., 1 (Generated atomically)
+  chalaniNumber String   @unique // Auto-generated (e.g., "C-081/82-001")
+  
+  // Link to Darta (Reply)
+  replyToDartaId String?
+  replyToDarta   Darta?  @relation("DartaToChalani", fields: [replyToDartaId], references: [id], onDelete: SetNull)
+  patraNumber   String?  // Reference letter number (if replying to external letter)
+  
+  // Document Details
+  type          ChalaniType
   subject       String
-  from          String?  // Sender (for incoming) or recipient (for outgoing)
-  to            String?  // Recipient (for outgoing) or sender (for incoming)
-  date          DateTime // Letter date
+  content       String?  @db.Text // पत्रको ब्यहोरा (Letter content)
+  category      ChalaniCategory?
+  status        ChalaniStatus @default(DRAFT)
+  priority      DocumentPriority @default(NORMAL)
+  remarks       String?  @db.Text
+  
+  // Receiver/Sender Details
+  receiverName  String   // पत्र पाउने संस्था वा व्यक्ति
+  receiverAddress String?
+  senderName    String?  // Sender (usually our office for outgoing)
+  senderAddress String?  // Our office address
+  
+  // Dispatch Details
+  date          DateTime // Letter date (पत्रको मिति)
   receivedDate  DateTime? // Date received (for incoming)
-  sentDate      DateTime? // Date sent (for outgoing)
-  priority      String   @default("normal") // "low", "normal", "high", "urgent"
-  status        String   @default("pending") // "pending", "in_progress", "completed", "archived"
-  category      String?  // Category of letter
-  remarks       String?
+  sentDate      DateTime? // Date sent (चलानी मिति)
+  transportMode String?  // "Email", "Post Office", "By Hand", "Courier"
+  
+  // CC/BODHARTHA
+  bodhartha     String?  @db.Text // CC to other departments/orgs
+  
+  // Tracking & Public Access
+  qrCode        String?  @unique // QR code for public tracking
+  trackingCode  String?  @unique // Public tracking code
+  publicTrackingEnabled Boolean @default(false)
+
+  // Audit Trail
   createdBy     String?
+  createdByUser User?    @relation("ChalaniCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedBy     String?
+  updatedByUser User?    @relation("ChalaniUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  completedBy   String?
+  completedByUser User?  @relation("ChalaniCompletedBy", fields: [completedBy], references: [id], onDelete: SetNull)
+  
+  // Soft Delete & Archival
+  deletedAt     DateTime?
+  deletedBy     String?
+  isArchived    Boolean  @default(false)
+  archivedAt    DateTime?
+  archivedBy    String?
+  retentionUntil DateTime?
+
+  // Timestamps
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   completedAt   DateTime?
@@ -1071,9 +1355,19 @@ model PatraChalani {
   documents   PatraChalaniDocument[]
   actions     PatraChalaniAction[]
 
-  @@unique([cooperativeId, chalaniNumber])
+  // Constraints & Indexes
+  @@unique([cooperativeId, fiscalYear, serialNo]) // Ensures numbering is unique per Cooperative per Fiscal Year
   @@index([cooperativeId, type, status])
   @@index([cooperativeId, date])
+  @@index([cooperativeId, fiscalYear])
+  @@index([cooperativeId, category])
+  @@index([cooperativeId, priority])
+  @@index([cooperativeId, isArchived, deletedAt])
+  @@index([chalaniNumber]) // Fast lookup by number
+  @@index([trackingCode]) // Public tracking lookup
+  @@index([qrCode]) // QR code lookup
+  @@index([replyToDartaId]) // Link to source Darta
+  // Note: Full-text search indexes for subject/content should be added via raw SQL migration
   @@map("patra_chalanis")
 }
 
@@ -1081,14 +1375,44 @@ model PatraChalaniDocument {
   id            String   @id @default(cuid())
   patraChalaniId String
   cooperativeId String
+  
+  // Document Metadata
   title         String
   fileName      String
-  filePath      String
-  fileSize      Int?
-  mimeType      String?
   description   String?
+  
+  // Storage Information
+  storageProvider StorageProvider @default(LOCAL)
+  filePath      String   // Local path or S3 key
+  fileUrl       String?  // Public/Pre-signed URL
+  fileSize      Int?     // Size in bytes
+  mimeType      String?
+  contentDisposition String? // "inline" or "attachment"
+  
+  // S3/Cloud Storage Metadata
+  bucket        String?  // S3 bucket name
+  key           String?  // S3 object key
+  region        String?  // AWS region
+  fileHash      String?  // SHA-256 hash for integrity
+  etag          String?  // S3 ETag
+  
+  // Versioning
+  version       Int      @default(1)
+  isLatest      Boolean  @default(true)
+  previousVersionId String? // Link to previous version
+  
+  // Audit
   uploadedBy    String?
+  uploadedByUser User?   @relation("ChalaniDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
   uploadedAt    DateTime @default(now())
+  
+  // Soft Delete
+  deletedAt     DateTime?
+  deletedBy     String?
+  
+  // Retention
+  retentionUntil DateTime? // Auto-delete after this date
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1096,6 +1420,9 @@ model PatraChalaniDocument {
   cooperative  Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   patraChalani PatraChalani @relation(fields: [patraChalaniId], references: [id], onDelete: Cascade)
 
+  @@index([patraChalaniId])
+  @@index([cooperativeId, deletedAt])
+  @@index([fileHash]) // For duplicate detection
   @@map("patra_chalani_documents")
 }
 
@@ -1103,17 +1430,26 @@ model PatraChalaniAction {
   id            String   @id @default(cuid())
   patraChalaniId String
   cooperativeId String
-  actionType    String   // "forward", "reply", "note", "complete", "archive"
-  actionBy      String?  // User who performed the action
+  
+  // Action Details
+  actionType    ChalaniActionType
   actionTo      String?  // User/Department action is forwarded to
-  remarks       String?
+  remarks       String?  @db.Text
   actionDate    DateTime @default(now())
+
+  // Audit
+  actionBy      String?  // User who performed the action
 
   // Relations
   cooperative  Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   patraChalani PatraChalani @relation(fields: [patraChalaniId], references: [id], onDelete: Cascade)
+  actionByUser User?       @relation("ChalaniActionBy", fields: [actionBy], references: [id], onDelete: SetNull)
+  actionToUser User?       @relation("ChalaniActionTo", fields: [actionTo], references: [id], onDelete: SetNull)
 
   @@index([patraChalaniId])
+  @@index([cooperativeId, actionDate])
+  @@index([actionType])
+  @@index([actionBy])
   @@map("patra_chalani_actions")
 }
 
@@ -2073,4 +2409,3 @@ model GenericWorkflowHistory {
   @@index([changedAt])
   @@map("generic_workflow_history")
 }
-

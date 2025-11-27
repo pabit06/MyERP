@@ -9,6 +9,21 @@ import { getCurrentNepaliFiscalYear } from '../lib/nepali-fiscal-year.js';
 
 const router = Router();
 
+// Map frontend status values to DartaStatus enum values
+const mapDartaStatus = (status: string): string | undefined => {
+  const statusMap: Record<string, string> = {
+    'PENDING': 'ACTIVE',      // Frontend "PENDING" maps to "ACTIVE" in schema
+    'ACTIVE': 'ACTIVE',
+    'IN_PROGRESS': 'PROCESSING', // Frontend "IN_PROGRESS" maps to "PROCESSING" in schema
+    'PROCESSING': 'PROCESSING',
+    'COMPLETED': 'COMPLETED',
+    'DONE': 'COMPLETED',
+    'ARCHIVED': 'ARCHIVED',
+    'CANCELLED': 'CANCELLED',
+  };
+  return statusMap[status.toUpperCase()];
+};
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -47,7 +62,7 @@ router.use(isModuleEnabled('dms'));
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { status, category, search, page = '1', limit = '20' } = req.query;
+    const { status, category, search, fiscalYear, page = '1', limit = '20' } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
@@ -58,11 +73,18 @@ router.get('/', async (req: Request, res: Response) => {
     };
 
     if (status) {
-      where.status = status as string;
+      const mappedStatus = mapDartaStatus(status as string);
+      if (mappedStatus) {
+        where.status = mappedStatus;
+      }
     }
 
     if (category) {
       where.category = category as string;
+    }
+
+    if (fiscalYear) {
+      where.fiscalYear = fiscalYear as string;
     }
 
     if (search) {
@@ -158,42 +180,81 @@ router.get('/:id', async (req: Request, res: Response) => {
 router.post('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { title, description, category, subject, priority, remarks } = req.body;
+    const { 
+      title, 
+      description, 
+      category, 
+      subject, 
+      priority, 
+      remarks,
+      senderName,
+      senderAddress,
+      senderChalaniNo,
+      senderChalaniDate,
+      receivedDate,
+      fiscalYear: fiscalYearParam
+    } = req.body;
 
     if (!title) {
       res.status(400).json({ error: 'Title is required' });
       return;
     }
 
+    if (!senderName) {
+      res.status(400).json({ error: 'Sender name is required' });
+      return;
+    }
+
     // Generate darta number
     // Use actual Nepali fiscal year (starts on Shrawan 1, approximately mid-July)
     // Fiscal year runs from Shrawan (month 4) to Ashad (month 3 of next year)
-    const fiscalYear = getCurrentNepaliFiscalYear();
-    const nepaliYear = fiscalYear.bsYear;
-    const fiscalYearStart = fiscalYear.startDate;
+    const currentFiscalYear = getCurrentNepaliFiscalYear();
+    const fiscalYearStr = fiscalYearParam || currentFiscalYear.label.replace('FY ', '');
     
-    // Count documents created in the current Nepali fiscal year
-    // This ensures the count matches the Nepali year used in the document number
+    // Parse fiscal year string (e.g., "080/081" or "2081/82") to get BS year
+    // Format: "YY/YY" or "YYYY/YY" where first part is starting year
+    let bsYear: number;
+    if (fiscalYearStr.includes('/')) {
+      const [startYearStr] = fiscalYearStr.split('/');
+      if (startYearStr.length === 2) {
+        // Format "080/081" - convert to full year (2080)
+        bsYear = 2000 + parseInt(startYearStr);
+      } else {
+        // Format "2081/82" - use as is
+        bsYear = parseInt(startYearStr);
+      }
+    } else {
+      // Fallback to current fiscal year
+      bsYear = currentFiscalYear.bsYear;
+    }
+    
+    // Count documents with the same fiscalYear string (not by date, to handle custom fiscal years)
+    // This ensures the count matches the fiscal year used in the document number
     const count = await prisma.darta.count({
       where: {
         cooperativeId: tenantId,
-        createdAt: {
-          gte: fiscalYearStart,
-        },
+        fiscalYear: fiscalYearStr,
       },
     });
-    const dartaNumber = `D-${nepaliYear}-${String(count + 1).padStart(3, '0')}`;
+    const dartaNumber = `D-${String(bsYear).slice(-2)}-${String(count + 1).padStart(3, '0')}`;
 
     const darta = await prisma.darta.create({
       data: {
         cooperativeId: tenantId,
+        fiscalYear: fiscalYearStr,
+        serialNo: count + 1,
         dartaNumber,
         title,
         description,
         category,
         subject,
-        priority: priority || 'normal',
+        priority: (priority || 'NORMAL').toUpperCase(),
         remarks,
+        senderName,
+        senderAddress,
+        senderChalaniNo,
+        senderChalaniDate: senderChalaniDate ? new Date(senderChalaniDate) : null,
+        receivedDate: receivedDate ? new Date(receivedDate) : new Date(),
         createdBy: req.user!.userId,
       },
       include: {
@@ -246,12 +307,15 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (description !== undefined) updateData.description = description;
     if (category !== undefined) updateData.category = category;
     if (subject !== undefined) updateData.subject = subject;
-    if (priority) updateData.priority = priority;
+    if (priority) updateData.priority = (priority as string).toUpperCase();
     if (status) {
-      updateData.status = status;
-      if (status === 'closed') {
-        updateData.closedAt = new Date();
-        updateData.closedBy = req.user!.userId;
+      const mappedStatus = mapDartaStatus(status as string);
+      if (mappedStatus) {
+        updateData.status = mappedStatus;
+        if (mappedStatus === 'COMPLETED' || mappedStatus === 'ARCHIVED') {
+          updateData.closedAt = new Date();
+          updateData.closedBy = req.user!.userId;
+        }
       }
     }
     if (remarks !== undefined) updateData.remarks = remarks;
