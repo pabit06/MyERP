@@ -209,23 +209,27 @@ router.post('/', async (req: Request, res: Response) => {
     // Use actual Nepali fiscal year (starts on Shrawan 1, approximately mid-July)
     // Fiscal year runs from Shrawan (month 4) to Ashad (month 3 of next year)
     const currentFiscalYear = getCurrentNepaliFiscalYear();
-    const fiscalYearStr = fiscalYearParam || currentFiscalYear.label.replace('FY ', '');
+    let fiscalYearStr = fiscalYearParam || currentFiscalYear.label.replace('FY ', '');
     
-    // Parse fiscal year string (e.g., "080/081" or "2081/82") to get BS year
-    // Format: "YY/YY" or "YYYY/YY" where first part is starting year
+    // Normalize fiscal year format to shortened format (2-digit/2-digit) to match frontend
+    // Accepts both "2081/82" and "081/082" formats, normalizes to "081/082"
     let bsYear: number;
     if (fiscalYearStr.includes('/')) {
-      const [startYearStr] = fiscalYearStr.split('/');
+      const [startYearStr, endYearStr] = fiscalYearStr.split('/');
       if (startYearStr.length === 2) {
-        // Format "080/081" - convert to full year (2080)
+        // Already in shortened format "080/081"
         bsYear = 2000 + parseInt(startYearStr);
       } else {
-        // Format "2081/82" - use as is
+        // Full format "2081/82" - convert to shortened format
         bsYear = parseInt(startYearStr);
+        // End year is always bsYear + 1 for fiscal year format
+        const endYear = bsYear + 1;
+        fiscalYearStr = `${String(bsYear).slice(-2)}/${String(endYear).slice(-2)}`;
       }
     } else {
       // Fallback to current fiscal year
       bsYear = currentFiscalYear.bsYear;
+      fiscalYearStr = `${String(bsYear).slice(-2)}/${String(bsYear + 1).slice(-2)}`;
     }
     
     // Count documents with the same fiscalYear string (not by date, to handle custom fiscal years)

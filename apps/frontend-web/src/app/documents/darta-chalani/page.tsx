@@ -96,7 +96,8 @@ export default function DartaChalaniPage() {
       // For "all" view, use separate pagination; otherwise use main pagination
       const dartaPage = recordType === 'all' ? dartaPagination.page : pagination.page;
       const chalaniPage = recordType === 'all' ? chalaniPagination.page : pagination.page;
-      const limit = recordType === 'all' ? dartaPagination.limit : pagination.limit;
+      const dartaLimit = recordType === 'all' ? dartaPagination.limit : pagination.limit;
+      const chalaniLimit = recordType === 'all' ? chalaniPagination.limit : pagination.limit;
 
       // Map status for Darta endpoint
       const mapStatusForDarta = (status: string): string | null => {
@@ -119,7 +120,7 @@ export default function DartaChalaniPage() {
       if (recordType === 'all' || recordType === 'darta') {
         const dartaParams = new URLSearchParams({
           page: dartaPage.toString(),
-          limit: limit.toString(),
+          limit: dartaLimit.toString(),
         });
         if (filters.status) {
           const mappedStatus = mapStatusForDarta(filters.status);
@@ -167,7 +168,7 @@ export default function DartaChalaniPage() {
       if (recordType === 'all' || recordType === 'chalani') {
         const chalaniParams = new URLSearchParams({
           page: chalaniPage.toString(),
-          limit: limit.toString(),
+          limit: chalaniLimit.toString(),
         });
         if (filters.status) {
           const mappedStatus = mapStatusForChalani(filters.status);

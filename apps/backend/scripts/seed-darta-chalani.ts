@@ -195,7 +195,8 @@ async function seedDartaChalani(
   for (let i = 0; i < dartaCount; i++) {
     const receivedDate = randomRecentDate();
     const fiscalYear = getFiscalYearForDate(receivedDate);
-    const fiscalYearStr = `${fiscalYear.bsYear}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
+    // Use shortened format (2-digit/2-digit) to match frontend format (e.g., "081/082")
+    const fiscalYearStr = `${String(fiscalYear.bsYear).slice(-2)}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
     
     const serialNo = await getNextSerialNo(cooperativeId, fiscalYearStr, 'darta', fiscalYear.startDate);
     const dartaNumber = formatDartaNumber(fiscalYearStr, serialNo);
@@ -287,7 +288,8 @@ async function seedDartaChalani(
   for (let i = 0; i < chalaniCount; i++) {
     const letterDate = randomRecentDate();
     const fiscalYear = getFiscalYearForDate(letterDate);
-    const fiscalYearStr = `${fiscalYear.bsYear}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
+    // Use shortened format (2-digit/2-digit) to match frontend format (e.g., "081/082")
+    const fiscalYearStr = `${String(fiscalYear.bsYear).slice(-2)}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
     
     const serialNo = await getNextSerialNo(cooperativeId, fiscalYearStr, 'chalani', fiscalYear.startDate);
     const chalaniNumber = formatChalaniNumber(fiscalYearStr, serialNo);
