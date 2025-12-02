@@ -21,7 +21,8 @@
     "seed:darta-chalani": "tsx scripts/seed-darta-chalani.ts",
     "reset:members": "tsx scripts/reset-and-seed-members.ts",
     "test:notifications": "tsx scripts/test-notifications.ts",
-    "test:permissions": "tsx scripts/test-permissions.ts"
+    "test:permissions": "tsx scripts/test-permissions.ts",
+    "create-system-admin": "tsx scripts/create-system-admin.ts"
   },
   "dependencies": {
     "@myerp/db-schema": "workspace:*",
@@ -36,7 +37,7 @@
     "multer": "^2.0.2",
     "nepali-date-converter": "^3.4.0",
     "node-cache": "^5.1.2",
-    "nodemailer": "^7.0.10",
+    "nodemailer": "^7.0.11",
     "pdfkit": "^0.17.2",
     "twilio": "^5.10.6",
     "xmlbuilder2": "^3.0.2"

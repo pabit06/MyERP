@@ -4,7 +4,8 @@ declare global {
   namespace Express {
     interface Request {
       user?: JWTPayload & {
-        tenantId: string;
+        tenantId: string | null; // Can be null for system admin
+        isSystemAdmin?: boolean;
       };
     }
   }

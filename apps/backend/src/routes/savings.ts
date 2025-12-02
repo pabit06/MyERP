@@ -34,7 +34,17 @@ router.post('/products', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
     const userId = req.user!.userId;
-    const { code, name, description, interestRate, minimumBalance } = req.body;
+    const {
+      code,
+      name,
+      description,
+      interestRate,
+      minimumBalance,
+      interestPostingFrequency,
+      interestCalculationMethod,
+      isTaxApplicable,
+      taxRate,
+    } = req.body;
 
     const product = await savingsController.createProduct(
       {
@@ -44,6 +54,10 @@ router.post('/products', async (req: Request, res: Response) => {
         description,
         interestRate,
         minimumBalance,
+        interestPostingFrequency,
+        interestCalculationMethod,
+        isTaxApplicable,
+        taxRate,
       },
       userId
     );
@@ -84,7 +98,7 @@ router.post('/accounts', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
     const userId = req.user!.userId;
-    const { memberId, productId, accountNumber, initialDeposit } = req.body;
+    const { memberId, productId, accountNumber, initialDeposit, nominee } = req.body;
 
     const account = await savingsController.createAccount(
       {
@@ -93,6 +107,7 @@ router.post('/accounts', async (req: Request, res: Response) => {
         productId,
         accountNumber,
         initialDeposit,
+        nominee,
       },
       userId
     );
@@ -117,6 +132,119 @@ router.get('/accounts/:id', async (req: Request, res: Response) => {
     res.json({ account });
   } catch (error: any) {
     console.error('Get saving account error:', error);
+    res.status(400).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/savings/accounts/:id/deposit
+ * Deposit amount to saving account
+ */
+router.post('/accounts/:id/deposit', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const { amount, paymentMode, cashAccountCode, bankAccountId, remarks, date } = req.body;
+
+    const result = await savingsController.deposit(
+      {
+        accountId: id,
+        amount,
+        cooperativeId: tenantId,
+        paymentMode,
+        cashAccountCode,
+        bankAccountId,
+        remarks,
+        date: date ? new Date(date) : undefined,
+      },
+      userId
+    );
+
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Deposit error:', error);
+    res.status(400).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/savings/accounts/:id/withdraw
+ * Withdraw amount from saving account
+ */
+router.post('/accounts/:id/withdraw', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const { id } = req.params;
+    const { amount, paymentMode, cashAccountCode, bankAccountId, remarks, date } = req.body;
+
+    const result = await savingsController.withdraw(
+      {
+        accountId: id,
+        amount,
+        cooperativeId: tenantId,
+        paymentMode,
+        cashAccountCode,
+        bankAccountId,
+        remarks,
+        date: date ? new Date(date) : undefined,
+      },
+      userId
+    );
+
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Withdraw error:', error);
+    res.status(400).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/savings/interest/calculate
+ * Calculate daily interest for all active saving accounts
+ */
+router.post('/interest/calculate', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const { asOfDate } = req.body;
+
+    const result = await savingsController.calculateInterest(
+      tenantId,
+      asOfDate ? new Date(asOfDate) : undefined
+    );
+
+    res.json({ success: true, results: result });
+  } catch (error: any) {
+    console.error('Calculate interest error:', error);
+    res.status(400).json({ error: error.message || 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/savings/interest/post
+ * Post interest to saving accounts
+ */
+router.post('/interest/post', async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const { productId, interestExpenseGLCode, tdsPayableGLCode, date } = req.body;
+
+    const result = await savingsController.postInterest(
+      {
+        cooperativeId: tenantId,
+        productId,
+        interestExpenseGLCode,
+        tdsPayableGLCode,
+        date: date ? new Date(date) : undefined,
+      },
+      userId
+    );
+
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Post interest error:', error);
     res.status(400).json({ error: error.message || 'Internal server error' });
   }
 });

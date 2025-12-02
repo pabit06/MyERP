@@ -23,6 +23,7 @@ import dayBookRoutes from './routes/cbs/day-book.js';
 import reportsRoutes from './routes/reports.js';
 import workflowRoutes from './routes/workflow.js';
 import notificationsRoutes from './routes/notifications.js';
+import systemAdminRoutes from './routes/system-admin.js';
 import { initializeAmlMonitoring } from './services/aml/monitor.js';
 import { registerAccountingHooks } from './hooks/accounting-hooks.js';
 import { registerLoansHooks } from './hooks/loans-hooks.js';
@@ -70,6 +71,7 @@ app.use(`${API_PREFIX}/cbs/day-book`, dayBookRoutes);
 app.use(`${API_PREFIX}/reports`, reportsRoutes);
 app.use(`${API_PREFIX}/workflow`, workflowRoutes);
 app.use(`${API_PREFIX}/notifications`, notificationsRoutes);
+app.use(`${API_PREFIX}/system-admin`, systemAdminRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {

@@ -127,14 +127,15 @@ model User {
   passwordHash  String
   firstName     String
   lastName      String
-  cooperativeId String
+  cooperativeId String?  // Optional for system admins
   roleId        String?
+  isSystemAdmin Boolean  @default(false) // System admin flag
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade) // Optional for system admins
   role        Role?       @relation(fields: [roleId], references: [id])
   workflowHistory WorkflowHistory[] @relation()
   genericWorkflowHistory GenericWorkflowHistory[] @relation()
@@ -814,6 +815,10 @@ model SavingProduct {
   description   String?
   interestRate  Decimal  @db.Decimal(5, 2) // Annual interest rate percentage
   minimumBalance Decimal @db.Decimal(15, 2) @default(0)
+  interestPostingFrequency String @default("QUARTERLY") // "QUARTERLY", "ANNUALLY", etc.
+  interestCalculationMethod String @default("DAILY_BALANCE") // "DAILY_BALANCE"
+  isTaxApplicable Boolean @default(true)
+  taxRate       Decimal  @db.Decimal(5, 2) @default(6.0) // Standard TDS rate (6%)
   cooperativeId String
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
@@ -838,6 +843,9 @@ model SavingAccount {
   status          String   // "active", "closed", "dormant"
   openedDate      DateTime @default(now())
   closedDate      DateTime?
+  lastInterestCalculatedDate DateTime?
+  lastInterestPostedDate DateTime?
+  nominee         Json?    // Stores name, relation, citizenship, photo
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -29,6 +29,7 @@ export const authenticate = async (
         cooperativeId: true,
         roleId: true,
         isActive: true,
+        isSystemAdmin: true, // Add system admin flag
       },
     });
 
@@ -40,7 +41,8 @@ export const authenticate = async (
     // Attach user info to request
     req.user = {
       ...payload,
-      tenantId: user.cooperativeId, // Set tenantId for tenant scoping
+      tenantId: user.cooperativeId || null, // Can be null for system admin
+      isSystemAdmin: user.isSystemAdmin, // Add system admin flag
     };
 
     next();

@@ -1,40 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Script from 'next/script';
 // @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
-import type { NepaliDate as LibNepaliDate } from 'react-nepali-datetime-picker';
-
-// Dynamically import DatePicker to avoid SSR issues
-const DatePicker = dynamic(
-  async () => {
-    try {
-      const mod = await import('react-nepali-datetime-picker');
-      // Import CSS dynamically as well
-      await import('react-nepali-datetime-picker/dist/style.css');
-      return { default: mod.DatePicker };
-    } catch (error) {
-      console.error('Failed to load DatePicker:', error);
-      // Return a fallback component
-      return {
-        default: () => (
-          <div className="w-full px-3 py-2 border border-red-300 rounded-lg bg-red-50 text-red-700 text-sm">
-            Date picker failed to load. Please refresh the page.
-          </div>
-        ),
-      };
-    }
-  },
-  {
-    ssr: false,
-    loading: () => (
-      <div className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 text-sm">
-        Loading date picker...
-      </div>
-    ),
-  }
-);
 
 interface NepaliDatePickerProps {
   value?: string; // ISO date string (YYYY-MM-DD) or empty string
@@ -55,6 +24,8 @@ export default function NepaliDatePicker({
   className = '',
   placeholder = 'Select date',
 }: NepaliDatePickerProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const initializedRef = useRef(false);
   const [bsDate, setBsDate] = useState<string>('');
   const [adDate, setAdDate] = useState<string>(value || '');
   const [calendarType, setCalendarType] = useState<'AD' | 'BS'>('BS');
@@ -88,12 +59,107 @@ export default function NepaliDatePicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // Handle BS date selection from the picker
-  // The library's DatePicker returns LibNepaliDate: { year: { value, label }, month: { value, label }, date: { value, label } }
-  const handleBsDateSelect = (selectedDate?: LibNepaliDate) => {
+  // Update input value when bsDate changes (after picker is initialized)
+  useEffect(() => {
+    if (inputRef.current && initializedRef.current) {
+      inputRef.current.value = bsDate || '';
+    }
+  }, [bsDate]);
+
+  // Initialize the Nepali Date Picker
+  useEffect(() => {
+    let handleInputChange: ((e: Event) => void) | null = null;
+
+    // Check if library is loaded and initialize
+    const initializePicker = () => {
+      if (inputRef.current && !initializedRef.current && typeof window !== 'undefined') {
+        // Check if NepaliDatePicker is available (library loaded)
+        // @ts-ignore
+        if (inputRef.current.NepaliDatePicker) {
+          try {
+            // @ts-ignore
+            inputRef.current.NepaliDatePicker({
+              dateFormat: 'YYYY-MM-DD',
+              ndpYear: true,
+              ndpMonth: true,
+              ndpYearCount: 10,
+              disableDaysAfter: 0,
+              disableDaysBefore: 0,
+            });
+
+            // Set initial value if provided
+            if (bsDate && inputRef.current) {
+              inputRef.current.value = bsDate;
+            }
+
+            // Listen to input changes (the library updates the input value when date is selected)
+            handleInputChange = (e: Event) => {
+              const target = e.target as HTMLInputElement;
+              const selectedDate = target.value;
+              if (selectedDate) {
+                handleBsDateChange(selectedDate);
+              } else {
+                // Date cleared
+                setBsDate('');
+                setAdDate('');
+                onChange('');
+                if (onBsDateChange) {
+                  onBsDateChange('');
+                }
+              }
+            };
+
+            // Listen to both change and input events
+            inputRef.current.addEventListener('change', handleInputChange);
+            inputRef.current.addEventListener('input', handleInputChange);
+
+            initializedRef.current = true;
+          } catch (error) {
+            console.error('Error initializing Nepali Date Picker:', error);
+          }
+        }
+      }
+    };
+
+    // Try to initialize immediately (in case script is already loaded)
+    initializePicker();
+
+    // Also listen for script load event
+    if (typeof window !== 'undefined') {
+      // @ts-ignore
+      if (window.nepaliDatePickerLoaded) {
+        initializePicker();
+      } else {
+        // Wait a bit for script to load
+        const checkInterval = setInterval(() => {
+          if (inputRef.current && !initializedRef.current) {
+            // @ts-ignore
+            if (inputRef.current.NepaliDatePicker) {
+              initializePicker();
+              clearInterval(checkInterval);
+            }
+          }
+        }, 100);
+
+        // Cleanup interval after 5 seconds
+        setTimeout(() => clearInterval(checkInterval), 5000);
+      }
+    }
+
+    // Cleanup function
+    return () => {
+      if (inputRef.current && handleInputChange) {
+        inputRef.current.removeEventListener('change', handleInputChange);
+        inputRef.current.removeEventListener('input', handleInputChange);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run once on mount
+
+  // Handle BS date change from the picker
+  const handleBsDateChange = useCallback((bsDateString: string) => {
     try {
-      if (!selectedDate) {
-        // Clear the date
+      if (!bsDateString) {
         setBsDate('');
         setAdDate('');
         onChange('');
@@ -103,18 +169,13 @@ export default function NepaliDatePicker({
         return;
       }
 
-      // Extract year, month, day from the library's NepaliDate format
-      const year = selectedDate.year?.value;
-      const month = selectedDate.month?.value; // This is 1-indexed (1-12)
-      const day = selectedDate.date?.value;
-
-      if (year === undefined || month === undefined || day === undefined) {
-        console.error('Invalid date values from picker:', selectedDate);
+      // Parse BS date (format: YYYY-MM-DD)
+      const [year, month, day] = bsDateString.split('-').map(Number);
+      if (!year || !month || !day) {
+        console.error('Invalid BS date format:', bsDateString);
         return;
       }
 
-      // Format as YYYY-MM-DD (month is already 1-indexed from the library)
-      const bsDateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       setBsDate(bsDateString);
 
       // Convert BS to AD (NepaliDate constructor expects month to be 0-indexed)
@@ -131,9 +192,9 @@ export default function NepaliDatePicker({
         onBsDateChange(bsDateString);
       }
     } catch (error) {
-      console.error('Error handling BS date selection:', error);
+      console.error('Error handling BS date change:', error);
     }
-  };
+  }, [onChange, onBsDateChange]);
 
   // Handle AD date selection (native date input)
   const handleAdDateChange = (adDateString: string) => {
@@ -184,13 +245,41 @@ export default function NepaliDatePicker({
     return `${year} ${nepaliMonths[parseInt(month) - 1]} ${day}`;
   };
 
+  // Load CSS dynamically
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.href = '/nepali.datepicker.v5.0.6.min.css';
+      link.id = 'nepali-datepicker-css';
+      
+      // Check if already added
+      if (!document.getElementById('nepali-datepicker-css')) {
+        document.head.appendChild(link);
+      }
+    }
+  }, []);
+
   return (
-    <div className={className}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-      )}
+    <>
+      {/* Load JS */}
+      <Script
+        src="/nepali.datepicker.v5.0.6.min.js"
+        strategy="lazyOnload"
+        onLoad={() => {
+          // @ts-ignore
+          if (typeof window !== 'undefined') {
+            // @ts-ignore
+            window.nepaliDatePickerLoaded = true;
+          }
+        }}
+      />
+      <div className={className}>
+        {label && (
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {label} {required && <span className="text-red-500">*</span>}
+          </label>
+        )}
 
       <div className="space-y-2">
         {/* Calendar Type Toggle */}
@@ -223,12 +312,12 @@ export default function NepaliDatePicker({
         {calendarType === 'BS' ? (
           <div>
             <div className="w-full">
-              <DatePicker
-                onDateSelect={handleBsDateSelect}
-                className="w-full"
-                dateInput={{
-                  placeholder: placeholder || 'Select date',
-                }}
+              <input
+                ref={inputRef}
+                type="text"
+                placeholder={placeholder || 'Select date'}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                readOnly
               />
             </div>
             {bsDate && adDate && (
@@ -265,6 +354,7 @@ export default function NepaliDatePicker({
             : 'Select date in Gregorian calendar'}
         </p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

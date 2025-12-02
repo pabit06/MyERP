@@ -7,7 +7,7 @@ const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 export interface JWTPayload {
   userId: string;
   email: string;
-  cooperativeId: string;
+  cooperativeId: string | null; // Can be null for system admins
   roleId?: string;
 }
 

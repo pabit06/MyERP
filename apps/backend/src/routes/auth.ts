@@ -26,7 +26,16 @@ router.post('/login', async (req: Request, res: Response) => {
     // Find user
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        passwordHash: true,
+        cooperativeId: true,
+        roleId: true,
+        isActive: true,
+        isSystemAdmin: true,
         role: {
           select: {
             id: true,
@@ -67,9 +76,35 @@ router.post('/login', async (req: Request, res: Response) => {
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      cooperativeId: user.cooperativeId,
+      cooperativeId: user.cooperativeId || null,
       roleId: user.roleId || undefined,
     });
+
+    // Handle system admin login
+    if (user.isSystemAdmin) {
+      res.json({
+        message: 'Login successful',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          cooperativeId: null,
+          roleId: null,
+          role: null,
+          isSystemAdmin: true,
+        },
+        cooperative: null,
+        token,
+      });
+      return;
+    }
+
+    // Regular user login
+    if (!user.cooperative) {
+      res.status(401).json({ error: 'User not associated with a cooperative' });
+      return;
+    }
 
     // Get enabled modules from subscription
     const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
@@ -84,6 +119,7 @@ router.post('/login', async (req: Request, res: Response) => {
         cooperativeId: user.cooperativeId,
         roleId: user.roleId,
         role: user.role || null,
+        isSystemAdmin: false,
       },
       cooperative: {
         id: user.cooperative.id,
@@ -202,6 +238,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
         cooperativeId: true,
         roleId: true,
         isActive: true,
+        isSystemAdmin: true,
         role: {
           select: {
             id: true,
@@ -241,6 +278,28 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
       return;
     }
 
+    // Handle system admin
+    if (user.isSystemAdmin) {
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleId: null,
+          role: null,
+          isSystemAdmin: true,
+        },
+        cooperative: null,
+      });
+      return;
+    }
+
+    if (!user.cooperative) {
+      res.status(404).json({ error: 'User not associated with a cooperative' });
+      return;
+    }
+
     const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
 
     res.json({
@@ -251,6 +310,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
         lastName: user.lastName,
         roleId: user.roleId,
         role: user.role || null,
+        isSystemAdmin: false,
       },
       cooperative: {
         id: user.cooperative.id,
