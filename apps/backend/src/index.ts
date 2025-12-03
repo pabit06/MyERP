@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import saasRoutes from './routes/saas.js';
 import authRoutes from './routes/auth.js';
 import onboardingRoutes from './routes/onboarding.js';
@@ -29,55 +28,83 @@ import { registerAccountingHooks } from './hooks/accounting-hooks.js';
 import { registerLoansHooks } from './hooks/loans-hooks.js';
 import { registerSavingsHooks } from './hooks/savings-hooks.js';
 import { registerDefaultWorkflows } from './lib/workflow-engine.js';
-
-dotenv.config();
+import { env, logger } from './config/index.js';
+import { errorHandler, notFoundHandler } from './middleware/error-handler.js';
+import {
+  helmetConfig,
+  apiLimiter,
+  authLimiter,
+  passwordResetLimiter,
+  requestSizeLimit,
+  trustProxy,
+} from './middleware/security.js';
 
 const app = express();
-const PORT = process.env.PORT || 3001;
-const API_PREFIX = process.env.API_PREFIX || '/api';
+const PORT = env.PORT;
+const API_PREFIX = env.API_PREFIX;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// Trust proxy (important for rate limiting behind reverse proxies)
+if (trustProxy) {
+  app.set('trust proxy', 1);
+  logger.info('Trust proxy enabled (for production behind reverse proxy)');
+}
+
+// Security headers (must be early in middleware chain)
+app.use(helmetConfig);
+
+// CORS
+app.use(
+  cors({
+    origin: env.CORS_ORIGIN,
+    credentials: true,
+  })
+);
+
+// Request size limits
+app.use(express.json({ limit: requestSizeLimit.json }));
+app.use(express.urlencoded({ extended: true, limit: requestSizeLimit.urlencoded }));
 
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Health check
+// Health check (no rate limiting)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Backend server is running' });
 });
 
-// Routes
-app.use(`${API_PREFIX}/saas`, saasRoutes);
-app.use(`${API_PREFIX}/auth`, authRoutes);
-app.use(`${API_PREFIX}/onboarding`, onboardingRoutes);
-app.use(`${API_PREFIX}/members`, membersRoutes);
-app.use(`${API_PREFIX}/member-workflow`, memberWorkflowRoutes);
-app.use(`${API_PREFIX}/savings`, savingsRoutes);
-app.use(`${API_PREFIX}/loans`, loansRoutes);
-app.use(`${API_PREFIX}/shares`, sharesRoutes);
-app.use(`${API_PREFIX}/dms`, dmsRoutes);
-app.use(`${API_PREFIX}/darta`, dartaRoutes);
-app.use(`${API_PREFIX}/patra-chalani`, patraChalaniRoutes);
-app.use(`${API_PREFIX}/hrm`, hrmRoutes);
-app.use(`${API_PREFIX}/governance`, governanceRoutes);
-app.use(`${API_PREFIX}/inventory`, inventoryRoutes);
-app.use(`${API_PREFIX}/compliance`, complianceRoutes);
-app.use(`${API_PREFIX}/public`, publicRoutes);
-app.use(`${API_PREFIX}/subscription`, subscriptionRoutes);
-app.use(`${API_PREFIX}/accounting`, accountingRoutes);
-app.use(`${API_PREFIX}/cbs/day-book`, dayBookRoutes);
-app.use(`${API_PREFIX}/reports`, reportsRoutes);
-app.use(`${API_PREFIX}/workflow`, workflowRoutes);
-app.use(`${API_PREFIX}/notifications`, notificationsRoutes);
-app.use(`${API_PREFIX}/system-admin`, systemAdminRoutes);
+// Routes with rate limiting
+// Auth routes with stricter rate limiting
+app.use(`${API_PREFIX}/auth`, authLimiter, authRoutes);
 
-// Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ error: 'Internal server error' });
-});
+// All other API routes with general rate limiting
+app.use(`${API_PREFIX}/saas`, apiLimiter, saasRoutes);
+app.use(`${API_PREFIX}/onboarding`, apiLimiter, onboardingRoutes);
+app.use(`${API_PREFIX}/members`, apiLimiter, membersRoutes);
+app.use(`${API_PREFIX}/member-workflow`, apiLimiter, memberWorkflowRoutes);
+app.use(`${API_PREFIX}/savings`, apiLimiter, savingsRoutes);
+app.use(`${API_PREFIX}/loans`, apiLimiter, loansRoutes);
+app.use(`${API_PREFIX}/shares`, apiLimiter, sharesRoutes);
+app.use(`${API_PREFIX}/dms`, apiLimiter, dmsRoutes);
+app.use(`${API_PREFIX}/darta`, apiLimiter, dartaRoutes);
+app.use(`${API_PREFIX}/patra-chalani`, apiLimiter, patraChalaniRoutes);
+app.use(`${API_PREFIX}/hrm`, apiLimiter, hrmRoutes);
+app.use(`${API_PREFIX}/governance`, apiLimiter, governanceRoutes);
+app.use(`${API_PREFIX}/inventory`, apiLimiter, inventoryRoutes);
+app.use(`${API_PREFIX}/compliance`, apiLimiter, complianceRoutes);
+app.use(`${API_PREFIX}/public`, apiLimiter, publicRoutes);
+app.use(`${API_PREFIX}/subscription`, apiLimiter, subscriptionRoutes);
+app.use(`${API_PREFIX}/accounting`, apiLimiter, accountingRoutes);
+app.use(`${API_PREFIX}/cbs/day-book`, apiLimiter, dayBookRoutes);
+app.use(`${API_PREFIX}/reports`, apiLimiter, reportsRoutes);
+app.use(`${API_PREFIX}/workflow`, apiLimiter, workflowRoutes);
+app.use(`${API_PREFIX}/notifications`, apiLimiter, notificationsRoutes);
+app.use(`${API_PREFIX}/system-admin`, apiLimiter, systemAdminRoutes);
+
+// 404 handler (must be after all routes)
+app.use(notFoundHandler);
+
+// Error handling middleware (must be last)
+app.use(errorHandler);
 
 // Initialize hooks system
 registerAccountingHooks();
@@ -91,6 +118,7 @@ registerDefaultWorkflows();
 initializeAmlMonitoring();
 
 app.listen(PORT, () => {
-  console.log(`🚀 Backend server running on port ${PORT}`);
-  console.log(`📡 API available at http://localhost:${PORT}${API_PREFIX}`);
+  logger.info(`🚀 Backend server running on port ${PORT}`);
+  logger.info(`📡 API available at http://localhost:${PORT}${API_PREFIX}`);
+  logger.info(`🌍 Environment: ${env.NODE_ENV}`);
 });
