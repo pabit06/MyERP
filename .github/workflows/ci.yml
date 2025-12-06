@@ -122,10 +122,12 @@ jobs:
         run: |
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          if [ -z "$JWT_SECRET_VALUE" ]; then
+          # Check if value is empty or contains unexpanded template (indicates missing secret)
+          # GitHub Actions expands missing secrets to empty strings, but we check for both cases
+          if [ -z "$JWT_SECRET_VALUE" ] || echo "$JWT_SECRET_VALUE" | grep -q '\${{'; then
             JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
           fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
+          if [ -z "$JWT_EXPIRES_IN_VALUE" ] || echo "$JWT_EXPIRES_IN_VALUE" | grep -q '\${{'; then
             JWT_EXPIRES_IN_VALUE="7d"
           fi
           echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
@@ -211,10 +213,12 @@ jobs:
         run: |
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          if [ -z "$JWT_SECRET_VALUE" ]; then
+          # Check if value is empty or contains unexpanded template (indicates missing secret)
+          # GitHub Actions expands missing secrets to empty strings, but we check for both cases
+          if [ -z "$JWT_SECRET_VALUE" ] || echo "$JWT_SECRET_VALUE" | grep -q '\${{'; then
             JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
           fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
+          if [ -z "$JWT_EXPIRES_IN_VALUE" ] || echo "$JWT_EXPIRES_IN_VALUE" | grep -q '\${{'; then
             JWT_EXPIRES_IN_VALUE="7d"
           fi
           echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
@@ -263,7 +267,8 @@ jobs:
         run: |
           echo "Waiting for server to start..."
           for i in {1..30}; do
-            if curl -f http://localhost:4000/health > /dev/null 2>&1; then
+            # Try both /health and /health/ (with trailing slash) as Express handles both
+            if curl -f http://localhost:4000/health > /dev/null 2>&1 || curl -f http://localhost:4000/health/ > /dev/null 2>&1; then
               echo "✅ Server is ready!"
               exit 0
             fi
@@ -275,6 +280,9 @@ jobs:
             echo "Server logs:"
             cat apps/backend/server.log
           fi
+          # Show last few lines of server output for debugging
+          echo "Checking server process..."
+          ps aux | grep -i node | grep -v grep || true
           exit 1
 
       - name: Run E2E tests
