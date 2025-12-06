@@ -42,7 +42,7 @@ jobs:
           tar -czf backend-dist.tar.gz dist/ package.json
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: backend-dist
           path: apps/backend/backend-dist.tar.gz
