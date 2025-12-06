@@ -149,10 +149,22 @@ jobs:
     # and uncomment the environment block below:
     # environment:
     #   name: production
+    env:
+      # NEXT_PUBLIC_API_URL is required for production builds
+      # This will fail if the secret is not configured (empty string)
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "$NEXT_PUBLIC_API_URL" ]; then
+            echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for production deployment"
+            echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
+            exit 1
+          fi
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -168,22 +180,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Set frontend environment variables
-        run: |
-          NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
-          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
-          # Production deployments require this secret to be configured
-          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
-            echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for production deployment"
-            echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
-            exit 1
-          fi
-          echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL_VALUE" >> $GITHUB_ENV
-
       - name: Build frontend
         run: pnpm --filter '@myerp/frontend-web' build
-        env:
-          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
 
       - name: Create deployment package
         run: |
