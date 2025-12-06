@@ -82,9 +82,9 @@ jobs:
       - name: Set frontend environment variables
         run: |
           NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
-          # Check if value is empty or contains unexpanded template (indicates missing secret)
+          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
           # CI builds require this secret to ensure correct API configuration
-          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ] || echo "$NEXT_PUBLIC_API_URL_VALUE" | grep -q '\${{'; then
+          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
             echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for CI builds"
             echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
             exit 1
@@ -126,12 +126,12 @@ jobs:
         run: |
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          # Check if value is empty or contains unexpanded template (indicates missing secret)
-          # GitHub Actions expands missing secrets to empty strings, but we check for both cases
-          if [ -z "$JWT_SECRET_VALUE" ] || echo "$JWT_SECRET_VALUE" | grep -q '\${{'; then
+          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
+          # Use fallback values for CI testing if secrets are not configured
+          if [ -z "$JWT_SECRET_VALUE" ]; then
             JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
           fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ] || echo "$JWT_EXPIRES_IN_VALUE" | grep -q '\${{'; then
+          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
             JWT_EXPIRES_IN_VALUE="7d"
           fi
           echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
@@ -217,12 +217,12 @@ jobs:
         run: |
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          # Check if value is empty or contains unexpanded template (indicates missing secret)
-          # GitHub Actions expands missing secrets to empty strings, but we check for both cases
-          if [ -z "$JWT_SECRET_VALUE" ] || echo "$JWT_SECRET_VALUE" | grep -q '\${{'; then
+          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
+          # Use fallback values for CI testing if secrets are not configured
+          if [ -z "$JWT_SECRET_VALUE" ]; then
             JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
           fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ] || echo "$JWT_EXPIRES_IN_VALUE" | grep -q '\${{'; then
+          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
             JWT_EXPIRES_IN_VALUE="7d"
           fi
           echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV

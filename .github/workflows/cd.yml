@@ -169,8 +169,9 @@ jobs:
       - name: Set frontend environment variables
         run: |
           NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
-          # Check if value is empty or contains unexpanded template (indicates missing secret)
-          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ] || echo "$NEXT_PUBLIC_API_URL_VALUE" | grep -q '\${{'; then
+          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
+          # Production deployments require this secret to be configured
+          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
             echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for production deployment"
             echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
             exit 1
