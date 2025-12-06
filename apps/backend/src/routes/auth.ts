@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { comparePassword, generateToken } from '../lib/auth.js';
 import { authenticate } from '../middleware/auth.js';
+import { BadRequestError, UnauthorizedError } from '../lib/errors.js';
+import { asyncHandler } from '../middleware/error-handler.js';
 
 const router = Router();
 
@@ -11,21 +13,75 @@ interface LoginRequest {
 }
 
 /**
- * POST /auth/login
- * Login user and return JWT token
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user and return JWT token
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 example: password123
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Bad request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/login',
+  asyncHandler(async (req: Request, res: Response) => {
     const { email, password }: LoginRequest = req.body;
 
     if (!email || !password) {
-      res.status(400).json({ error: 'Email and password are required' });
-      return;
+      throw new BadRequestError('Email and password are required');
+    }
+
+    // Sanitize email input
+    const sanitizedEmail = sanitizeEmail(email);
+    if (!sanitizedEmail) {
+      throw new BadRequestError('Invalid email format');
     }
 
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email },
+      where: { email: sanitizedEmail },
       select: {
         id: true,
         email: true,
@@ -60,16 +116,24 @@ router.post('/login', async (req: Request, res: Response) => {
     });
 
     if (!user || !user.isActive) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      throw new UnauthorizedError('Invalid credentials');
     }
 
     // Verify password
     const isValidPassword = await comparePassword(password, user.passwordHash);
 
     if (!isValidPassword) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      // Log failed login attempt
+      await createAuditLog({
+        action: AuditAction.LOGIN_FAILURE,
+        userId: user.id,
+        tenantId: user.cooperativeId || undefined,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+        success: false,
+        errorMessage: 'Invalid password',
+      });
+      throw new UnauthorizedError('Invalid credentials');
     }
 
     // Generate JWT token
@@ -78,6 +142,16 @@ router.post('/login', async (req: Request, res: Response) => {
       email: user.email,
       cooperativeId: user.cooperativeId || null,
       roleId: user.roleId || undefined,
+    });
+
+    // Log successful login
+    await createAuditLog({
+      action: AuditAction.LOGIN_SUCCESS,
+      userId: user.id,
+      tenantId: user.cooperativeId || undefined,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
     });
 
     // Handle system admin login
@@ -102,8 +176,7 @@ router.post('/login', async (req: Request, res: Response) => {
 
     // Regular user login
     if (!user.cooperative) {
-      res.status(401).json({ error: 'User not associated with a cooperative' });
-      return;
+      throw new UnauthorizedError('User not associated with a cooperative');
     }
 
     // Get enabled modules from subscription
@@ -130,24 +203,21 @@ router.post('/login', async (req: Request, res: Response) => {
       },
       token,
     });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /auth/member-login
  * Login for members using subdomain, member number, and password
  * This is for mobile app member access
  */
-router.post('/member-login', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/member-login',
+  asyncHandler(async (req: Request, res: Response) => {
     const { subdomain, memberNumber, password } = req.body;
 
     if (!subdomain || !memberNumber || !password) {
-      res.status(400).json({ error: 'Subdomain, member number, and password are required' });
-      return;
+      throw new BadRequestError('Subdomain, member number, and password are required');
     }
 
     // Find cooperative by subdomain
@@ -163,8 +233,7 @@ router.post('/member-login', async (req: Request, res: Response) => {
     });
 
     if (!cooperative) {
-      res.status(404).json({ error: 'Cooperative not found' });
-      return;
+      throw new NotFoundError('Cooperative', subdomain);
     }
 
     // Find member by member number within the cooperative
@@ -177,8 +246,7 @@ router.post('/member-login', async (req: Request, res: Response) => {
     });
 
     if (!member) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
+      throw new UnauthorizedError('Invalid credentials');
     }
 
     // For now, we'll use a simple password check
@@ -214,18 +282,17 @@ router.post('/member-login', async (req: Request, res: Response) => {
       },
       token,
     });
-  } catch (error) {
-    console.error('Member login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /auth/me
  * Get current user information (protected route)
  */
-router.get('/me', authenticate, async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
     const user = await prisma.user.findUnique({
@@ -320,10 +387,7 @@ router.get('/me', authenticate, async (req: Request, res: Response) => {
         enabledModules,
       },
     });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 export default router;

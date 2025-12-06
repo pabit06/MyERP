@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import ProtectedRoute from '../../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../../contexts/AuthContext';
-import MemberWorkflow from '../../../components/MemberWorkflow';
+import { MemberWorkflow } from '@/features/members';
 import Link from 'next/link';
 import { removeDuplication } from '../../../lib/utils';
 

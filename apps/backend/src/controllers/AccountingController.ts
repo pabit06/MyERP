@@ -437,12 +437,43 @@ export class AccountingController extends BaseController {
         },
       });
 
+      // Batch fetch all accounts and latest balances to avoid N+1 queries
+      const accountIds = entries.map((entry) => entry.accountId);
+      const [accounts, latestLedgers] = await Promise.all([
+        tx.chartOfAccounts.findMany({
+          where: { id: { in: accountIds } },
+          select: { id: true, type: true },
+        }),
+        // Get latest ledger entry for each account
+        tx.ledger.findMany({
+          where: {
+            accountId: { in: accountIds },
+            cooperativeId,
+          },
+          select: {
+            accountId: true,
+            balance: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ]);
+
+      // Create maps for O(1) lookup
+      const accountMap = new Map(accounts.map((acc) => [acc.id, acc]));
+      const balanceMap = new Map<string, number>();
+      const seenAccounts = new Set<string>();
+      for (const ledger of latestLedgers) {
+        if (!seenAccounts.has(ledger.accountId)) {
+          balanceMap.set(ledger.accountId, Number(ledger.balance));
+          seenAccounts.add(ledger.accountId);
+        }
+      }
+
       // Create ledger entries with calculated balances
       const ledgerEntries = await Promise.all(
         entries.map(async (entry) => {
-          const account = await tx.chartOfAccounts.findUnique({
-            where: { id: entry.accountId },
-          });
+          const account = accountMap.get(entry.accountId);
 
           if (!account) {
             throw new Error(`Account not found: ${entry.accountId}`);
@@ -454,13 +485,8 @@ export class AccountingController extends BaseController {
             ? entry.debit - entry.credit
             : entry.credit - entry.debit;
 
-          // Get current balance from latest ledger entry for this account
-          const latestLedger = await tx.ledger.findFirst({
-            where: { accountId: entry.accountId },
-            orderBy: { createdAt: 'desc' },
-          });
-
-          const currentBalance = latestLedger ? Number(latestLedger.balance) : 0;
+          // Get current balance from map (O(1) lookup)
+          const currentBalance = balanceMap.get(entry.accountId) || 0;
           const newBalance = currentBalance + balanceChange;
 
           return tx.ledger.create({

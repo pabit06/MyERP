@@ -1,0 +1,259 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, 'upgrade/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run linter
+        run: pnpm lint
+
+  type-check:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm type-check
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm --filter '@myerp/backend' build
+
+      - name: Build frontend
+        run: pnpm --filter '@myerp/frontend-web' build
+
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myerp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
+      NODE_ENV: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma Client
+        run: pnpm --filter '@myerp/db-schema' generate
+
+      - name: Run database migrations
+        run: pnpm --filter '@myerp/db-schema' prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run backend unit tests
+        run: pnpm --filter '@myerp/backend' test
+
+  test-frontend:
+    name: Frontend Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run frontend tests
+        run: pnpm --filter '@myerp/frontend-web' test
+
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myerp_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
+      NODE_ENV: test
+      API_BASE_URL: http://localhost:4000
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm --filter '@myerp/backend' exec playwright install --with-deps chromium
+
+      - name: Generate Prisma Client
+        run: pnpm --filter '@myerp/db-schema' generate
+
+      - name: Run database migrations
+        run: pnpm --filter '@myerp/db-schema' prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Start backend server
+        run: |
+          cd apps/backend
+          pnpm dev > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 15
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ env.JWT_EXPIRES_IN }}
+          NODE_ENV: ${{ env.NODE_ENV }}
+          PORT: 4000
+          API_PREFIX: /api
+
+      - name: Wait for server to be ready
+        run: |
+          echo "Waiting for server to start..."
+          for i in {1..30}; do
+            if curl -f http://localhost:4000/health > /dev/null 2>&1; then
+              echo "✅ Server is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30: Server not ready yet, waiting..."
+            sleep 2
+          done
+          echo "❌ Server failed to start"
+          if [ -f apps/backend/server.log ]; then
+            echo "Server logs:"
+            cat apps/backend/server.log
+          fi
+          exit 1
+
+      - name: Run E2E tests
+        run: pnpm --filter '@myerp/backend' test:e2e
+        env:
+          API_BASE_URL: ${{ env.API_BASE_URL }}
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: apps/backend/playwright-report/
+          retention-days: 30

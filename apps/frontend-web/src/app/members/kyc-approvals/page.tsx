@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import { useAuth } from '../../../contexts/AuthContext';
+import { ProtectedRoute } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
-import { removeDuplication } from '../../../lib/utils';
+import { removeDuplication } from '@/lib/utils';
 import { ArrowUp, ArrowDown } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';

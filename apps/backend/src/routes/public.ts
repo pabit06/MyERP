@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
+import { getCsrfToken } from '../middleware/csrf.js';
 
 const router = Router();
 
@@ -42,5 +43,12 @@ router.get('/profile/:subdomain', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * GET /api/public/csrf-token
+ * Get CSRF token for client-side requests
+ * This is a public endpoint (no authentication required)
+ */
+router.get('/csrf-token', getCsrfToken);
 
 export default router;

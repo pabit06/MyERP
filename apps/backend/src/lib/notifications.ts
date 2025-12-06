@@ -7,6 +7,7 @@ import { prisma } from './prisma.js';
 import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
+import { env } from '../config/index.js';
 
 export interface NotificationData {
   cooperativeId: string;
@@ -86,10 +87,10 @@ async function updateNotificationStatus(
  * Get SMS provider client (Twilio or local)
  */
 function getSMSClient() {
-  const provider = process.env.SMS_PROVIDER || 'console';
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+  const provider = env.SMS_PROVIDER || 'console';
+  const accountSid = env.TWILIO_ACCOUNT_SID;
+  const authToken = env.TWILIO_AUTH_TOKEN;
+  const fromNumber = env.TWILIO_PHONE_NUMBER;
 
   if (provider === 'twilio' && accountSid && authToken && fromNumber) {
     return {
@@ -162,11 +163,11 @@ export async function sendSMS(data: NotificationData): Promise<any> {
  * Get email transporter (SMTP via Nodemailer)
  */
 function getEmailTransporter() {
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = parseInt(process.env.SMTP_PORT || '587', 10);
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-  const smtpSecure = process.env.SMTP_SECURE === 'true';
+  const smtpHost = env.SMTP_HOST;
+  const smtpPort = env.SMTP_PORT || 587;
+  const smtpUser = env.SMTP_USER;
+  const smtpPass = env.SMTP_PASS;
+  const smtpSecure = env.SMTP_SECURE || false;
 
   if (smtpHost && smtpUser && smtpPass) {
     return nodemailer.createTransport({
@@ -197,7 +198,7 @@ export async function sendEmail(data: NotificationData): Promise<any> {
 
   try {
     const transporter = getEmailTransporter();
-    const smtpFrom = process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@myerp.com';
+    const smtpFrom = env.SMTP_FROM || env.SMTP_USER || 'noreply@myerp.com';
 
     if (transporter) {
       // Send via SMTP
@@ -264,10 +265,10 @@ export async function createInAppNotification(data: NotificationData): Promise<a
  * Get FCM admin instance (if configured)
  */
 async function getFCMAdmin() {
-  const fcmProjectId = process.env.FCM_PROJECT_ID;
-  const fcmPrivateKey = process.env.FCM_PRIVATE_KEY;
-  const fcmClientEmail = process.env.FCM_CLIENT_EMAIL;
-  const fcmPrivateKeyPath = process.env.FCM_PRIVATE_KEY_PATH;
+  const fcmProjectId = env.FCM_PROJECT_ID;
+  const fcmPrivateKey = env.FCM_PRIVATE_KEY;
+  const fcmClientEmail = env.FCM_CLIENT_EMAIL;
+  const fcmPrivateKeyPath = env.FCM_PRIVATE_KEY_PATH;
 
   if (!fcmProjectId) {
     return null;
@@ -375,7 +376,10 @@ async function sendPushNotification(data: NotificationData): Promise<any> {
 
     // Mark as sent only after actual push is sent (when FCM is configured and device tokens are available)
     // For now, if FCM is configured but no device tokens are available, keep as PENDING
-    // TODO: Uncomment the following when device tokens are implemented:
+    // NOTE: Device token management needs to be implemented:
+    // - Store device tokens in database (e.g., UserDeviceToken model)
+    // - Register tokens when users log in from mobile apps
+    // - Uncomment the following when device tokens are implemented:
     // if (deviceTokens.length > 0 && response.successCount > 0) {
     //   await updateNotificationStatus(notification.id, NotificationStatus.SENT);
     // }

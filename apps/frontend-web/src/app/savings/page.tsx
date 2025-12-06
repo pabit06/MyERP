@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';

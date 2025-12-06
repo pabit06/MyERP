@@ -11,7 +11,7 @@ import {
   BarChart3,
   Shield,
 } from 'lucide-react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 
 interface ReportCategory {
   id: string;

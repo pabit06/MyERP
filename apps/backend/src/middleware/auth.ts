@@ -41,9 +41,12 @@ export const authenticate = async (
     // Attach user info to request
     req.user = {
       ...payload,
-      tenantId: user.cooperativeId || null, // Can be null for system admin
+      tenantId: user.cooperativeId || null, // Can be null for system admin (deprecated, use currentCooperativeId)
       isSystemAdmin: user.isSystemAdmin, // Add system admin flag
     };
+
+    // Set initial cooperative context from JWT (can be overridden by setCooperativeContext middleware)
+    req.currentCooperativeId = user.cooperativeId || null;
 
     next();
   } catch (error) {

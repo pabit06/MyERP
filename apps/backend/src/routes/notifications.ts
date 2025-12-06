@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
 import {
@@ -10,6 +11,10 @@ import {
   NotificationQueryOptions,
 } from '../lib/notifications.js';
 import { NotificationChannel, NotificationStatus } from '@prisma/client';
+import { validateParams, validateQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { idSchema, paginationSchema } from '../validators/common.js';
+import { createPaginatedResponse } from '../lib/pagination.js';
 
 const router: Router = Router();
 
@@ -19,136 +24,113 @@ router.use(requireTenant);
 
 /**
  * GET /api/notifications
- * Get notifications for the current user or cooperative
+ * Get notifications for the current user or cooperative (with pagination)
  * Query params:
  *   - type: Filter by notification type
  *   - channel: Filter by channel (SMS, EMAIL, IN_APP, PUSH)
  *   - status: Filter by status (PENDING, SENT, FAILED, READ)
  *   - unreadOnly: Only return unread notifications (true/false)
- *   - limit: Number of notifications to return (default: 50)
- *   - offset: Offset for pagination (default: 0)
+ *   - page: Page number (default: 1)
+ *   - limit: Number of notifications per page (default: 20, max: 100)
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/',
+  validateQuery(
+    paginationSchema.extend({
+      type: z.string().optional(),
+      channel: z.nativeEnum(NotificationChannel).optional(),
+      status: z.nativeEnum(NotificationStatus).optional(),
+      unreadOnly: z
+        .string()
+        .transform((val) => val === 'true')
+        .optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const cooperativeId = req.user!.tenantId;
     const userId = req.user!.userId;
-    const { type, channel, status, unreadOnly, limit, offset } = req.query;
+    const { page, limit, type, channel, status, unreadOnly } = req.validatedQuery!;
+
+    const offset = (page - 1) * limit;
 
     const options: NotificationQueryOptions = {
       cooperativeId,
       userId, // Get notifications for current user
       type: type as string | undefined,
-      channel: channel ? (channel as NotificationChannel) : undefined,
-      status: status ? (status as NotificationStatus) : undefined,
-      unreadOnly: unreadOnly === 'true',
-      limit: limit ? parseInt(limit as string, 10) : 50,
-      offset: offset ? parseInt(offset as string, 10) : 0,
+      channel: channel as NotificationChannel | undefined,
+      status: status as NotificationStatus | undefined,
+      unreadOnly: unreadOnly || false,
+      limit,
+      offset,
     };
 
     const result = await getNotifications(options);
 
-    res.json({
-      notifications: result.notifications,
-      total: result.total,
-      limit: options.limit,
-      offset: options.offset,
-    });
-  } catch (error: any) {
-    console.error('Get notifications error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get notifications' });
-  }
-});
+    res.json(
+      createPaginatedResponse(result.notifications, result.total, {
+        page,
+        limit,
+      })
+    );
+  })
+);
 
 /**
  * GET /api/notifications/unread-count
  * Get unread notification count for the current user
  */
-router.get('/unread-count', async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
+router.get('/unread-count', asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
 
-    const count = await getUnreadCount(cooperativeId, userId);
+  const count = await getUnreadCount(cooperativeId, userId);
 
-    res.json({ count });
-  } catch (error: any) {
-    console.error('Get unread count error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get unread count' });
-  }
-});
+  res.json({ count });
+}));
 
 /**
  * PUT /api/notifications/read-all
  * Mark all notifications as read for the current user
  * NOTE: This route must be defined before /:id/read to avoid route matching conflicts
  */
-router.put('/read-all', async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
+router.put('/read-all', asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
 
-    const count = await markAllAsRead(cooperativeId, userId);
+  const count = await markAllAsRead(cooperativeId, userId);
 
-    res.json({
-      message: 'All notifications marked as read',
-      count,
-    });
-  } catch (error: any) {
-    console.error('Mark all as read error:', error);
-    res.status(500).json({ error: error.message || 'Failed to mark all notifications as read' });
-  }
-});
+  res.json({
+    message: 'All notifications marked as read',
+    count,
+  });
+}));
 
 /**
  * PUT /api/notifications/:id/read
  * Mark a notification as read
  */
-router.put('/:id/read', async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const cooperativeId = req.user!.tenantId;
-    const { id } = req.params;
+router.put('/:id/read', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const cooperativeId = req.user!.tenantId;
+  const { id } = req.validatedParams!;
 
-    await markAsRead(id, userId, cooperativeId);
+  await markAsRead(id, userId, cooperativeId);
 
-    res.json({ message: 'Notification marked as read' });
-  } catch (error: any) {
-    console.error('Mark as read error:', error);
-    if (
-      error.message === 'Notification not found' ||
-      error.message === 'Notification does not belong to user'
-    ) {
-      res.status(404).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: error.message || 'Failed to mark notification as read' });
-    }
-  }
-});
+  res.json({ message: 'Notification marked as read' });
+}));
 
 /**
  * DELETE /api/notifications/:id
  * Delete a notification
  */
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-    const cooperativeId = req.user!.tenantId;
-    const { id } = req.params;
+router.delete('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
+  const userId = req.user!.userId;
+  const cooperativeId = req.user!.tenantId;
+  const { id } = req.validatedParams!;
 
-    await deleteNotification(id, userId, cooperativeId);
+  await deleteNotification(id, userId, cooperativeId);
 
-    res.json({ message: 'Notification deleted' });
-  } catch (error: any) {
-    console.error('Delete notification error:', error);
-    if (
-      error.message === 'Notification not found' ||
-      error.message === 'Notification does not belong to user'
-    ) {
-      res.status(404).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: error.message || 'Failed to delete notification' });
-    }
-  }
-});
+  res.json({ message: 'Notification deleted' });
+}));
 
 export default router;

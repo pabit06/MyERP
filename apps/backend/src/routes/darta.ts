@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
@@ -6,6 +7,9 @@ import { requireTenant } from '../middleware/tenant.js';
 import { isModuleEnabled } from '../middleware/module.js';
 import { saveUploadedFile, deleteFile } from '../lib/upload.js';
 import { getCurrentNepaliFiscalYear } from '../lib/nepali-fiscal-year.js';
+import { validate, validateAll, validateParams } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { idSchema } from '../validators/common.js';
 
 const router = Router();
 
@@ -59,10 +63,9 @@ router.use(isModuleEnabled('dms'));
  * GET /api/darta
  * Get all dartas with filters
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { status, category, search, fiscalYear, page = '1', limit = '20' } = req.query;
+router.get('/', asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { status, category, search, fiscalYear, page = '1', limit = '20' } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
@@ -128,20 +131,15 @@ router.get('/', async (req: Request, res: Response) => {
         total,
       },
     });
-  } catch (error) {
-    console.error('Get dartas error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
 /**
  * GET /api/darta/:id
  * Get single darta with details
  */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+router.get('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { id } = req.validatedParams!;
 
     const darta = await prisma.darta.findFirst({
       where: {
@@ -167,43 +165,46 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     res.json({ darta });
-  } catch (error) {
-    console.error('Get darta error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
 /**
  * POST /api/darta
  * Create a new darta
  */
-router.post('/', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/',
+  validate(
+    z.object({
+      title: z.string().min(1, 'Title is required'),
+      senderName: z.string().min(1, 'Sender name is required'),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      subject: z.string().optional(),
+      priority: z.string().optional(),
+      remarks: z.string().optional(),
+      senderAddress: z.string().optional(),
+      senderChalaniNo: z.string().optional(),
+      senderChalaniDate: z.string().datetime().or(z.date()).optional(),
+      receivedDate: z.string().datetime().or(z.date()).optional(),
+      fiscalYear: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { 
-      title, 
-      description, 
-      category, 
-      subject, 
-      priority, 
+    const {
+      title,
+      description,
+      category,
+      subject,
+      priority,
       remarks,
       senderName,
       senderAddress,
       senderChalaniNo,
       senderChalaniDate,
       receivedDate,
-      fiscalYear: fiscalYearParam
-    } = req.body;
-
-    if (!title) {
-      res.status(400).json({ error: 'Title is required' });
-      return;
-    }
-
-    if (!senderName) {
-      res.status(400).json({ error: 'Sender name is required' });
-      return;
-    }
+      fiscalYear: fiscalYearParam,
+    } = req.validated!;
 
     // Generate darta number
     // Use actual Nepali fiscal year (starts on Shrawan 1, approximately mid-July)
@@ -278,21 +279,31 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ darta });
-  } catch (error) {
-    console.error('Create darta error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * PUT /api/darta/:id
  * Update darta
  */
-router.put('/:id', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/:id',
+  validateAll({
+    params: idSchema,
+    body: z.object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      subject: z.string().optional(),
+      priority: z.string().optional(),
+      status: z.string().optional(),
+      remarks: z.string().optional(),
+    }),
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
-    const { title, description, category, subject, priority, status, remarks } = req.body;
+    const { id } = req.validatedParams!;
+    const { title, description, category, subject, priority, status, remarks } = req.validated!;
 
     const darta = await prisma.darta.findFirst({
       where: {
@@ -334,20 +345,16 @@ router.put('/:id', async (req: Request, res: Response) => {
     });
 
     res.json({ darta: updated });
-  } catch (error) {
-    console.error('Update darta error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * DELETE /api/darta/:id
  * Delete darta
  */
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+router.delete('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { id } = req.validatedParams!;
 
     const darta = await prisma.darta.findFirst({
       where: {
@@ -376,11 +383,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
 
     res.json({ message: 'Darta deleted successfully' });
-  } catch (error) {
-    console.error('Delete darta error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
 /**
  * POST /api/darta/:id/upload
@@ -440,16 +443,24 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
  * POST /api/darta/:id/movement
  * Record darta movement
  */
-router.post('/:id/movement', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/:id/movement',
+  validateAll({
+    params: idSchema,
+    body: z.object({
+      movementType: z.string().min(1, 'Movement type is required'),
+      fromUserId: z.string().optional(),
+      toUserId: z.string().optional(),
+      fromDepartment: z.string().optional(),
+      toDepartment: z.string().optional(),
+      remarks: z.string().optional(),
+    }),
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
-    const { movementType, fromUserId, toUserId, fromDepartment, toDepartment, remarks } = req.body;
-
-    if (!movementType) {
-      res.status(400).json({ error: 'Movement type is required' });
-      return;
-    }
+    const { id } = req.validatedParams!;
+    const { movementType, fromUserId, toUserId, fromDepartment, toDepartment, remarks } =
+      req.validated!;
 
     const darta = await prisma.darta.findFirst({
       where: {
@@ -478,11 +489,8 @@ router.post('/:id/movement', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ movement });
-  } catch (error) {
-    console.error('Create darta movement error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/darta/:id/download/:docId

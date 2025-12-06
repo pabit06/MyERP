@@ -1,6 +1,6 @@
 /**
  * Security Middleware
- *
+ * 
  * Provides rate limiting and security headers for the application.
  * - Rate limiting to prevent DDoS and brute force attacks
  * - Security headers via Helmet
@@ -114,6 +114,15 @@ export const helmetConfig = helmet({
   },
   crossOriginEmbedderPolicy: false, // Disable if you need to embed resources from other origins
   crossOriginResourcePolicy: { policy: 'cross-origin' }, // Allow cross-origin resources
+  // Additional security headers
+  xContentTypeOptions: true, // Prevent MIME type sniffing
+  xFrameOptions: { action: 'deny' }, // Prevent clickjacking
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' }, // Control referrer information
+  strictTransportSecurity: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true,
+  },
 });
 
 /**

@@ -31,6 +31,10 @@ pnpm-debug.log*
 
 # Credentials (sensitive information)
 CREDENTIALS.md
+*.txt
+!pnpm-lock.yaml
+JWT_SECRET*.txt
+GENERATED_SECRETS.txt
 
 # Vercel
 .vercel

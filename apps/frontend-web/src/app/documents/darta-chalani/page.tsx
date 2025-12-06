@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../../contexts/AuthContext';
 import { Toaster, toast } from 'react-hot-toast';
 import Link from 'next/link';
-import NepaliDateDisplay from '../../../components/NepaliDateDisplay';
+import { NepaliDateDisplay } from '@/features/components/shared';
 import StatsOverview from './components/StatsOverview';
 import CreateRecordModal from './components/CreateRecordModal';
 import ViewRecordModal from './components/ViewRecordModal';

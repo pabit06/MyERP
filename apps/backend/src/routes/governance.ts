@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import multer from 'multer';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
@@ -9,6 +10,14 @@ import { auditLogFromRequest } from '../lib/audit.js';
 import { generateMeetingNumber } from '../lib/meeting-number.js';
 import { sendMeetingNotifications } from '../lib/notifications.js';
 import { fetchReportData } from '../services/report-data-fetcher.js';
+import { validate, validateAll, validateParams } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import {
+  createMeetingSchema,
+  updateMeetingStatusSchema,
+  createCommitteeSchema,
+} from '@myerp/shared-types';
+import { idSchema } from '../validators/common.js';
 
 const router: Router = Router();
 
@@ -140,8 +149,19 @@ router.get('/meetings', async (req: Request, res: Response) => {
  * POST /api/governance/meetings
  * Create a new meeting
  */
-router.post('/meetings', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/meetings',
+  validate(
+    createMeetingSchema.extend({
+      date: z.string().datetime().or(z.date()).optional(), // New field name
+      scheduledDate: z.string().datetime().or(z.date()).optional(), // Backward compatibility
+      startTime: z.string().datetime().or(z.date()).optional(),
+      endTime: z.string().datetime().or(z.date()).optional(),
+      attendees: z.any().optional(),
+      assignPendingAgendaItems: z.array(z.string()).optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const userId = req.user!.userId || req.user!.id;
     const {
@@ -156,16 +176,10 @@ router.post('/meetings', async (req: Request, res: Response) => {
       committeeId,
       attendees,
       assignPendingAgendaItems, // Array of member IDs to assign to this meeting
-    } = req.body;
+    } = req.validated!;
 
     // Use date if provided, otherwise fall back to scheduledDate for backward compatibility
     const meetingDate = date || scheduledDate;
-    if (!title || !meetingType || !meetingDate) {
-      res.status(400).json({
-        error: 'Missing required fields: title, meetingType, date (or scheduledDate)',
-      });
-      return;
-    }
 
     // Helper function to safely parse dates
     const parseDate = (dateString: string | undefined | null): Date | null => {
@@ -340,24 +354,8 @@ router.post('/meetings', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ meeting });
-  } catch (error: any) {
-    console.error('Create meeting error:', error);
-    const errorMessage = error?.message || 'Unknown error';
-    const errorCode = error?.code || 'UNKNOWN';
-    console.error('Error details:', { errorMessage, errorCode, stack: error?.stack });
-
-    // Provide more specific error messages
-    if (errorCode === 'P2002') {
-      res.status(400).json({ error: 'A meeting with this information already exists' });
-    } else if (errorCode === 'P2003') {
-      res.status(400).json({ error: 'Invalid reference. Please check related records.' });
-    } else if (errorMessage.includes('Invalid date') || errorMessage.includes('date')) {
-      res.status(400).json({ error: 'Invalid date format. Please check the date fields.' });
-    } else {
-      res.status(500).json({ error: 'Internal server error', details: errorMessage });
-    }
-  }
-});
+  })
+);
 
 /**
  * GET /api/governance/meetings/:id
@@ -881,7 +879,7 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
 
     const attendees = meeting.meetingAttendees.map((attendee) => ({
       phone: attendee.committeeMember?.member?.phone || null,
-      email: null, // TODO: Add email to member model if needed
+      email: attendee.committeeMember?.member?.email || null,
       userId: attendee.committeeMember?.member?.id || null,
     }));
 
@@ -1872,15 +1870,17 @@ router.get('/committees', async (req: Request, res: Response) => {
  * POST /api/governance/committees
  * Create a new committee
  */
-router.post('/committees', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/committees',
+  validate(
+    createCommitteeSchema.extend({
+      nameNepali: z.string().optional(),
+      isStatutory: z.boolean().optional().default(false),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { name, nameNepali, description, type, isStatutory } = req.body;
-
-    if (!name) {
-      res.status(400).json({ error: 'Committee name is required' });
-      return;
-    }
+    const { name, nameNepali, description, type, isStatutory = false } = req.validated!;
 
     const committee = await prisma.committee.create({
       data: {
@@ -1889,7 +1889,7 @@ router.post('/committees', async (req: Request, res: Response) => {
         nameNepali,
         description,
         type: type || 'OTHER',
-        isStatutory: isStatutory || false,
+        isStatutory,
       },
     });
 
@@ -1900,14 +1900,8 @@ router.post('/committees', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ committee });
-  } catch (error: any) {
-    console.error('Create committee error:', error);
-    const errorMessage = error?.message || 'Unknown error';
-    const errorCode = error?.code || 'UNKNOWN';
-    console.error('Error details:', { errorMessage, errorCode, stack: error?.stack });
-    res.status(500).json({ error: 'Internal server error', details: errorMessage });
-  }
-});
+  })
+);
 
 /**
  * GET /api/governance/committees/:id
@@ -2601,29 +2595,42 @@ router.get('/agm', async (req: Request, res: Response) => {
  * POST /api/governance/agm
  * Create a new AGM
  */
-router.post('/agm', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/agm',
+  validate(
+    z.object({
+      fiscalYear: z.string().min(1, 'Fiscal year is required'),
+      agmNumber: z.number().int().positive().optional().default(1),
+      bookCloseDate: z.string().datetime().or(z.date()).optional(),
+      scheduledDate: z.string().datetime().or(z.date()),
+      location: z.string().optional(),
+      totalMembers: z.number().int().nonnegative().optional().default(0),
+      presentMembers: z.number().int().nonnegative().optional().default(0),
+      quorumThresholdPercent: z.number().min(0).max(100).optional().default(51.0),
+      approvedDividendBonus: z.number().optional(),
+      approvedDividendCash: z.number().optional(),
+      status: z.string().optional().default('PLANNED'),
+      notes: z.string().optional(),
+      minutesFileUrl: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const {
       fiscalYear,
-      agmNumber,
+      agmNumber = 1,
       bookCloseDate,
       scheduledDate,
       location,
-      totalMembers,
-      presentMembers,
-      quorumThresholdPercent,
+      totalMembers = 0,
+      presentMembers = 0,
+      quorumThresholdPercent = 51.0,
       approvedDividendBonus,
       approvedDividendCash,
-      status,
+      status = 'PLANNED',
       notes,
       minutesFileUrl,
-    } = req.body;
-
-    if (!fiscalYear || !scheduledDate) {
-      res.status(400).json({ error: 'Fiscal year and scheduled date are required' });
-      return;
-    }
+    } = req.validated!;
 
     // Check if AGM with same fiscal year already exists
     const existingAGM = await prisma.aGM.findUnique({
@@ -2666,11 +2673,8 @@ router.post('/agm', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ agm });
-  } catch (error) {
-    console.error('Create AGM error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/governance/agm/:id
@@ -3234,15 +3238,18 @@ router.get('/reports', async (req: Request, res: Response) => {
  * POST /api/governance/reports
  * Create new manager report
  */
-router.post('/reports', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/reports',
+  validate(
+    z.object({
+      fiscalYear: z.string().min(1, 'Fiscal year is required'),
+      month: z.string().min(1, 'Month is required'),
+      title: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { fiscalYear, month, title } = req.body;
-
-    if (!fiscalYear || !month) {
-      res.status(400).json({ error: 'Fiscal year and month are required' });
-      return;
-    }
+    const { fiscalYear, month, title } = req.validated!;
 
     // Check if report already exists for this fiscal year and month
     const existing = await prisma.managerReport.findFirst({
@@ -3276,11 +3283,8 @@ router.post('/reports', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ report });
-  } catch (error) {
-    console.error('Create report error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/governance/reports/:id

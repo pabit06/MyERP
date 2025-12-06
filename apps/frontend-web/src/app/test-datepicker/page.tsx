@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import NepaliDatePicker from '../../components/NepaliDatePicker';
+import { NepaliDatePicker } from '@/features/components/shared';
 
 export default function TestDatePickerPage() {
   const [selectedDate, setSelectedDate] = useState<string>('');

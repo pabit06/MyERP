@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
@@ -10,6 +11,20 @@ import {
   updateLeaveBalanceOnApproval,
   getEmployeeLeaveBalances,
 } from '../services/hrm/leave-service.js';
+import { getFiscalYearForDate } from '../lib/nepali-fiscal-year.js';
+import { getEmployeeLoanDeduction } from '../services/hrm/loan-deduction.js';
+import { getBatchEmployeeLoanDeductions } from '../services/hrm/loan-deduction-batch.js';
+import { validate, validateAll, validateParams, validateQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { paginationSchema, paginationWithSearchSchema } from '../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
+import {
+  createEmployeeSchema,
+  createLeaveRequestSchema,
+  createPayrollRunSchema,
+  updateLeaveRequestStatusSchema,
+} from '@myerp/shared-types';
+import { idSchema } from '../validators/common.js';
 
 const router = Router();
 
@@ -20,45 +35,103 @@ router.use(isModuleEnabled('hrm'));
 
 /**
  * GET /api/hrm/employees
- * Get all employees (with optional filters)
+ * Get all employees (with pagination and optional filters)
  */
-router.get('/employees', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/employees',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      status: z.string().optional(),
+      department: z.string().optional(),
+      departmentId: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { status, department } = req.query;
+    const { page, limit, sortBy, sortOrder, status, department, departmentId, search } =
+      req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId,
     };
 
     if (status) {
-      where.status = status as string;
+      where.status = status;
     }
 
     if (department) {
-      where.department = department as string;
+      where.department = department;
     }
 
-    const employees = await prisma.employee.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    if (departmentId) {
+      where.departmentId = departmentId;
+    }
 
-    res.json({ employees });
-  } catch (error) {
-    console.error('Get employees error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    if (search) {
+      where.OR = [
+        { code: { contains: search, mode: 'insensitive' as const } },
+        { employeeNumber: { contains: search, mode: 'insensitive' as const } },
+        { firstName: { contains: search, mode: 'insensitive' as const } },
+        { lastName: { contains: search, mode: 'insensitive' as const } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+        { phone: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    const [employees, total] = await Promise.all([
+      prisma.employee.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                department: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                designation: {
+                  select: {
+                    id: true,
+                    title: true,
+                  },
+                },
+              },
+            },
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.employee.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(employees, total, { page, limit }));
+  })
+);
 
 /**
  * POST /api/hrm/employees
  * Create a new employee
  */
-router.post('/employees', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/employees',
+  validate(
+    createEmployeeSchema.extend({
+      employeeNumber: z.string().min(1, 'Employee number is required'),
+      email: z.string().email().optional(),
+      phone: z.string().optional(),
+      address: z.string().optional(),
+      position: z.string().min(1, 'Position is required'),
+      department: z.string().optional(),
+      hireDate: z.string().datetime().or(z.date()).optional(),
+      salary: z.number().nonnegative().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const {
       employeeNumber,
@@ -71,14 +144,7 @@ router.post('/employees', async (req: Request, res: Response) => {
       department,
       hireDate,
       salary,
-    } = req.body;
-
-    if (!employeeNumber || !firstName || !lastName || !position) {
-      res.status(400).json({
-        error: 'Missing required fields: employeeNumber, firstName, lastName, position',
-      });
-      return;
-    }
+    } = req.validated!;
 
     // Check if employee number already exists
     const existing = await prisma.employee.findUnique({
@@ -106,27 +172,23 @@ router.post('/employees', async (req: Request, res: Response) => {
         address,
         position,
         department,
-        hireDate: hireDate ? new Date(hireDate) : new Date(),
-        salary: salary ? parseFloat(salary) : null,
+        hireDate: hireDate ? new Date(hireDate as string) : new Date(),
+        salary: salary || null,
         status: 'active',
       },
     });
 
     res.status(201).json({ employee });
-  } catch (error) {
-    console.error('Create employee error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/hrm/employees/:id
  * Get a specific employee
  */
-router.get('/employees/:id', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+router.get('/employees/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { id } = req.validatedParams!;
 
     const employee = await prisma.employee.findFirst({
       where: {
@@ -149,35 +211,36 @@ router.get('/employees/:id', async (req: Request, res: Response) => {
     }
 
     res.json({ employee });
-  } catch (error) {
-    console.error('Get employee error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
 /**
  * POST /api/hrm/payroll
  * Create a payroll log entry
  */
-router.post('/payroll', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/payroll',
+  validate(
+    z.object({
+      employeeId: z.string().min(1, 'Employee ID is required'),
+      payPeriodStart: z.string().datetime().or(z.date()),
+      payPeriodEnd: z.string().datetime().or(z.date()),
+      grossSalary: z.number().nonnegative('Gross salary must be non-negative'),
+      deductions: z.number().nonnegative().optional().default(0),
+      paymentDate: z.string().datetime().or(z.date()).optional(),
+      remarks: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const {
       employeeId,
       payPeriodStart,
       payPeriodEnd,
       grossSalary,
-      deductions,
+      deductions = 0,
       paymentDate,
       remarks,
-    } = req.body;
-
-    if (!employeeId || !payPeriodStart || !payPeriodEnd || grossSalary === undefined) {
-      res.status(400).json({
-        error: 'Missing required fields: employeeId, payPeriodStart, payPeriodEnd, grossSalary',
-      });
-      return;
-    }
+    } = req.validated!;
 
     // Verify employee belongs to cooperative
     const employee = await prisma.employee.findFirst({
@@ -192,20 +255,18 @@ router.post('/payroll', async (req: Request, res: Response) => {
       return;
     }
 
-    const gross = parseFloat(grossSalary);
-    const deduct = deductions ? parseFloat(deductions) : 0;
-    const net = gross - deduct;
+    const net = grossSalary - deductions;
 
     const payroll = await prisma.payrollLog.create({
       data: {
         employeeId,
         cooperativeId: tenantId,
-        payPeriodStart: new Date(payPeriodStart),
-        payPeriodEnd: new Date(payPeriodEnd),
-        grossSalary: gross,
-        deductions: deduct,
+        payPeriodStart: new Date(payPeriodStart as string),
+        payPeriodEnd: new Date(payPeriodEnd as string),
+        grossSalary,
+        deductions,
         netSalary: net,
-        paymentDate: paymentDate ? new Date(paymentDate) : null,
+        paymentDate: paymentDate ? new Date(paymentDate as string) : null,
         remarks,
         status: 'pending',
       },
@@ -222,70 +283,96 @@ router.post('/payroll', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ payroll });
-  } catch (error) {
-    console.error('Create payroll log error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/hrm/payroll
- * Get payroll logs (with optional filters)
+ * Get payroll logs (with pagination and optional filters)
  */
-router.get('/payroll', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/payroll',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      employeeId: z.string().optional(),
+      status: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { employeeId, status } = req.query;
+    const { page, limit, sortBy, sortOrder, employeeId, status, search } = req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId,
     };
 
     if (employeeId) {
-      where.employeeId = employeeId as string;
+      where.employeeId = employeeId;
     }
 
     if (status) {
-      where.status = status as string;
+      where.status = status;
     }
 
-    const payrollLogs = await prisma.payrollLog.findMany({
-      where,
-      include: {
-        employee: {
-          select: {
-            id: true,
-            employeeNumber: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-      orderBy: {
-        payPeriodStart: 'desc',
-      },
-    });
+    if (search) {
+      where.OR = [
+        { employee: { code: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { employeeNumber: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { lastName: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
 
-    res.json({ payrollLogs });
-  } catch (error) {
-    console.error('Get payroll logs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [payrollLogs, total] = await Promise.all([
+      prisma.payrollLog.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                employee: {
+                  select: {
+                    id: true,
+                    employeeNumber: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'payPeriodStart'
+        )
+      ),
+      prisma.payrollLog.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(payrollLogs, total, { page, limit }));
+  })
+);
 
 /**
  * POST /api/hrm/attendance
  * Create or update an attendance log entry
  */
-router.post('/attendance', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/attendance',
+  validate(
+    z.object({
+      employeeId: z.string().min(1, 'Employee ID is required'),
+      date: z.string().datetime().or(z.date()),
+      checkIn: z.string().datetime().or(z.date()).optional(),
+      checkOut: z.string().datetime().or(z.date()).optional(),
+      status: z.string().optional().default('present'),
+      remarks: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { employeeId, date, checkIn, checkOut, status, remarks } = req.body;
-
-    if (!employeeId || !date) {
-      res.status(400).json({ error: 'Missing required fields: employeeId, date' });
-      return;
-    }
+    const { employeeId, date, checkIn, checkOut, status = 'present', remarks } = req.validated!;
 
     // Verify employee belongs to cooperative
     const employee = await prisma.employee.findFirst({
@@ -349,27 +436,34 @@ router.post('/attendance', async (req: Request, res: Response) => {
     });
 
     res.json({ attendance });
-  } catch (error) {
-    console.error('Create/update attendance log error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/hrm/attendance
- * Get attendance logs (with optional filters)
+ * Get attendance logs (with pagination and optional filters)
  */
-router.get('/attendance', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/attendance',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      employeeId: z.string().optional(),
+      startDate: z.string().datetime().or(z.date()).optional(),
+      endDate: z.string().datetime().or(z.date()).optional(),
+      status: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { employeeId, startDate, endDate, status } = req.query;
+    const { page, limit, sortBy, sortOrder, employeeId, startDate, endDate, status, search } =
+      req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId,
     };
 
     if (employeeId) {
-      where.employeeId = employeeId as string;
+      where.employeeId = employeeId;
     }
 
     if (startDate || endDate) {
@@ -383,50 +477,75 @@ router.get('/attendance', async (req: Request, res: Response) => {
     }
 
     if (status) {
-      where.status = status as string;
+      where.status = status;
     }
 
-    const attendanceLogs = await prisma.attendanceLog.findMany({
-      where,
-      include: {
-        employee: {
-          select: {
-            id: true,
-            employeeNumber: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-      },
-      orderBy: {
-        date: 'desc',
-      },
-    });
+    if (search) {
+      where.OR = [
+        { employee: { code: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { employeeNumber: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { lastName: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
 
-    res.json({ attendanceLogs });
-  } catch (error) {
-    console.error('Get attendance logs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [attendanceLogs, total] = await Promise.all([
+      prisma.attendanceLog.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                employee: {
+                  select: {
+                    id: true,
+                    employeeNumber: true,
+                    firstName: true,
+                    lastName: true,
+                  },
+                },
+              },
+            },
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'date'
+        )
+      ),
+      prisma.attendanceLog.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(attendanceLogs, total, { page, limit }));
+  })
+);
 
 // ==================== Training Endpoints ====================
 
 /**
  * GET /api/hrm/training
- * Get all training sessions
+ * Get all training sessions (with pagination)
  */
-router.get('/training', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/training',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      sessionType: z.string().optional(),
+      startDate: z.string().datetime().or(z.date()).optional(),
+      endDate: z.string().datetime().or(z.date()).optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { sessionType, startDate, endDate } = req.query;
+    const { page, limit, sortBy, sortOrder, sessionType, startDate, endDate, search } =
+      req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId,
     };
 
     if (sessionType) {
-      where.sessionType = sessionType as string;
+      where.sessionType = sessionType;
     }
 
     if (startDate || endDate) {
@@ -439,33 +558,47 @@ router.get('/training', async (req: Request, res: Response) => {
       }
     }
 
-    const sessions = await prisma.trainingSession.findMany({
-      where,
-      include: {
-        attendance: {
-          include: {
-            employee: {
-              select: {
-                id: true,
-                employeeNumber: true,
-                firstName: true,
-                lastName: true,
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' as const } },
+        { description: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    const [sessions, total] = await Promise.all([
+      prisma.trainingSession.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                attendance: {
+                  include: {
+                    employee: {
+                      select: {
+                        id: true,
+                        employeeNumber: true,
+                        firstName: true,
+                        lastName: true,
+                      },
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-      },
-      orderBy: {
-        sessionDate: 'desc',
-      },
-    });
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'sessionDate'
+        )
+      ),
+      prisma.trainingSession.count({ where }),
+    ]);
 
-    res.json({ sessions });
-  } catch (error) {
-    console.error('Get training sessions error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    res.json(createPaginatedResponse(sessions, total, { page, limit }));
+  })
+);
 
 /**
  * POST /api/hrm/training
@@ -544,19 +677,41 @@ router.post('/training/:sessionId/attendance', async (req: Request, res: Respons
 
 // ==================== Departments ====================
 
-router.get('/departments', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/departments',
+  validateQuery(paginationWithSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const departments = await prisma.department.findMany({
-      where: { cooperativeId: tenantId },
-      orderBy: { name: 'asc' },
-    });
-    res.json({ departments });
-  } catch (error) {
-    console.error('Get departments error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
+
+    const where: any = {
+      cooperativeId: tenantId,
+    };
+
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' as const };
+    }
+
+    const [departments, total] = await Promise.all([
+      prisma.department.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit }
+          ),
+          sortBy || 'name',
+          sortOrder || 'asc',
+          'name'
+        )
+      ),
+      prisma.department.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(departments, total, { page, limit }));
+  })
+);
 
 router.post('/departments', async (req: Request, res: Response) => {
   try {
@@ -582,19 +737,41 @@ router.post('/departments', async (req: Request, res: Response) => {
 
 // ==================== Designations ====================
 
-router.get('/designations', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/designations',
+  validateQuery(paginationWithSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const designations = await prisma.designation.findMany({
-      where: { cooperativeId: tenantId },
-      orderBy: { rank: 'asc' },
-    });
-    res.json({ designations });
-  } catch (error) {
-    console.error('Get designations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
+
+    const where: any = {
+      cooperativeId: tenantId,
+    };
+
+    if (search) {
+      where.title = { contains: search, mode: 'insensitive' as const };
+    }
+
+    const [designations, total] = await Promise.all([
+      prisma.designation.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit }
+          ),
+          sortBy || 'rank',
+          sortOrder || 'asc',
+          'rank'
+        )
+      ),
+      prisma.designation.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(designations, total, { page, limit }));
+  })
+);
 
 router.post('/designations', async (req: Request, res: Response) => {
   try {
@@ -620,19 +797,41 @@ router.post('/designations', async (req: Request, res: Response) => {
 
 // ==================== Shifts ====================
 
-router.get('/shifts', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/shifts',
+  validateQuery(paginationWithSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const shifts = await prisma.shift.findMany({
-      where: { cooperativeId: tenantId },
-      orderBy: { name: 'asc' },
-    });
-    res.json({ shifts });
-  } catch (error) {
-    console.error('Get shifts error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
+
+    const where: any = {
+      cooperativeId: tenantId,
+    };
+
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' as const };
+    }
+
+    const [shifts, total] = await Promise.all([
+      prisma.shift.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit }
+          ),
+          sortBy || 'name',
+          sortOrder || 'asc',
+          'name'
+        )
+      ),
+      prisma.shift.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(shifts, total, { page, limit }));
+  })
+);
 
 router.post('/shifts', async (req: Request, res: Response) => {
   try {
@@ -666,19 +865,41 @@ router.post('/shifts', async (req: Request, res: Response) => {
 
 // ==================== Leave Types ====================
 
-router.get('/leave/types', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/leave/types',
+  validateQuery(paginationWithSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const leaveTypes = await prisma.leaveType.findMany({
-      where: { cooperativeId: tenantId },
-      orderBy: { name: 'asc' },
-    });
-    res.json({ leaveTypes });
-  } catch (error) {
-    console.error('Get leave types error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
+
+    const where: any = {
+      cooperativeId: tenantId,
+    };
+
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' as const };
+    }
+
+    const [leaveTypes, total] = await Promise.all([
+      prisma.leaveType.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit }
+          ),
+          sortBy || 'name',
+          sortOrder || 'asc',
+          'name'
+        )
+      ),
+      prisma.leaveType.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(leaveTypes, total, { page, limit }));
+  })
+);
 
 router.post('/leave/types', async (req: Request, res: Response) => {
   try {
@@ -709,37 +930,67 @@ router.post('/leave/types', async (req: Request, res: Response) => {
 
 // ==================== Leave Requests ====================
 
-router.get('/leave/requests', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/leave/requests',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      employeeId: z.string().optional(),
+      status: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { employeeId, status } = req.query;
-    const where: any = { cooperativeId: tenantId };
-    if (employeeId) where.employeeId = employeeId;
-    if (status) where.status = status;
+    const { page, limit, sortBy, sortOrder, employeeId, status, search } = req.validatedQuery!;
 
-    const requests = await prisma.leaveRequest.findMany({
-      where,
-      include: {
-        employee: { select: { id: true, code: true, firstName: true, lastName: true } },
-        leaveType: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ requests });
-  } catch (error) {
-    console.error('Get leave requests error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const where: any = {
+      cooperativeId: tenantId,
+    };
 
-router.post('/leave/requests', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { employeeId, leaveTypeId, startDate, endDate, comment } = req.body;
-    if (!employeeId || !leaveTypeId || !startDate || !endDate) {
-      res.status(400).json({ error: 'Missing required fields' });
-      return;
+    if (employeeId) {
+      where.employeeId = employeeId;
     }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      where.OR = [
+        { employee: { code: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { employee: { lastName: { contains: search, mode: 'insensitive' as const } } },
+        { leaveType: { name: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
+
+    const [requests, total] = await Promise.all([
+      prisma.leaveRequest.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                employee: { select: { id: true, code: true, firstName: true, lastName: true } },
+                leaveType: { select: { id: true, name: true } },
+              },
+            },
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.leaveRequest.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(requests, total, { page, limit }));
+  })
+);
+
+router.post('/leave/requests', validate(createLeaveRequestSchema), asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { employeeId, leaveTypeId, startDate, endDate, comment } = req.validated!;
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -762,11 +1013,7 @@ router.post('/leave/requests', async (req: Request, res: Response) => {
       },
     });
     res.status(201).json({ request });
-  } catch (error) {
-    console.error('Create leave request error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+}));
 
 router.post('/leave/requests/:id/approve', async (req: Request, res: Response) => {
   try {
@@ -788,8 +1035,9 @@ router.post('/leave/requests/:id/approve', async (req: Request, res: Response) =
       return;
     }
 
-    // Get fiscal year from request date (simplified - should use proper BS conversion)
-    const fiscalYear = '2082/83'; // TODO: Calculate from startDate
+    // Get fiscal year from request start date
+    const fiscalYearRange = getFiscalYearForDate(request.startDate);
+    const fiscalYear = fiscalYearRange.label.replace('FY ', ''); // Convert "FY 2081/82" to "2081/82"
 
     await prisma.$transaction(async (tx) => {
       // Update leave balance
@@ -865,9 +1113,21 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
 
     const employees = await prisma.employee.findMany({ where });
 
+    // Batch fetch loan deductions for all employees to avoid N+1 queries
+    const allEmployeeIds = employees.map((emp) => emp.id);
+    const loanDeductionsMap = await getBatchEmployeeLoanDeductions(
+      allEmployeeIds,
+      tenantId,
+      fiscalYear,
+      monthBs
+    );
+
     const preview = await Promise.all(
       employees.map(async (emp) => {
         try {
+          // Get loan deduction from batch map
+          const loanDeduction = loanDeductionsMap.get(emp.id) || 0;
+
           const payroll = await calculateEmployeePayroll(
             emp.id,
             fiscalYear,
@@ -877,7 +1137,7 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
               tdsConfig: settings.tdsConfig as any,
               festivalBonusMonthBs: settings.festivalBonusMonthBs || undefined,
             },
-            0 // TODO: Get loan deduction from loan module
+            loanDeduction
           );
           // Transform allowances from Record<string, number> to total number for frontend
           const allowancesObj = payroll.allowances as Record<string, number>;
@@ -925,15 +1185,9 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/payroll/runs', async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    const { fiscalYear, monthBs, employeeIds } = req.body;
-
-    if (!fiscalYear || !monthBs) {
-      res.status(400).json({ error: 'Missing required fields: fiscalYear, monthBs' });
-      return;
-    }
+router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeIds: z.array(z.string()).optional() })), asyncHandler(async (req: Request, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { fiscalYear, monthBs, employeeIds } = req.validated!;
 
     // Check if run already exists
     const existing = await prisma.payrollRun.findUnique({
@@ -967,6 +1221,15 @@ router.post('/payroll/runs', async (req: Request, res: Response) => {
 
     const employees = await prisma.employee.findMany({ where });
 
+    // Batch fetch loan deductions for all employees to avoid N+1 queries
+    const allEmployeeIds = employees.map((emp) => emp.id);
+    const loanDeductionsMap = await getBatchEmployeeLoanDeductions(
+      allEmployeeIds,
+      tenantId,
+      fiscalYear,
+      monthBs
+    );
+
     const payrollRun = await prisma.$transaction(async (tx) => {
       const run = await tx.payrollRun.create({
         data: {
@@ -980,6 +1243,9 @@ router.post('/payroll/runs', async (req: Request, res: Response) => {
       const payrolls = [];
       for (const emp of employees) {
         try {
+          // Get loan deduction from batch map
+          const loanDeduction = loanDeductionsMap.get(emp.id) || 0;
+
           const payrollData = await calculateEmployeePayroll(
             emp.id,
             fiscalYear,
@@ -989,7 +1255,7 @@ router.post('/payroll/runs', async (req: Request, res: Response) => {
               tdsConfig: settings.tdsConfig as any,
               festivalBonusMonthBs: settings.festivalBonusMonthBs || undefined,
             },
-            0
+            loanDeduction
           );
 
           const payroll = await tx.payroll.create({
@@ -1027,37 +1293,47 @@ router.post('/payroll/runs', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ payrollRun });
-  } catch (error: any) {
-    if (error.code === 'P2002') {
-      res.status(409).json({ error: 'Payroll run already exists for this month' });
-    } else {
-      console.error('Create payroll run error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
+}));
 
-router.get('/payroll/runs', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/payroll/runs',
+  validateQuery(
+    paginationSchema.extend({
+      fiscalYear: z.string().optional(),
+      monthBs: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { fiscalYear, monthBs } = req.query;
+    const { page, limit, sortBy, sortOrder, fiscalYear, monthBs } = req.validatedQuery!;
+
     const where: any = { cooperativeId: tenantId };
     if (fiscalYear) where.fiscalYear = fiscalYear;
-    if (monthBs) where.monthBs = parseInt(monthBs as string);
+    if (monthBs) where.monthBs = monthBs;
 
-    const runs = await prisma.payrollRun.findMany({
-      where,
-      include: {
-        _count: { select: { payrolls: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-    res.json({ runs });
-  } catch (error) {
-    console.error('Get payroll runs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [runs, total] = await Promise.all([
+      prisma.payrollRun.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                _count: { select: { payrolls: true } },
+              },
+            },
+            { page, limit }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.payrollRun.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(runs, total, { page, limit }));
+  })
+);
 
 router.post('/payroll/runs/:runId/finalize', async (req: Request, res: Response) => {
   try {

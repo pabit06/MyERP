@@ -1,0 +1,28 @@
+name: Test Workflow Trigger
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+    paths:
+      - '.github/workflows/**'
+      - 'README.md'
+      - 'CICD_SETUP.md'
+
+jobs:
+  test-trigger:
+    name: Test Workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test workflow execution
+        run: |
+          echo "✅ Workflow triggered successfully!"
+          echo "Branch: ${{ github.ref }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Actor: ${{ github.actor }}"
+          echo ""
+          echo "This is a test workflow to verify CI/CD setup."
+          echo "All workflows are configured and ready to use."

@@ -1,0 +1,51 @@
+name: Dependency Update Check
+
+on:
+  schedule:
+    # Run weekly on Monday at 8 AM UTC
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check-updates:
+    name: Check for Dependency Updates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8.15.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for outdated packages
+        run: |
+          echo "## 📦 Dependency Update Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Outdated Packages:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          pnpm outdated || echo "All packages are up to date" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Create issue for major updates
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📦 Dependency Updates Available',
+              body: 'Some dependencies have updates available. Please review and update as needed.\n\nSee workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              labels: ['dependencies', 'maintenance']
+            })

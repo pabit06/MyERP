@@ -3,8 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Banknote, ArrowLeft, FileText, Download, Calendar, Filter } from 'lucide-react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
 
 export default function LoanReportsPage() {
   const router = useRouter();

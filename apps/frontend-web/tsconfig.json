@@ -22,6 +22,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/components/*": ["./src/features/components/shared/*"],
+      "@/lib/*": ["./src/lib/*"],
       "@myerp/shared-types": ["../../packages/shared-types/src"]
     }
   },

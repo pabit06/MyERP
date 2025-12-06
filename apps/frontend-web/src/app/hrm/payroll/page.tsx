@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import Link from 'next/link';
-import PayrollPreviewModal from '../../../components/PayrollPreviewModal';
+import PayrollPreviewModal from '@/features/hrm/components/PayrollPreviewModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 

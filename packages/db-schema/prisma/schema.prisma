@@ -373,6 +373,12 @@ model Member {
   committeeMembers CommitteeMember[]
 
   @@unique([cooperativeId, memberNumber], name: "cooperativeId_memberNumber")
+  @@index([cooperativeId, workflowStatus])
+  @@index([cooperativeId, isActive])
+  @@index([cooperativeId, createdAt])
+  @@index([cooperativeId, riskCategory])
+  @@index([cooperativeId, nextKymReviewDate])
+  @@index([memberNumber])
   @@map("members")
 }
 
@@ -670,6 +676,11 @@ model MemberWorkflowHistory {
   member      Member      @relation("MemberWorkflowHistory", fields: [memberId], references: [id], onDelete: Cascade)
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
 
+  @@index([memberId])
+  @@index([cooperativeId, toStatus])
+  @@index([cooperativeId, action])
+  @@index([performedBy])
+  @@index([createdAt])
   @@map("member_workflow_history")
 }
 
@@ -748,6 +759,10 @@ model ChartOfAccounts {
   mappedUser    User?   @relation("UserAccountMapping", fields: [mappedUserId], references: [id])
 
   @@unique([cooperativeId, code])
+  @@index([cooperativeId, type])
+  @@index([cooperativeId, isActive])
+  @@index([cooperativeId, parentId])
+  @@index([code])
   @@map("chart_of_accounts")
 }
 
@@ -768,6 +783,11 @@ model Ledger {
   transaction  Transaction?     @relation(fields: [transactionId], references: [id])
   journalEntry JournalEntry?    @relation(fields: [journalEntryId], references: [id])
 
+  @@index([cooperativeId, accountId])
+  @@index([cooperativeId, createdAt])
+  @@index([accountId])
+  @@index([journalEntryId])
+  @@index([transactionId])
   @@map("ledgers")
 }
 
@@ -785,6 +805,9 @@ model JournalEntry {
   ledgers     Ledger[]
 
   @@unique([cooperativeId, entryNumber])
+  @@index([cooperativeId, date])
+  @@index([cooperativeId, createdAt])
+  @@index([entryNumber])
   @@map("journal_entries")
 }
 
@@ -803,6 +826,10 @@ model Transaction {
   ledgers     Ledger[]
 
   @@unique([cooperativeId, transactionNumber])
+  @@index([cooperativeId, date])
+  @@index([cooperativeId, type])
+  @@index([cooperativeId, createdAt])
+  @@index([transactionNumber])
   @@map("transactions")
 }
 
@@ -855,6 +882,11 @@ model SavingAccount {
   product     SavingProduct @relation(fields: [productId], references: [id])
 
   @@unique([cooperativeId, accountNumber])
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, productId])
+  @@index([memberId])
+  @@index([accountNumber])
   @@map("saving_accounts")
 }
 
@@ -909,6 +941,12 @@ model LoanApplication {
   emiSchedule EMISchedule[]
 
   @@unique([cooperativeId, applicationNumber])
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, productId])
+  @@index([cooperativeId, appliedDate])
+  @@index([memberId])
+  @@index([applicationNumber])
   @@map("loan_applications")
 }
 
@@ -932,6 +970,11 @@ model EMISchedule {
   application LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
 
   @@unique([applicationId, installmentNumber])
+  @@index([applicationId])
+  @@index([cooperativeId, dueDate])
+  @@index([cooperativeId, status])
+  @@index([dueDate])
+  @@index([status])
   @@map("emi_schedules")
 }
 
@@ -1026,6 +1069,11 @@ model ShareTransaction {
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, date])
+  @@index([cooperativeId, type])
+  @@index([memberId])
+  @@index([transactionNo])
   @@unique([cooperativeId, transactionNo])
   @@map("share_transactions")
 }
@@ -1051,6 +1099,9 @@ model MemberDocument {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, memberId])
+  @@index([memberId])
+  @@index([documentType])
   @@map("member_documents")
 }
 
@@ -1549,6 +1600,11 @@ model Employee {
 
   @@unique([cooperativeId, code])
   @@unique([cooperativeId, employeeNumber])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, departmentId])
+  @@index([cooperativeId, designationId])
+  @@index([departmentId])
+  @@index([code])
   @@map("employees")
 }
 
@@ -1571,6 +1627,10 @@ model PayrollLog {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, employeeId])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, payPeriodStart])
+  @@index([employeeId])
   @@map("payroll_logs")
 }
 
@@ -1592,6 +1652,10 @@ model AttendanceLog {
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, date])
+  @@index([cooperativeId, employeeId])
+  @@index([cooperativeId, date])
+  @@index([cooperativeId, status])
+  @@index([employeeId])
   @@map("attendance_logs")
 }
 
@@ -1615,6 +1679,10 @@ model Attendance {
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@unique([employeeId, date])
+  @@index([cooperativeId, employeeId])
+  @@index([cooperativeId, date])
+  @@index([cooperativeId, status])
+  @@index([employeeId])
   @@map("attendances")
 }
 
@@ -1656,6 +1724,10 @@ model LeaveRequest {
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leaveType   LeaveType   @relation(fields: [leaveTypeId], references: [id])
 
+  @@index([cooperativeId, employeeId])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, startDate])
+  @@index([employeeId])
   @@map("leave_requests")
 }
 
@@ -1698,6 +1770,8 @@ model PayrollRun {
   payrolls    Payroll[]
 
   @@unique([cooperativeId, fiscalYear, monthBs])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, fiscalYear])
   @@map("payroll_runs")
 }
 
@@ -1726,6 +1800,11 @@ model Payroll {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, employeeId])
+  @@index([cooperativeId, fiscalYear, monthBs])
+  @@index([cooperativeId, payrollRunId])
+  @@index([employeeId])
+  @@index([payrollRunId])
   @@map("payrolls")
 }
 
@@ -2005,6 +2084,12 @@ model AuditLog {
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, timestamp])
+  @@index([cooperativeId, action])
+  @@index([cooperativeId, entityType])
+  @@index([cooperativeId, userId])
+  @@index([entityType, entityId])
+  @@index([timestamp])
   @@map("audit_logs")
 }
 
@@ -2053,6 +2138,10 @@ model AmlFlag {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, type])
+  @@index([cooperativeId, status])
+  @@index([memberId])
   @@map("aml_flags")
 }
 
@@ -2074,6 +2163,11 @@ model AmlTtrReport {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, forDate])
+  @@index([cooperativeId, status])
+  @@index([memberId])
+  @@index([forDate])
   @@map("aml_ttr_reports")
 }
 
@@ -2091,6 +2185,10 @@ model SourceOfFundsDeclaration {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, transactionId])
+  @@index([memberId])
+  @@index([transactionId])
   @@map("source_of_funds_declarations")
 }
 
@@ -2190,6 +2288,10 @@ model AmlCase {
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, status])
+  @@index([cooperativeId, type])
+  @@index([memberId])
   @@map("aml_cases")
 }
 

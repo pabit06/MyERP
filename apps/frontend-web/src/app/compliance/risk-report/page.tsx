@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 
 interface RiskReport {
   year: number;

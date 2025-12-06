@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import * as Sentry from '@sentry/node';
+import { initializeSentry } from './config/sentry.js';
 import saasRoutes from './routes/saas.js';
 import authRoutes from './routes/auth.js';
 import onboardingRoutes from './routes/onboarding.js';
@@ -23,6 +25,8 @@ import reportsRoutes from './routes/reports.js';
 import workflowRoutes from './routes/workflow.js';
 import notificationsRoutes from './routes/notifications.js';
 import systemAdminRoutes from './routes/system-admin.js';
+import healthRoutes from './routes/health.js';
+import swaggerRoutes from './routes/swagger.js';
 import { initializeAmlMonitoring } from './services/aml/monitor.js';
 import { registerAccountingHooks } from './hooks/accounting-hooks.js';
 import { registerLoansHooks } from './hooks/loans-hooks.js';
@@ -38,10 +42,21 @@ import {
   requestSizeLimit,
   trustProxy,
 } from './middleware/security.js';
+import { metricsMiddleware } from './middleware/metrics.js';
+import { performanceMiddleware } from './middleware/performance.js';
+
+// Initialize Sentry BEFORE creating Express app
+initializeSentry();
 
 const app = express();
 const PORT = env.PORT;
 const API_PREFIX = env.API_PREFIX;
+
+// Sentry request handler (must be first middleware)
+if (env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.requestHandler());
+  app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Trust proxy (important for rate limiting behind reverse proxies)
 if (trustProxy) {
@@ -64,13 +79,20 @@ app.use(
 app.use(express.json({ limit: requestSizeLimit.json }));
 app.use(express.urlencoded({ extended: true, limit: requestSizeLimit.urlencoded }));
 
+// Metrics middleware (track request metrics)
+app.use(metricsMiddleware);
+
+// Performance monitoring middleware (track route-level performance)
+app.use(performanceMiddleware);
+
 // Serve uploaded files
 app.use('/uploads', express.static('uploads'));
 
-// Health check (no rate limiting)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Backend server is running' });
-});
+// API Documentation (no rate limiting, no auth required)
+app.use('/', swaggerRoutes);
+
+// Health check routes (no rate limiting, no auth required)
+app.use('/health', healthRoutes);
 
 // Routes with rate limiting
 // Auth routes with stricter rate limiting
@@ -100,6 +122,11 @@ app.use(`${API_PREFIX}/workflow`, apiLimiter, workflowRoutes);
 app.use(`${API_PREFIX}/notifications`, apiLimiter, notificationsRoutes);
 app.use(`${API_PREFIX}/system-admin`, apiLimiter, systemAdminRoutes);
 
+// Sentry error handler (must be before errorHandler)
+if (env.SENTRY_DSN) {
+  app.use(Sentry.Handlers.errorHandler());
+}
+
 // 404 handler (must be after all routes)
 app.use(notFoundHandler);
 
@@ -120,5 +147,6 @@ initializeAmlMonitoring();
 app.listen(PORT, () => {
   logger.info(`🚀 Backend server running on port ${PORT}`);
   logger.info(`📡 API available at http://localhost:${PORT}${API_PREFIX}`);
+  logger.info(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
   logger.info(`🌍 Environment: ${env.NODE_ENV}`);
 });

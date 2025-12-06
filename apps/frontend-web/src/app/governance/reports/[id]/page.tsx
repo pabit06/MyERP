@@ -2,14 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import ProtectedRoute from '../../../../components/ProtectedRoute';
-import { useAuth } from '../../../../contexts/AuthContext';
-import RichTextEditor from '../../../../components/RichTextEditor';
-import ConfirmModal from '../../../../components/ConfirmModal';
+import { ProtectedRoute, RichTextEditor, ConfirmModal } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import './ReportPrint.module.css';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface ManagerReport {
   id: string;

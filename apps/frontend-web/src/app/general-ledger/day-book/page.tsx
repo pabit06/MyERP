@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import { useAuth } from '../../../contexts/AuthContext';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { 
   Calendar, 
@@ -17,10 +18,7 @@ import {
   RefreshCw,
   Download
 } from 'lucide-react';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
-import { formatBsDate, adToBs, bsToAd } from '../../../lib/nepali-date';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { formatBsDate, adToBs, bsToAd } from '@/lib/nepali-date';
 
 interface DayBookStatus {
   status: string;

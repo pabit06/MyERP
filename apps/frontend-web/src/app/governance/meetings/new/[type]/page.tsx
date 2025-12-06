@@ -2,12 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import ProtectedRoute from '../../../../../components/ProtectedRoute';
-import { useAuth } from '../../../../../contexts/AuthContext';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
-import NepaliDatePicker from '../../../../../components/NepaliDatePicker';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface PendingAgendaItem {
   id: string;

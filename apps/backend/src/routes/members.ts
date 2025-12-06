@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
@@ -13,6 +14,13 @@ import {
 } from '@myerp/shared-types';
 import { Prisma } from '@prisma/client';
 import { postEntryFee, getCurrentSharePrice } from '../services/accounting.js';
+import { env } from '../config/index.js';
+import { NotFoundError, ValidationError, BadRequestError, ConflictError } from '../lib/errors.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { validate, validateAll } from '../middleware/validate.js';
+import { csrfProtection } from '../middleware/csrf.js';
+import { createAuditLog, AuditAction } from '../lib/audit-log.js';
+import { sanitizeText, sanitizeEmail } from '../lib/sanitize.js';
 
 const router: Router = Router();
 
@@ -24,8 +32,9 @@ router.use(requireTenant);
  * GET /api/members/:id/kym
  * Get a member's KYM (Know Your Member) information.
  */
-router.get('/:id/kym', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/:id/kym',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const { id: memberId } = req.params;
 
@@ -34,7 +43,7 @@ router.get('/:id/kym', async (req: Request, res: Response) => {
     });
 
     if (!member) {
-      return res.status(404).json({ error: 'Member not found' });
+      throw new NotFoundError('Member', memberId);
     }
 
     const kymData = await prisma.memberKYC.findUnique({
@@ -49,41 +58,36 @@ router.get('/:id/kym', async (req: Request, res: Response) => {
     });
 
     if (!kymData) {
-      return res.status(404).json({ error: 'KYM information not found' });
+      throw new NotFoundError('KYM information', memberId);
     }
 
     res.json(kymData);
-  } catch (error) {
-    console.error('Get KYM error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * PUT /api/members/:id/kym
  * Create or Update a member's comprehensive KYM (Know Your Member) information.
  */
-router.put('/:id/kym', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/:id/kym',
+  csrfProtection,
+  validateAll({
+    params: z.object({ id: z.string().min(1) }),
+    body: KymFormSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id: memberId } = req.params;
+    const { id: memberId } = req.validatedParams!;
 
-    const validation = KymFormSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.errors,
-      });
-    }
-
-    const kycData = validation.data;
+    const kycData = req.validated!;
 
     const existingMember = await prisma.member.findFirst({
       where: { id: memberId, cooperativeId: tenantId },
     });
 
     if (!existingMember) {
-      return res.status(404).json({ error: 'Member not found' });
+      throw new NotFoundError('Member', memberId);
     }
 
     const {
@@ -221,46 +225,37 @@ router.put('/:id/kym', async (req: Request, res: Response) => {
         }
       }
     } catch (accountingError) {
-      console.error('Error posting to ledger during KYC completion:', accountingError);
       // Don't fail the request if accounting posting fails
+      // This is intentionally caught and ignored - accounting errors are non-critical here
     }
 
-    res.status(200).json({ message: 'KYM (Know Your Member) information updated successfully' });
-  } catch (error: any) {
-    console.error('Update KYM error:', error);
-    res.status(500).json({
-      error: 'Internal server error',
-      message: error?.message || 'An unexpected error occurred',
-      details: process.env.NODE_ENV === 'development' ? error?.stack : undefined,
-    });
-  }
-});
+    res.json({ message: 'KYM (Know Your Member) information updated successfully' });
+  })
+);
 
 /**
  * PUT /api/members/:id/institution-kym
  * Create or Update an institution member's comprehensive KYM (Know Your Member) information.
  */
-router.put('/:id/institution-kym', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/:id/institution-kym',
+  csrfProtection,
+  validateAll({
+    params: z.object({ id: z.string().min(1) }),
+    body: InstitutionKymFormSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id: memberId } = req.params;
+    const { id: memberId } = req.validatedParams!;
 
-    const validation = InstitutionKymFormSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.errors,
-      });
-    }
-
-    const kycData = validation.data;
+    const kycData = req.validated!;
 
     const existingMember = await prisma.member.findFirst({
       where: { id: memberId, cooperativeId: tenantId },
     });
 
     if (!existingMember) {
-      return res.status(404).json({ error: 'Member not found' });
+      throw new NotFoundError('Member', memberId);
     }
 
     const {
@@ -278,18 +273,16 @@ router.put('/:id/institution-kym', async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!mainKycData.initialShareAmount || Number(mainKycData.initialShareAmount) <= 0) {
-      return res.status(400).json({ 
-        error: 'Share amount is required and must be greater than 0',
-        field: 'initialShareAmount'
+      throw new ValidationError('Share amount is required and must be greater than 0', {
+        field: 'initialShareAmount',
       });
     }
 
     // Validate share amount is divisible by 100 (per kitta = Rs. 100)
     const shareAmount = Number(mainKycData.initialShareAmount);
     if (shareAmount % 100 !== 0) {
-      return res.status(400).json({ 
-        error: 'Share amount must be divisible by 100 (per kitta = Rs. 100)',
-        field: 'initialShareAmount'
+      throw new ValidationError('Share amount must be divisible by 100 (per kitta = Rs. 100)', {
+        field: 'initialShareAmount',
       });
     }
 
@@ -371,14 +364,9 @@ router.put('/:id/institution-kym', async (req: Request, res: Response) => {
       // Don't fail the KYC submission if payment recording fails, but log it
     }
 
-    res
-      .status(200)
-      .json({ message: 'Institution KYM (Know Your Member) information updated successfully' });
-  } catch (error) {
-    console.error('Update Institution KYM error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    res.json({ message: 'Institution KYM (Know Your Member) information updated successfully' });
+  })
+);
 
 /**
  * GET /api/members/summary
@@ -430,7 +418,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       pendingKYC,
     });
   } catch (error) {
-    console.error('Get members summary error:', error);
+    console.error('Get member summary error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -440,8 +428,9 @@ router.get('/summary', async (req: Request, res: Response) => {
  * Heavy endpoint for chart data (cached for 1-2 hours)
  * Uses database aggregations for optimal performance
  */
-router.get('/charts', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/charts',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const cacheKey = `members:charts:${tenantId}`;
 
@@ -656,57 +645,50 @@ router.get('/charts', async (req: Request, res: Response) => {
     setCachedData(cacheKey, chartData, 3600);
 
     res.json(chartData);
-  } catch (error) {
-    console.error('Get members charts error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/members/upcoming-birthdays
  * Get members with upcoming birthdays
  */
-router.get('/upcoming-birthdays', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/upcoming-birthdays',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const daysAhead = parseInt(req.query.daysAhead as string) || 30;
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Cooperative ID is required' });
+      throw new BadRequestError('Cooperative ID is required');
     }
 
     const { getUpcomingBirthdays } = await import('../services/member-statistics.js');
     const upcomingBirthdays = await getUpcomingBirthdays(tenantId, daysAhead);
 
     res.json(upcomingBirthdays);
-  } catch (error) {
-    console.error('Get upcoming birthdays error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/members/list
  * Get member list with basic information (S.N., Membership Number, Name, Temporary Address, Phone Number)
  */
-router.get('/list', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/list',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const includeInactive = req.query.includeInactive === 'true';
 
     if (!tenantId) {
-      return res.status(400).json({ error: 'Cooperative ID is required' });
+      throw new BadRequestError('Cooperative ID is required');
     }
 
     const { getMemberList } = await import('../services/member-statistics.js');
     const memberList = await getMemberList(tenantId, includeInactive);
 
     res.json(memberList);
-  } catch (error) {
-    console.error('Get member list error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/members
@@ -717,8 +699,9 @@ router.get('/list', async (req: Request, res: Response) => {
  *   - isActive: Filter by active status (true/false)
  *   - search: Search across member fields
  */
-router.get('/', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const { isActive, search, page = '1', limit = '20', hasMemberNumber } = req.query;
 
@@ -776,18 +759,16 @@ router.get('/', async (req: Request, res: Response) => {
         hasPreviousPage: pageNum > 1,
       },
     });
-  } catch (error) {
-    console.error('Get members error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/members/:id
  * Get a specific member
  */
-router.get('/:id', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const { id } = req.params;
 
@@ -799,8 +780,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     });
 
     if (!member) {
-      res.status(404).json({ error: 'Member not found' });
-      return;
+      throw new NotFoundError('Member', id);
     }
 
     // Fetch related data in parallel for optimal performance
@@ -857,29 +837,21 @@ router.get('/:id', async (req: Request, res: Response) => {
           : null,
       },
     });
-  } catch (error) {
-    console.error('Get member error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/members
  * Create a new member (member number will be auto-generated after approval)
  */
-router.post('/', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/',
+  csrfProtection,
+  validate(createMemberSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
 
-    // Validate request body using Zod schema
-    const validation = createMemberSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.errors,
-      });
-    }
-
+    // Request body is already validated and available in req.validated
     const {
       memberType,
       firstName,
@@ -890,7 +862,7 @@ router.post('/', async (req: Request, res: Response) => {
       fullNameNepali,
       email,
       phone,
-    } = validation.data;
+    } = req.validated!;
 
     // Auto-generate fullName if not provided
     let generatedFullName = fullName;
@@ -925,33 +897,28 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ member });
-  } catch (error) {
-    console.error('Create member error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * PUT /api/members/:id/status
  * Updates a member's workflow status and logs the change.
  * This is the primary endpoint for all workflow actions (Approve, Reject, etc.)
  */
-router.put('/:id/status', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/:id/status',
+  csrfProtection,
+  validateAll({
+    params: z.object({ id: z.string().min(1) }),
+    body: updateMemberStatusSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const staffId = req.user!.userId; // The staff member making the change
-    const { id: memberId } = req.params;
+    const { id: memberId } = req.validatedParams!;
 
-    // 1. Validate the request body
-    const validation = updateMemberStatusSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.errors,
-      });
-    }
-
-    const { toStatus, remarks } = validation.data;
+    // Request body is already validated and available in req.validated
+    const { toStatus, remarks } = req.validated!;
 
     // 2. Get the current member
     const existingMember = await prisma.member.findFirst({
@@ -959,14 +926,14 @@ router.put('/:id/status', async (req: Request, res: Response) => {
     });
 
     if (!existingMember) {
-      return res.status(404).json({ error: 'Member not found' });
+      throw new NotFoundError('Member', memberId);
     }
 
     const fromStatus = existingMember.workflowStatus;
 
     // 3. Check if status is actually changing
     if (fromStatus === toStatus) {
-      return res.status(400).json({ error: 'Member is already in this status' });
+      throw new BadRequestError('Member is already in this status');
     }
 
     // 4. Generate Member Number if moving to 'active'
@@ -1163,35 +1130,43 @@ router.put('/:id/status', async (req: Request, res: Response) => {
       }
     }
 
+    // Audit log for status change
+    await createAuditLog({
+      action: toStatus === 'active' ? AuditAction.MEMBER_ACTIVATED : AuditAction.MEMBER_UPDATED,
+      userId: staffId,
+      tenantId,
+      resourceType: 'Member',
+      resourceId: memberId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { 
+        fromStatus,
+        toStatus,
+        memberNumber: updatedMember.memberNumber,
+      },
+    });
+
     res.json({ member: updatedMember });
-  } catch (error: any) {
-    console.error('Update member status error:', error);
-    if (error.code === 'P2002') {
-      // Handle race condition for member number
-      res.status(409).json({ error: 'Failed to generate unique member number. Please try again.' });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
-});
+  })
+);
 
 /**
  * PUT /api/members/:id
  * Update a member
  */
-router.put('/:id', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/:id',
+  csrfProtection,
+  validateAll({
+    params: z.object({ id: z.string().min(1) }),
+    body: updateMemberSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const { id } = req.validatedParams!;
 
-    // Validate request body using Zod schema
-    const validation = updateMemberSchema.safeParse(req.body);
-    if (!validation.success) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: validation.error.errors,
-      });
-    }
+    // Request body is already validated and available in req.validated
 
     // Verify member belongs to cooperative
     const existing = await prisma.member.findFirst({
@@ -1202,12 +1177,11 @@ router.put('/:id', async (req: Request, res: Response) => {
     });
 
     if (!existing) {
-      res.status(404).json({ error: 'Member not found' });
-      return;
+      throw new NotFoundError('Member', id);
     }
 
     const { firstName, middleName, lastName, fullName, fullNameNepali, email, phone, isActive } =
-      validation.data;
+      req.validated!;
 
     // Auto-generate fullName if not provided and name parts are being updated
     let generatedFullName = fullName;
@@ -1236,24 +1210,49 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (generatedFullName !== undefined) updateData.fullName = generatedFullName;
     if (fullNameNepali !== undefined) updateData.fullNameNepali = fullNameNepali || null;
 
+    // Sanitize inputs
+    if (email !== undefined) {
+      updateData.email = email ? sanitizeEmail(email) : null;
+    }
+    if (phone !== undefined) {
+      updateData.phone = phone ? sanitizeText(phone) : null;
+    }
+    if (fullNameNepali !== undefined) {
+      updateData.fullNameNepali = fullNameNepali ? sanitizeText(fullNameNepali) : null;
+    }
+
     const member = await prisma.member.update({
       where: { id },
       data: updateData,
     });
 
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.MEMBER_UPDATED,
+      userId: req.user!.userId,
+      tenantId,
+      resourceType: 'Member',
+      resourceId: id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { 
+        changes: Object.keys(updateData),
+      },
+    });
+
     res.json({ member });
-  } catch (error) {
-    console.error('Update member error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * DELETE /api/members/:id
  * Soft delete a member (set isActive to false)
  */
-router.delete('/:id', async (req: Request, res: Response) => {
-  try {
+router.delete(
+  '/:id',
+  csrfProtection,
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const { id } = req.params;
 
@@ -1266,8 +1265,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
 
     if (!existing) {
-      res.status(404).json({ error: 'Member not found' });
-      return;
+      throw new NotFoundError('Member', id);
     }
 
     // Soft delete by setting isActive to false
@@ -1277,10 +1275,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
 
     res.json({ message: 'Member deactivated successfully', member });
-  } catch (error) {
-    console.error('Delete member error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 export default router;

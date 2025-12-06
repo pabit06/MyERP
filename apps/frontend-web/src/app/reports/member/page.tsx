@@ -3,11 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, ArrowLeft, FileText, Download, Calendar, Filter, Gift, Cake } from 'lucide-react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import { useAuth } from '../../../contexts/AuthContext';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 
 interface UpcomingBirthday {
   id: string;

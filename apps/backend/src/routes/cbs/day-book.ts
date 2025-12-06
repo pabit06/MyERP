@@ -3,6 +3,9 @@ import { authenticate } from '../../middleware/auth.js';
 import { requireTenant } from '../../middleware/tenant.js';
 import { isModuleEnabled } from '../../middleware/module.js';
 import { requireRole } from '../../middleware/role.js';
+import { csrfProtection } from '../../middleware/csrf.js';
+import { createAuditLog, AuditAction } from '../../lib/audit-log.js';
+import { asyncHandler } from '../../middleware/error-handler.js';
 import {
   startDay,
   previewSettlement,
@@ -77,26 +80,35 @@ router.get('/status', async (req: Request, res: Response) => {
  * POST /api/cbs/day-book/start
  * Perform Day Begin (Manager Only)
  */
-router.post('/start', requireRole('Manager'), async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
-    const { date } = req.body;
+router.post('/start', csrfProtection, requireRole('Manager'), asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
+  const { date } = req.body;
 
-    if (!date) {
-      return res.status(400).json({ error: 'Date is required' });
-    }
-
-    const dayBook = await startDay(cooperativeId, new Date(date), userId);
-    res.status(201).json({
-      message: 'Day started successfully',
-      dayBook,
-    });
-  } catch (error: any) {
-    console.error('Start day error:', error);
-    res.status(400).json({ error: error.message || 'Failed to start day' });
+  if (!date) {
+    return res.status(400).json({ error: 'Date is required' });
   }
-});
+
+  const dayBook = await startDay(cooperativeId, new Date(date), userId);
+  
+  // Audit log
+  await createAuditLog({
+    action: AuditAction.SYSTEM_BACKUP,
+    userId,
+    tenantId: cooperativeId,
+    resourceType: 'DayBook',
+    resourceId: dayBook.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    success: true,
+    details: { action: 'day_started', date: dayBook.date.toISOString() },
+  });
+  
+  res.status(201).json({
+    message: 'Day started successfully',
+    dayBook,
+  });
+}));
 
 /**
  * POST /api/cbs/day-book/settle/preview
@@ -128,131 +140,147 @@ router.post('/settle/preview', async (req: Request, res: Response) => {
  * POST /api/cbs/day-book/settle
  * Perform Teller Settlement (Teller/Supervisor)
  */
-router.post('/settle', async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
-    const { tellerId, physicalCash, denominationData, attachmentUrl, idempotencyKey } = req.body;
+router.post('/settle', csrfProtection, asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
+  const { tellerId, physicalCash, denominationData, attachmentUrl, idempotencyKey } = req.body;
 
-    if (!tellerId || physicalCash === undefined) {
-      return res.status(400).json({ error: 'tellerId and physicalCash are required' });
-    }
-
-    const settlement = await settleTeller(
-      cooperativeId,
-      tellerId,
-      physicalCash,
-      userId,
-      denominationData,
-      attachmentUrl,
-      idempotencyKey
-    );
-
-    res.status(201).json({
-      message: 'Settlement completed successfully',
-      settlement,
-    });
-  } catch (error: any) {
-    console.error('Settle teller error:', error);
-
-    // Handle specific error codes
-    if (error.message.includes('TELLER_PENDING_SETTLEMENT')) {
-      res.status(400).json({
-        code: 'TELLER_PENDING_SETTLEMENT',
-        error: error.message,
-        details: {
-          remediation: 'Please ensure all tellers have settled before closing the day.',
-        },
-      });
-    } else {
-      res.status(400).json({ error: error.message || 'Failed to settle teller' });
-    }
+  if (!tellerId || physicalCash === undefined) {
+    return res.status(400).json({ error: 'tellerId and physicalCash are required' });
   }
-});
+
+  const settlement = await settleTeller(
+    cooperativeId,
+    tellerId,
+    physicalCash,
+    userId,
+    denominationData,
+    attachmentUrl,
+    idempotencyKey
+  );
+
+  // Audit log
+  await createAuditLog({
+    action: AuditAction.TRANSACTION_CREATED,
+    userId,
+    tenantId: cooperativeId,
+    resourceType: 'TellerSettlement',
+    resourceId: settlement.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    success: true,
+    details: { 
+      action: 'teller_settled',
+      tellerId,
+      physicalCash: physicalCash.toString(),
+      difference: settlement.difference.toString(),
+    },
+  });
+
+  res.status(201).json({
+    message: 'Settlement completed successfully',
+    settlement,
+  });
+}));
 
 /**
  * POST /api/cbs/day-book/unsettle
  * Revert a pending settlement (Teller/Manager)
  */
-router.post('/unsettle', async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
-    const { settlementId, reason } = req.body;
+router.post('/unsettle', csrfProtection, asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
+  const { settlementId, reason } = req.body;
 
-    if (!settlementId) {
-      return res.status(400).json({ error: 'settlementId is required' });
-    }
-
-    const settlement = await unsettleTeller(cooperativeId, settlementId, userId, reason);
-    res.json({
-      message: 'Settlement reverted successfully',
-      settlement,
-    });
-  } catch (error: any) {
-    console.error('Unsettle teller error:', error);
-    res.status(400).json({ error: error.message || 'Failed to unsettle teller' });
+  if (!settlementId) {
+    return res.status(400).json({ error: 'settlementId is required' });
   }
-});
+
+  const settlement = await unsettleTeller(cooperativeId, settlementId, userId, reason);
+  
+  // Audit log
+  await createAuditLog({
+    action: AuditAction.TRANSACTION_MODIFIED,
+    userId,
+    tenantId: cooperativeId,
+    resourceType: 'TellerSettlement',
+    resourceId: settlementId,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    success: true,
+    details: { action: 'unsettled', reason },
+  });
+  
+  res.json({
+    message: 'Settlement reverted successfully',
+    settlement,
+  });
+}));
 
 /**
  * POST /api/cbs/day-book/close
  * Perform Day End (Manager Only)
  */
-router.post('/close', requireRole('Manager'), async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
+router.post('/close', csrfProtection, requireRole('Manager'), asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
 
-    const dayBook = await closeDay(cooperativeId, userId);
-    res.json({
-      message: 'Day closed successfully',
-      dayBook,
-    });
-  } catch (error: any) {
-    console.error('Close day error:', error);
-
-    // Handle specific error codes
-    if (error.message.includes('TELLER_PENDING_SETTLEMENT')) {
-      res.status(400).json({
-        code: 'TELLER_PENDING_SETTLEMENT',
-        error: error.message,
-        details: {
-          remediation: 'Please ensure all tellers have settled before closing the day.',
-        },
-      });
-    } else {
-      res.status(400).json({ error: error.message || 'Failed to close day' });
-    }
-  }
-});
+  const dayBook = await closeDay(cooperativeId, userId);
+  
+  // Audit log
+  await createAuditLog({
+    action: AuditAction.SYSTEM_BACKUP,
+    userId,
+    tenantId: cooperativeId,
+    resourceType: 'DayBook',
+    resourceId: dayBook.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    success: true,
+    details: { action: 'day_closed', date: dayBook.date.toISOString() },
+  });
+  
+  res.json({
+    message: 'Day closed successfully',
+    dayBook,
+  });
+}));
 
 /**
  * POST /api/cbs/day-book/close/force
  * Force Close Day End (Manager Only)
  */
-router.post('/close/force', requireRole('Manager'), async (req: Request, res: Response) => {
-  try {
-    const cooperativeId = req.user!.tenantId;
-    const userId = req.user!.userId;
-    const { reason, approverId } = req.body;
+router.post('/close/force', csrfProtection, requireRole('Manager'), asyncHandler(async (req: Request, res: Response) => {
+  const cooperativeId = req.user!.tenantId;
+  const userId = req.user!.userId;
+  const { reason, approverId } = req.body;
 
-    if (!reason) {
-      return res.status(400).json({ error: 'reason is required for force close' });
-    }
-
-    const approver = approverId || userId; // Use provided approver or current user
-
-    const dayBook = await forceCloseDay(cooperativeId, userId, reason, approver);
-    res.json({
-      message: 'Day force closed successfully',
-      dayBook,
-    });
-  } catch (error: any) {
-    console.error('Force close day error:', error);
-    res.status(400).json({ error: error.message || 'Failed to force close day' });
+  if (!reason) {
+    return res.status(400).json({ error: 'reason is required for force close' });
   }
-});
+
+  const approver = approverId || userId; // Use provided approver or current user
+
+  const dayBook = await forceCloseDay(cooperativeId, userId, reason, approver);
+  
+  // Audit log
+  await createAuditLog({
+    action: AuditAction.SYSTEM_BACKUP,
+    userId,
+    tenantId: cooperativeId,
+    resourceType: 'DayBook',
+    resourceId: dayBook.id,
+    ipAddress: req.ip,
+    userAgent: req.get('user-agent'),
+    success: true,
+    details: { action: 'day_force_closed', date: dayBook.date.toISOString(), reason },
+  });
+  
+  res.json({
+    message: 'Day force closed successfully',
+    dayBook,
+  });
+}));
 
 /**
  * POST /api/cbs/day-book/reopen

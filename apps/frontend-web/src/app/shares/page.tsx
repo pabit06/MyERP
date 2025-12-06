@@ -1,13 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute, NepaliDateDisplay } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import { LayoutDashboard, Plus, ArrowLeftRight, FileText, Award, BookOpen } from 'lucide-react';
-import NepaliDateDisplay from '../../components/NepaliDateDisplay';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface DashboardStats {
   totalShareCapital: number;

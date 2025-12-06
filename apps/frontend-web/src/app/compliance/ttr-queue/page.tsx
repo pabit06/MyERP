@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import NepaliDateDisplay from '@/components/NepaliDateDisplay';
+import { ProtectedRoute, NepaliDateDisplay } from '@/features/components/shared';
 
 interface TtrReport {
   id: string;
