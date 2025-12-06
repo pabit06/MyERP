@@ -11,11 +11,11 @@ jobs:
     name: Deploy Backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    # Note: The 'production' environment will be created automatically on first run
-    # or can be created manually in Settings > Environments
-    # Environment URL can be configured in Settings > Environments > production
-    environment:
-      name: 'production'
+    # Note: To use environment-specific secrets and protection rules,
+    # create a 'production' environment in Settings > Environments
+    # and uncomment the environment block below:
+    # environment:
+    #   name: production
 
     steps:
       - name: Checkout code
@@ -144,11 +144,11 @@ jobs:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
-    # Note: The 'production' environment will be created automatically on first run
-    # or can be created manually in Settings > Environments
-    # Environment URL can be configured in Settings > Environments > production
-    environment:
-      name: 'production'
+    # Note: To use environment-specific secrets and protection rules,
+    # create a 'production' environment in Settings > Environments
+    # and uncomment the environment block below:
+    # environment:
+    #   name: production
 
     steps:
       - name: Checkout code
