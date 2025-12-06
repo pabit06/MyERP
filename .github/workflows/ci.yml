@@ -281,3 +281,24 @@ jobs:
           name: playwright-report
           path: apps/backend/playwright-report/
           retention-days: 30
+
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f apps/backend/server.pid ]; then
+            PID=$(cat apps/backend/server.pid)
+            if ps -p $PID > /dev/null 2>&1; then
+              echo "Stopping backend server (PID: $PID)..."
+              kill $PID || true
+              sleep 2
+              # Force kill if still running
+              if ps -p $PID > /dev/null 2>&1; then
+                kill -9 $PID || true
+              fi
+            fi
+            rm -f apps/backend/server.pid
+          fi
+          # Fallback: kill any process on port 4000
+          if command -v lsof > /dev/null 2>&1; then
+            lsof -ti:4000 | xargs kill -9 2>/dev/null || true
+          fi
