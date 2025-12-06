@@ -57,9 +57,9 @@ describe('AccountingController', () => {
       const hookSpy = vi.fn();
       hooks.register('ChartOfAccounts', 'onCreate', hookSpy, 100, 'test-hook');
 
-      vi.mocked(mockPrisma.cooperative.findUnique).mockResolvedValue({ id: 'coop-1' } as any);
-      vi.mocked(mockPrisma.chartOfAccounts.findFirst).mockResolvedValue(null);
-      vi.mocked(mockPrisma.chartOfAccounts.create).mockResolvedValue(mockAccount as any);
+      (mockPrisma.cooperative.findUnique as any).mockResolvedValue({ id: 'coop-1' } as any);
+      (mockPrisma.chartOfAccounts.findFirst as any).mockResolvedValue(null);
+      (mockPrisma.chartOfAccounts.create as any).mockResolvedValue(mockAccount as any);
 
       const result = await controller.createAccount(
         {
@@ -76,7 +76,7 @@ describe('AccountingController', () => {
     });
 
     it('should validate tenant before creating account', async () => {
-      vi.mocked(mockPrisma.cooperative.findUnique).mockResolvedValue(null);
+      (mockPrisma.cooperative.findUnique as any).mockResolvedValue(null);
 
       await expect(
         controller.createAccount(
@@ -101,28 +101,41 @@ describe('AccountingController', () => {
         cooperativeId: 'coop-1',
       };
 
-      const mockLedger = {
-        id: 'ledger-1',
-        accountId: 'account-1',
-        journalEntryId: 'je-1',
-        debit: 100,
-        credit: 0,
-        balance: 100,
-      };
-
       const hookSpy = vi.fn();
       hooks.register('JournalEntry', 'onCreate', hookSpy, 100, 'test-hook');
 
-      vi.mocked(mockPrisma.cooperative.findUnique).mockResolvedValue({ id: 'coop-1' } as any);
-      vi.mocked(mockPrisma.journalEntry.count).mockResolvedValue(0);
-      vi.mocked(mockPrisma.journalEntry.create).mockResolvedValue(mockJournalEntry as any);
-      vi.mocked(mockPrisma.chartOfAccounts.findUnique).mockResolvedValue({
+      (mockPrisma.cooperative.findUnique as any).mockResolvedValue({ id: 'coop-1' } as any);
+      (mockPrisma.journalEntry.count as any).mockResolvedValue(0);
+      (mockPrisma.journalEntry.create as any).mockResolvedValue(mockJournalEntry as any);
+      (mockPrisma.chartOfAccounts.findUnique as any).mockResolvedValue({
         id: 'account-1',
         type: 'asset',
         isActive: true,
       } as any);
-      vi.mocked(mockPrisma.ledger.findFirst).mockResolvedValue(null);
-      vi.mocked(mockPrisma.ledger.create).mockResolvedValue(mockLedger as any);
+      (mockPrisma.chartOfAccounts.findMany as any).mockResolvedValue([
+        { id: 'account-1', type: 'asset' },
+        { id: 'account-2', type: 'liability' },
+      ] as any);
+      (mockPrisma.ledger.findFirst as any).mockResolvedValue(null);
+      (mockPrisma.ledger.findMany as any).mockResolvedValue([]);
+      // Mock ledger.create to return a value for each entry (called twice)
+      (mockPrisma.ledger.create as any)
+        .mockResolvedValueOnce({
+          id: 'ledger-1',
+          accountId: 'account-1',
+          journalEntryId: 'je-1',
+          debit: 100,
+          credit: 0,
+          balance: 100,
+        } as any)
+        .mockResolvedValueOnce({
+          id: 'ledger-2',
+          accountId: 'account-2',
+          journalEntryId: 'je-1',
+          debit: 0,
+          credit: 100,
+          balance: -100,
+        } as any);
 
       const result = await controller.createJournalEntry(
         'coop-1',
@@ -140,7 +153,7 @@ describe('AccountingController', () => {
     });
 
     it('should validate double-entry accounting', async () => {
-      vi.mocked(mockPrisma.cooperative.findUnique).mockResolvedValue({ id: 'coop-1' } as any);
+      (mockPrisma.cooperative.findUnique as any).mockResolvedValue({ id: 'coop-1' } as any);
 
       await expect(
         controller.createJournalEntry(
@@ -167,9 +180,10 @@ describe('AccountingController', () => {
         cooperativeId: 'coop-1',
       };
 
-      vi.mocked(mockPrisma.cooperative.findUnique).mockResolvedValue({ id: 'coop-1' } as any);
-      vi.mocked(mockPrisma.chartOfAccounts.findUnique).mockResolvedValue(originalAccount as any);
-      vi.mocked(mockPrisma.ledger.count).mockResolvedValue(5); // Has transactions
+      (mockPrisma.cooperative.findUnique as any).mockResolvedValue({ id: 'coop-1' } as any);
+      (mockPrisma.chartOfAccounts.findUnique as any).mockResolvedValue(originalAccount as any);
+      (mockPrisma.chartOfAccounts.findFirst as any).mockResolvedValue(null);
+      (mockPrisma.ledger.count as any).mockResolvedValue(5); // Has transactions
 
       await expect(
         controller.updateAccount(

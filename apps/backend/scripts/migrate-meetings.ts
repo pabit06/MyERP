@@ -61,7 +61,8 @@ async function migrateMeetings() {
           let workflowStatus: MeetingWorkflowStatus = MeetingWorkflowStatus.DRAFT;
 
           // Map old status values to new enum (handle legacy string values)
-          const statusStr = String(meeting.status).toLowerCase();
+          // Convert enum to string for comparison (handles both enum and legacy string values)
+          const statusStr = String(meeting.status as string | MeetingStatus).toLowerCase();
           if (statusStr === 'scheduled' || statusStr === 'planned') {
             newStatus = MeetingStatus.PLANNED;
           } else if (statusStr === 'ongoing') {

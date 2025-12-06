@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { comparePassword, generateToken } from '../lib/auth.js';
 import { authenticate } from '../middleware/auth.js';
-import { BadRequestError, UnauthorizedError } from '../lib/errors.js';
+import { BadRequestError, UnauthorizedError, NotFoundError } from '../lib/errors.js';
 import { asyncHandler } from '../middleware/error-handler.js';
+import { createAuditLog, AuditAction } from '../lib/audit-log.js';
+import { sanitizeEmail } from '../lib/sanitize.js';
 
 const router = Router();
 
@@ -127,7 +129,7 @@ router.post(
       await createAuditLog({
         action: AuditAction.LOGIN_FAILURE,
         userId: user.id,
-        tenantId: user.cooperativeId || undefined,
+        tenantId: user.cooperativeId ?? undefined,
         ipAddress: req.ip,
         userAgent: req.get('user-agent'),
         success: false,
@@ -140,15 +142,15 @@ router.post(
     const token = generateToken({
       userId: user.id,
       email: user.email,
-      cooperativeId: user.cooperativeId || null,
-      roleId: user.roleId || undefined,
+      cooperativeId: user.cooperativeId ?? null,
+      roleId: user.roleId ?? undefined,
     });
 
     // Log successful login
     await createAuditLog({
       action: AuditAction.LOGIN_SUCCESS,
       userId: user.id,
-      tenantId: user.cooperativeId || undefined,
+      tenantId: user.cooperativeId ?? undefined,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
@@ -179,8 +181,11 @@ router.post(
       throw new UnauthorizedError('User not associated with a cooperative');
     }
 
+    // TypeScript narrowing: user.cooperative is now guaranteed to be non-null
+    const cooperative = user.cooperative;
+
     // Get enabled modules from subscription
-    const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
+    const enabledModules = (cooperative.subscription?.plan?.enabledModules as string[]) || [];
 
     res.json({
       message: 'Login successful',
@@ -189,16 +194,16 @@ router.post(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        cooperativeId: user.cooperativeId,
-        roleId: user.roleId,
+        cooperativeId: user.cooperativeId ?? undefined,
+        roleId: user.roleId ?? undefined,
         role: user.role || null,
         isSystemAdmin: false,
       },
       cooperative: {
-        id: user.cooperative.id,
-        name: user.cooperative.name,
-        subdomain: user.cooperative.subdomain,
-        logoUrl: user.cooperative.profile?.logoUrl || null,
+        id: cooperative.id,
+        name: cooperative.name,
+        subdomain: cooperative.subdomain,
+        logoUrl: cooperative.profile?.logoUrl || null,
         enabledModules,
       },
       token,
@@ -367,7 +372,10 @@ router.get(
       return;
     }
 
-    const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
+    // TypeScript narrowing: user.cooperative is now guaranteed to be non-null
+    const cooperative = user.cooperative;
+
+    const enabledModules = (cooperative.subscription?.plan?.enabledModules as string[]) || [];
 
     res.json({
       user: {
@@ -375,15 +383,15 @@ router.get(
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roleId: user.roleId,
+        roleId: user.roleId ?? undefined,
         role: user.role || null,
         isSystemAdmin: false,
       },
       cooperative: {
-        id: user.cooperative.id,
-        name: user.cooperative.name,
-        subdomain: user.cooperative.subdomain,
-        logoUrl: user.cooperative.profile?.logoUrl || null,
+        id: cooperative.id,
+        name: cooperative.name,
+        subdomain: cooperative.subdomain,
+        logoUrl: cooperative.profile?.logoUrl || null,
         enabledModules,
       },
     });
