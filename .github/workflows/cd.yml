@@ -13,9 +13,9 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     # Note: The 'production' environment will be created automatically on first run
     # or can be created manually in Settings > Environments
+    # Environment URL can be configured in Settings > Environments > production
     environment:
       name: 'production'
-      url: ${{ secrets.BACKEND_URL }}
 
     steps:
       - name: Checkout code
@@ -146,9 +146,9 @@ jobs:
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
     # Note: The 'production' environment will be created automatically on first run
     # or can be created manually in Settings > Environments
+    # Environment URL can be configured in Settings > Environments > production
     environment:
       name: 'production'
-      url: ${{ secrets.FRONTEND_URL }}
 
     steps:
       - name: Checkout code
