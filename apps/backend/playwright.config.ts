@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright E2E Test Configuration
- * 
+ *
  * Tests critical user flows end-to-end:
  * - Authentication (login/logout)
  * - Member onboarding
@@ -34,7 +34,9 @@ export default defineConfig({
   webServer: {
     command: 'pnpm dev',
     url: 'http://localhost:4000/health',
-    reuseExistingServer: !process.env.CI,
+    // In CI, the server is manually started before tests run, so we should reuse it
+    // Locally, we might want a fresh server for each test run
+    reuseExistingServer: !!process.env.CI,
     timeout: 120 * 1000,
   },
 });

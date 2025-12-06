@@ -44,14 +44,14 @@ router.get('/:memberId/kyc', async (req: Request, res: Response) => {
     }
 
     // Check for KYC based on member type
-    let _kyc = null;
+    let kyc = null;
 
     if (member.memberType === 'INSTITUTION') {
-      _kyc = await prisma.institutionKYC.findUnique({
+      kyc = await prisma.institutionKYC.findUnique({
         where: { memberId },
       });
     } else {
-      _kyc = await prisma.memberKYC.findUnique({
+      kyc = await prisma.memberKYC.findUnique({
         where: { memberId },
         include: {
           bodMeeting: {
@@ -488,16 +488,16 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
     }
 
     // Get KYC based on member type
-    let _kyc: any = null;
+    let kyc: any = null;
     let isInstitution = false;
 
     if (member.memberType === 'INSTITUTION') {
-      _kyc = await prisma.institutionKYC.findUnique({
+      kyc = await prisma.institutionKYC.findUnique({
         where: { memberId },
       });
       isInstitution = true;
     } else {
-      _kyc = await prisma.memberKYC.findUnique({
+      kyc = await prisma.memberKYC.findUnique({
         where: { memberId },
       });
     }
