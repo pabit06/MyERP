@@ -82,8 +82,12 @@ jobs:
       - name: Set frontend environment variables
         run: |
           NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
-          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
-            NEXT_PUBLIC_API_URL_VALUE="http://localhost:3001/api"
+          # Check if value is empty or contains unexpanded template (indicates missing secret)
+          # CI builds require this secret to ensure correct API configuration
+          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ] || echo "$NEXT_PUBLIC_API_URL_VALUE" | grep -q '\${{'; then
+            echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for CI builds"
+            echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
+            exit 1
           fi
           echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL_VALUE" >> $GITHUB_ENV
 
@@ -253,8 +257,19 @@ jobs:
         run: |
           cd apps/backend
           pnpm dev > server.log 2>&1 &
-          echo $! > server.pid
-          sleep 15
+          PNPM_PID=$!
+          echo $PNPM_PID > server.pid
+          # Wait a bit for the actual Node.js process to start
+          sleep 5
+          # Find the actual Node.js/tsx process (child of pnpm or direct tsx process)
+          if command -v pgrep > /dev/null 2>&1; then
+            # Try to find tsx or node process related to our server
+            NODE_PID=$(pgrep -P $PNPM_PID 2>/dev/null | head -1 || pgrep -f "tsx.*src/index.ts" 2>/dev/null | head -1 || echo "")
+            if [ -n "$NODE_PID" ]; then
+              echo $NODE_PID > server.pid
+            fi
+          fi
+          sleep 10
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
           JWT_SECRET: ${{ env.JWT_SECRET }}
@@ -267,8 +282,10 @@ jobs:
         run: |
           echo "Waiting for server to start..."
           for i in {1..30}; do
-            # Try both /health and /health/ (with trailing slash) as Express handles both
-            if curl -f http://localhost:4000/health > /dev/null 2>&1 || curl -f http://localhost:4000/health/ > /dev/null 2>&1; then
+            # Try /health (mounted at root), /health/ (with trailing slash), and /api/health (if under API_PREFIX)
+            if curl -f http://localhost:4000/health > /dev/null 2>&1 || \
+               curl -f http://localhost:4000/health/ > /dev/null 2>&1 || \
+               curl -f http://localhost:4000/api/health > /dev/null 2>&1; then
               echo "✅ Server is ready!"
               exit 0
             fi
@@ -305,16 +322,25 @@ jobs:
             PID=$(cat apps/backend/server.pid)
             if ps -p $PID > /dev/null 2>&1; then
               echo "Stopping backend server (PID: $PID)..."
-              kill $PID || true
+              # Try to kill the process and its children
+              kill $PID 2>/dev/null || true
+              # If pkill is available, kill the process tree
+              if command -v pkill > /dev/null 2>&1; then
+                pkill -P $PID 2>/dev/null || true
+              fi
               sleep 2
               # Force kill if still running
               if ps -p $PID > /dev/null 2>&1; then
-                kill -9 $PID || true
+                kill -9 $PID 2>/dev/null || true
               fi
             fi
             rm -f apps/backend/server.pid
           fi
-          # Fallback: kill any process on port 4000
+          # Fallback: kill any process on port 4000 and related tsx/node processes
           if command -v lsof > /dev/null 2>&1; then
             lsof -ti:4000 | xargs kill -9 2>/dev/null || true
+          fi
+          # Also kill any remaining tsx processes related to the backend
+          if command -v pkill > /dev/null 2>&1; then
+            pkill -f "tsx.*src/index.ts" 2>/dev/null || true
           fi
