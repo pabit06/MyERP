@@ -173,7 +173,7 @@ jobs:
           tar -czf frontend-dist.tar.gz .next/ public/ package.json
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: apps/frontend-web/frontend-dist.tar.gz
