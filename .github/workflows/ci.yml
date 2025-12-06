@@ -161,6 +161,11 @@ jobs:
 
       - name: Run backend unit tests
         run: pnpm --filter '@myerp/backend' test
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          JWT_SECRET: ${{ env.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ env.JWT_EXPIRES_IN }}
+          NODE_ENV: ${{ env.NODE_ENV }}
 
   test-frontend:
     name: Frontend Tests
