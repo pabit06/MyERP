@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import multer from 'multer';
+import { MeetingStatus, MeetingWorkflowStatus, ShareTxType } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
@@ -10,14 +11,9 @@ import { auditLogFromRequest } from '../lib/audit.js';
 import { generateMeetingNumber } from '../lib/meeting-number.js';
 import { sendMeetingNotifications } from '../lib/notifications.js';
 import { fetchReportData } from '../services/report-data-fetcher.js';
-import { validate, validateAll, validateParams } from '../middleware/validate.js';
+import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import {
-  createMeetingSchema,
-  updateMeetingStatusSchema,
-  createCommitteeSchema,
-} from '@myerp/shared-types';
-import { idSchema } from '../validators/common.js';
+import { createMeetingSchema, createCommitteeSchema } from '@myerp/shared-types';
 
 const router: Router = Router();
 
@@ -218,8 +214,8 @@ router.post(
         endTime: parseDate(endTime),
         location,
         committeeId: committeeId || null,
-        status: 'PLANNED',
-        workflowStatus: 'DRAFT',
+        status: MeetingStatus.PLANNED,
+        workflowStatus: MeetingWorkflowStatus.DRAFT,
         baseAllowance: defaultAllowanceRate,
         createdBy: userId,
         attendees: attendees ? attendees : null,
@@ -572,7 +568,7 @@ router.delete('/meetings/:id', async (req: Request, res: Response) => {
     }
 
     // Prevent deleting finalized meetings (optional safety check)
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res
         .status(400)
         .json({ error: 'Cannot delete finalized meeting. Please contact administrator.' });
@@ -637,7 +633,7 @@ router.post('/meetings/:id/agenda', async (req: Request, res: Response) => {
     }
 
     // Only allow adding agendas if workflowStatus is DRAFT
-    if (meeting.workflowStatus !== 'DRAFT') {
+    if (meeting.workflowStatus !== MeetingWorkflowStatus.DRAFT) {
       res.status(400).json({ error: 'Cannot add agenda. Meeting is locked or finalized.' });
       return;
     }
@@ -693,7 +689,7 @@ router.put('/meetings/:id/agenda/:agendaId', async (req: Request, res: Response)
     }
 
     // Only allow updating agendas if workflowStatus is DRAFT
-    if (meeting.workflowStatus !== 'DRAFT') {
+    if (meeting.workflowStatus !== MeetingWorkflowStatus.DRAFT) {
       res.status(400).json({ error: 'Cannot update agenda. Meeting is locked or finalized.' });
       return;
     }
@@ -753,7 +749,7 @@ router.delete('/meetings/:id/agenda/:agendaId', async (req: Request, res: Respon
     }
 
     // Only allow deleting agendas if workflowStatus is DRAFT
-    if (meeting.workflowStatus !== 'DRAFT') {
+    if (meeting.workflowStatus !== MeetingWorkflowStatus.DRAFT) {
       res.status(400).json({ error: 'Cannot delete agenda. Meeting is locked or finalized.' });
       return;
     }
@@ -855,7 +851,7 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
     }
 
     // Only allow scheduling if status is PLANNED
-    if (meeting.status !== 'PLANNED') {
+    if (meeting.status !== MeetingStatus.PLANNED) {
       res.status(400).json({ error: 'Meeting can only be scheduled when status is PLANNED' });
       return;
     }
@@ -864,8 +860,8 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
     const updatedMeeting = await prisma.meeting.update({
       where: { id },
       data: {
-        status: 'SCHEDULED',
-        workflowStatus: 'LOCKED',
+        status: MeetingStatus.SCHEDULED,
+        workflowStatus: MeetingWorkflowStatus.LOCKED,
       },
     });
 
@@ -895,8 +891,8 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
     // Audit log
     await auditLogFromRequest(req, 'update', 'meeting', id, {
       action: 'schedule',
-      status: 'SCHEDULED',
-      workflowStatus: 'LOCKED',
+      status: MeetingStatus.SCHEDULED,
+      workflowStatus: MeetingWorkflowStatus.LOCKED,
       notificationsSent: notificationCount,
     });
 
@@ -945,7 +941,7 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
     }
 
     // Prevent editing if finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Cannot edit finalized meeting' });
       return;
     }
@@ -953,7 +949,7 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
     // Prevent changing date/time if locked
     const workflowStatus = req.body.workflowStatus;
     if (
-      meeting.workflowStatus === 'LOCKED' &&
+      meeting.workflowStatus === MeetingWorkflowStatus.LOCKED &&
       (scheduledDate || req.body.date || startTime || endTime || location)
     ) {
       res.status(400).json({ error: 'Cannot change date, time, or location. Meeting is locked.' });
@@ -1171,9 +1167,8 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
     try {
       const kyc = memberKYC;
       if (kyc) {
-        const { postShareCapital, postEntryFee, getCurrentSharePrice } = await import(
-          '../services/accounting.js'
-        );
+        const { postShareCapital, postEntryFee, getCurrentSharePrice } =
+          await import('../services/accounting.js');
         const { amlEvents, AML_EVENTS } = await import('../lib/events.js');
 
         const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
@@ -1203,7 +1198,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
             const existingTransaction = await prisma.shareTransaction.findFirst({
               where: {
                 memberId,
-                type: 'purchase',
+                type: ShareTxType.PURCHASE,
                 remarks: {
                   contains: 'Initial share purchase',
                 },
@@ -1229,7 +1224,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
                   ledgerId: shareLedger.id,
                   memberId,
                   cooperativeId: tenantId,
-                  type: 'purchase',
+                  type: ShareTxType.PURCHASE,
                   shares,
                   amount: shares * sharePrice,
                   sharePrice,
@@ -1339,7 +1334,7 @@ router.put('/meetings/:id/minutes', async (req: Request, res: Response) => {
     }
 
     // Only allow updating minutes if status is SCHEDULED or COMPLETED
-    if (meeting.status !== 'SCHEDULED' && meeting.status !== 'COMPLETED') {
+    if (meeting.status !== MeetingStatus.SCHEDULED && meeting.status !== MeetingStatus.COMPLETED) {
       res
         .status(400)
         .json({ error: 'Can only record minutes for scheduled or completed meetings' });
@@ -1347,7 +1342,7 @@ router.put('/meetings/:id/minutes', async (req: Request, res: Response) => {
     }
 
     // Prevent editing if finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Cannot update minutes. Meeting is finalized.' });
       return;
     }
@@ -1484,7 +1479,7 @@ router.put('/meetings/:id/attendance', async (req: Request, res: Response) => {
     }
 
     // Prevent editing if finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Cannot update attendance. Meeting is finalized.' });
       return;
     }
@@ -1513,11 +1508,15 @@ router.put('/meetings/:id/attendance', async (req: Request, res: Response) => {
     const isDatePassed = meetingDate ? new Date(meetingDate) < new Date() : false;
 
     const meetingUpdateData: any = {};
-    if (isDatePassed && meeting.status !== 'COMPLETED') {
-      meetingUpdateData.status = 'COMPLETED';
+    if (isDatePassed && meeting.status !== MeetingStatus.COMPLETED) {
+      meetingUpdateData.status = MeetingStatus.COMPLETED;
     }
-    if (meeting.workflowStatus !== 'MINUTED' && meeting.workflowStatus !== 'FINALIZED') {
-      meetingUpdateData.workflowStatus = 'MINUTED';
+    // Only update to MINUTED if currently DRAFT or LOCKED (we already checked it's not FINALIZED above)
+    if (
+      meeting.workflowStatus === MeetingWorkflowStatus.DRAFT ||
+      meeting.workflowStatus === MeetingWorkflowStatus.LOCKED
+    ) {
+      meetingUpdateData.workflowStatus = MeetingWorkflowStatus.MINUTED;
     }
 
     if (Object.keys(meetingUpdateData).length > 0) {
@@ -1568,7 +1567,7 @@ router.post('/meetings/:id/attendees', async (req: Request, res: Response) => {
     }
 
     // Prevent editing if finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Cannot add attendee. Meeting is finalized.' });
       return;
     }
@@ -1627,7 +1626,7 @@ router.put('/meetings/:id/attendees/:attendeeId', async (req: Request, res: Resp
     }
 
     // Prevent editing if finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Cannot update attendee. Meeting is finalized.' });
       return;
     }
@@ -1702,7 +1701,7 @@ router.post('/meetings/:id/finalize', async (req: Request, res: Response) => {
     }
 
     // Check if already finalized
-    if (meeting.workflowStatus === 'FINALIZED') {
+    if (meeting.workflowStatus === MeetingWorkflowStatus.FINALIZED) {
       res.status(400).json({ error: 'Meeting is already finalized' });
       return;
     }
@@ -1730,7 +1729,7 @@ router.post('/meetings/:id/finalize', async (req: Request, res: Response) => {
     const updatedMeeting = await prisma.meeting.update({
       where: { id },
       data: {
-        workflowStatus: 'FINALIZED',
+        workflowStatus: MeetingWorkflowStatus.FINALIZED,
         totalExpense,
         minutesStatus: 'FINALIZED', // Keep for backward compatibility
       },
@@ -3134,7 +3133,7 @@ router.get('/meetings/upcoming', async (req: Request, res: Response) => {
     const meetings = await prisma.meeting.findMany({
       where: {
         cooperativeId: tenantId,
-        status: 'scheduled',
+        status: MeetingStatus.SCHEDULED,
         scheduledDate: {
           gte: today,
           lte: futureDate,

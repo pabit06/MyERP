@@ -11,7 +11,7 @@ async function hashPassword(password: string): Promise<string> {
 
 /**
  * Test Data Helper
- * 
+ *
  * Creates and manages test data for E2E tests
  */
 
@@ -117,6 +117,10 @@ export async function setupTestUser(): Promise<TestUser> {
     });
   }
 
+  if (!user.cooperativeId) {
+    throw new Error('Test user must have a cooperativeId');
+  }
+
   return {
     email: testEmail,
     password: testPassword,
@@ -128,10 +132,7 @@ export async function setupTestUser(): Promise<TestUser> {
 /**
  * Login and get auth token
  */
-export async function loginTestUser(
-  request: APIRequestContext,
-  user: TestUser
-): Promise<string> {
+export async function loginTestUser(request: APIRequestContext, user: TestUser): Promise<string> {
   const response = await request.post('/api/auth/login', {
     data: {
       email: user.email,
