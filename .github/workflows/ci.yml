@@ -262,12 +262,30 @@ jobs:
           # Wait a bit for the actual Node.js process to start
           sleep 5
           # Find the actual Node.js/tsx process (child of pnpm or direct tsx process)
+          # If we can't find it, we'll keep the PNPM_PID as a fallback for cleanup
           if command -v pgrep > /dev/null 2>&1; then
-            # Try to find tsx or node process related to our server
-            NODE_PID=$(pgrep -P $PNPM_PID 2>/dev/null | head -1 || pgrep -f "tsx.*src/index.ts" 2>/dev/null | head -1 || echo "")
-            if [ -n "$NODE_PID" ]; then
-              echo $NODE_PID > server.pid
+            NODE_PID=""
+            # Try to find child process of pnpm first
+            CHILD_PID=$(pgrep -P $PNPM_PID 2>/dev/null | head -1)
+            if [ -n "$CHILD_PID" ] && [ "$CHILD_PID" -gt 0 ] 2>/dev/null; then
+              NODE_PID=$CHILD_PID
+            else
+              # Fallback: try to find tsx process by pattern
+              PATTERN_PID=$(pgrep -f "tsx.*src/index.ts" 2>/dev/null | head -1)
+              if [ -n "$PATTERN_PID" ] && [ "$PATTERN_PID" -gt 0 ] 2>/dev/null; then
+                NODE_PID=$PATTERN_PID
+              fi
             fi
+            # Only update server.pid if we found a valid Node.js process ID
+            # Otherwise, keep the PNPM_PID as fallback (already written above)
+            if [ -n "$NODE_PID" ] && [ "$NODE_PID" -gt 0 ] 2>/dev/null; then
+              echo $NODE_PID > server.pid
+              echo "Found Node.js process PID: $NODE_PID"
+            else
+              echo "Could not find Node.js process, using PNPM PID as fallback: $PNPM_PID"
+            fi
+          else
+            echo "pgrep not available, using PNPM PID: $PNPM_PID"
           fi
           sleep 10
         env:
