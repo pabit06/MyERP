@@ -11,8 +11,10 @@ jobs:
     name: Deploy Backend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    # Note: The 'production' environment will be created automatically on first run
+    # or can be created manually in Settings > Environments
     environment:
-      name: production
+      name: 'production'
       url: ${{ secrets.BACKEND_URL }}
 
     steps:
@@ -140,8 +142,10 @@ jobs:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    # Note: The 'production' environment will be created automatically on first run
+    # or can be created manually in Settings > Environments
     environment:
-      name: production
+      name: 'production'
       url: ${{ secrets.FRONTEND_URL }}
 
     steps:
@@ -162,15 +166,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Set frontend environment variables
+        run: |
+          NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
+          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
+            NEXT_PUBLIC_API_URL_VALUE="http://localhost:3001/api"
+          fi
+          echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL_VALUE" >> $GITHUB_ENV
+
       - name: Build frontend
         run: pnpm --filter '@myerp/frontend-web' build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
 
       - name: Create deployment package
         run: |
           cd apps/frontend-web
-          tar -czf frontend-dist.tar.gz .next/ public/ package.json
+          # Copy lock file from root for frozen install
+          cp ../../pnpm-lock.yaml . || true
+          tar -czf frontend-dist.tar.gz .next/ public/ package.json pnpm-lock.yaml
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

@@ -79,10 +79,18 @@ jobs:
       - name: Build backend
         run: pnpm --filter '@myerp/backend' build
 
+      - name: Set frontend environment variables
+        run: |
+          NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
+          if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
+            NEXT_PUBLIC_API_URL_VALUE="http://localhost:3001/api"
+          fi
+          echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL_VALUE" >> $GITHUB_ENV
+
       - name: Build frontend
         run: pnpm --filter '@myerp/frontend-web' build
         env:
-          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL: ${{ env.NEXT_PUBLIC_API_URL }}
 
   test-backend:
     name: Backend Tests
