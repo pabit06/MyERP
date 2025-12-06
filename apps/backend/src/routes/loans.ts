@@ -85,7 +85,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.CONFIGURATION_CHANGED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'LoanProduct',
       resourceId: product.id,
       ipAddress: req.ip,
@@ -159,7 +159,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortOrder: sortOrder || 'desc' }
           ),
           sortBy,
           sortOrder,
@@ -169,7 +169,9 @@ router.get(
       prisma.loanApplication.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(applications, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(applications, total, { page, limit, sortOrder: sortOrder || 'desc' })
+    );
   })
 );
 
@@ -198,7 +200,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'LoanApplication',
       resourceId: application.id,
       ipAddress: req.ip,
@@ -207,7 +209,7 @@ router.post(
       details: {
         action: 'created',
         memberId: application.memberId,
-        amount: application.requestedAmount?.toString(),
+        amount: application.loanAmount?.toString(),
       },
     });
 
@@ -236,7 +238,7 @@ router.post(
 
     const result = await loansController.approveApplication(
       id,
-      tenantId,
+      tenantId || req.currentCooperativeId!,
       {
         disbursedDate: disbursedDate ? new Date(disbursedDate as string) : undefined,
       },
@@ -247,7 +249,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'LoanApplication',
       resourceId: id,
       ipAddress: req.ip,
@@ -256,7 +258,7 @@ router.post(
       details: {
         action: 'approved',
         memberId: result.application.memberId,
-        amount: result.application.approvedAmount?.toString(),
+        amount: result.application.loanAmount?.toString(),
       },
     });
 
@@ -276,7 +278,11 @@ router.get(
   '/applications/:id/emi-schedule',
   validateParams(idSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId || req.currentCooperativeId;
+    if (!tenantId) {
+      res.status(400).json({ error: 'Tenant ID is required' });
+      return;
+    }
     const { id } = req.validatedParams!;
 
     const emiSchedule = await loansController.getEMISchedule(id, tenantId);

@@ -276,7 +276,7 @@ async function getFCMAdmin() {
 
   try {
     // Dynamic import to avoid requiring firebase-admin if not configured
-    const admin = await import('firebase-admin').catch(() => null);
+    const admin = (await import('firebase-admin').catch(() => null)) as any;
     if (!admin) {
       logger.warn('firebase-admin not available, push notifications disabled');
       return;

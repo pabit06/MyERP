@@ -223,7 +223,7 @@ export class WorkflowEngine {
       );
     } else {
       // Create new transaction
-      return await prisma.$transaction(async (transactionClient: Prisma.TransactionClient) => {
+      return await prisma.$transaction(async (transactionClient: any) => {
         const result = await this.executeTransition(
           workflow,
           entity,

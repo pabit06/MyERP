@@ -1,6 +1,6 @@
 /**
  * Audit Logging System
- * 
+ *
  * Logs all sensitive operations for security and compliance:
  * - Login attempts (success/failure)
  * - Permission changes
@@ -58,6 +58,7 @@ export enum AuditAction {
   // Member Operations
   MEMBER_CREATED = 'MEMBER_CREATED',
   MEMBER_UPDATED = 'MEMBER_UPDATED',
+  MEMBER_ACTIVATED = 'MEMBER_ACTIVATED',
   MEMBER_DELETED = 'MEMBER_DELETED',
   KYC_APPROVED = 'KYC_APPROVED',
   KYC_REJECTED = 'KYC_REJECTED',
@@ -83,7 +84,7 @@ export interface AuditLogData {
 
 /**
  * Create an audit log entry
- * 
+ *
  * @param data - Audit log data
  */
 export async function createAuditLog(data: AuditLogData): Promise<void> {

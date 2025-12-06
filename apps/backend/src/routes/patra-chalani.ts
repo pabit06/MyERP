@@ -277,7 +277,7 @@ router.post('/', async (req: Request, res: Response) => {
     const count = await prisma.patraChalani.count({
       where: {
         cooperativeId: tenantId!,
-        type: type as string,
+        type: type as any,
         fiscalYear: fiscalYearStr,
       },
     });
@@ -471,7 +471,11 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
       return;
     }
 
-    const fileInfo = await saveUploadedFile(req.file, 'patra-chalani-documents', tenantId);
+    const fileInfo = await saveUploadedFile(
+      req.file,
+      'patra-chalani-documents',
+      tenantId || req.currentCooperativeId!
+    );
 
     const document = await prisma.patraChalaniDocument.create({
       data: {

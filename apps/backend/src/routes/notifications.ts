@@ -53,7 +53,7 @@ router.get(
       return;
     }
     const userId = req.user!.userId;
-    const { page, limit, type, channel, status, unreadOnly } = req.validatedQuery!;
+    const { page, limit, type, channel, status, unreadOnly, sortOrder } = req.validatedQuery!;
 
     const offset = (page - 1) * limit;
 
@@ -74,6 +74,7 @@ router.get(
       createPaginatedResponse(result.notifications, result.total, {
         page,
         limit,
+        sortOrder: sortOrder || 'desc',
       })
     );
   })
@@ -132,7 +133,11 @@ router.put(
   validateParams(idSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const cooperativeId = req.user!.tenantId;
+    const cooperativeId = req.user!.tenantId || req.currentCooperativeId;
+    if (!cooperativeId) {
+      res.status(400).json({ error: 'Cooperative ID is required' });
+      return;
+    }
     const { id } = req.validatedParams!;
 
     await markAsRead(id, userId, cooperativeId);
@@ -150,7 +155,11 @@ router.delete(
   validateParams(idSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
-    const cooperativeId = req.user!.tenantId;
+    const cooperativeId = req.user!.tenantId || req.currentCooperativeId;
+    if (!cooperativeId) {
+      res.status(400).json({ error: 'Cooperative ID is required' });
+      return;
+    }
     const { id } = req.validatedParams!;
 
     await deleteNotification(id, userId, cooperativeId);

@@ -434,7 +434,11 @@ router.post(
       }
 
       // Save file
-      const fileInfo = await saveUploadedFile(req.file, 'official-documents', tenantId);
+      const fileInfo = await saveUploadedFile(
+        req.file,
+        'official-documents',
+        tenantId || req.currentCooperativeId!
+      );
 
       // Create document record
       const document = await prisma.officialDocument.create({

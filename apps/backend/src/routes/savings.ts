@@ -74,7 +74,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortOrder: sortOrder || 'desc' }
           ),
           sortBy,
           sortOrder,
@@ -84,7 +84,9 @@ router.get(
       prisma.savingProduct.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(products, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(products, total, { page, limit, sortOrder: sortOrder || 'desc' })
+    );
   })
 );
 
@@ -113,7 +115,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.CONFIGURATION_CHANGED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'SavingProduct',
       resourceId: product.id,
       ipAddress: req.ip,
@@ -224,7 +226,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortOrder: sortOrder || 'desc' }
           ),
           sortBy,
           sortOrder,
@@ -234,7 +236,9 @@ router.get(
       prisma.savingAccount.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(accounts, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(accounts, total, { page, limit, sortOrder: sortOrder || 'desc' })
+    );
   })
 );
 
@@ -263,7 +267,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'SavingAccount',
       resourceId: account.id,
       ipAddress: req.ip,
@@ -284,7 +288,11 @@ router.get(
   '/accounts/:id',
   validateParams(idSchema),
   asyncHandler(async (req: Request, res: Response) => {
-    const tenantId = req.user!.tenantId;
+    const tenantId = req.user!.tenantId || req.currentCooperativeId;
+    if (!tenantId) {
+      res.status(400).json({ error: 'Tenant ID is required' });
+      return;
+    }
     const { id } = req.validatedParams!;
 
     const account = await savingsController.getAccount(id, tenantId);
@@ -331,7 +339,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.PAYMENT_PROCESSED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'SavingAccount',
       resourceId: id,
       ipAddress: req.ip,
@@ -340,7 +348,7 @@ router.post(
       details: {
         action: 'deposit',
         amount: amount.toString(),
-        transactionId: result.transaction?.id,
+        transactionId: result.journalEntry?.id,
       },
     });
 
@@ -387,7 +395,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.PAYMENT_PROCESSED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'SavingAccount',
       resourceId: id,
       ipAddress: req.ip,
@@ -396,7 +404,7 @@ router.post(
       details: {
         action: 'withdraw',
         amount: amount.toString(),
-        transactionId: result.transaction?.id,
+        transactionId: result.journalEntry?.id,
       },
     });
 
@@ -420,7 +428,7 @@ router.post(
     const { asOfDate } = req.validated!;
 
     const result = await savingsController.calculateInterest(
-      tenantId,
+      tenantId || req.currentCooperativeId!,
       asOfDate ? new Date(asOfDate as string) : undefined
     );
 
@@ -463,7 +471,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'SavingProduct',
       resourceId: productId,
       ipAddress: req.ip,
@@ -471,7 +479,7 @@ router.post(
       success: true,
       details: {
         action: 'interest_posted',
-        accountsAffected: result.accountsAffected,
+        accountsAffected: result.posted?.length || 0,
       },
     });
 

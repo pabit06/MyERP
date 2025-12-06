@@ -52,7 +52,7 @@ export abstract class BaseController {
    * Provides transaction client to the function
    */
   protected async handleTransaction<T>(
-    fn: (tx: Prisma.TransactionClient) => Promise<T>
+    fn: (tx: any) => Promise<T> // Using any to support extended Prisma client transaction
   ): Promise<T> {
     return (await this.prisma.$transaction(fn, {
       maxWait: 10000, // 10 seconds

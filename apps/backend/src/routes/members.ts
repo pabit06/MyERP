@@ -135,27 +135,27 @@ router.put(
       // Create new related data
       if (otherCooperativeMemberships && otherCooperativeMemberships.length > 0) {
         await tx.otherCooperativeMembership.createMany({
-          data: otherCooperativeMemberships.map((item) => ({ ...item, memberKycId })),
+          data: otherCooperativeMemberships.map((item: any) => ({ ...item, memberKycId })),
         });
       }
       if (familyMemberCooperativeMemberships && familyMemberCooperativeMemberships.length > 0) {
         await tx.familyMemberCooperativeMembership.createMany({
-          data: familyMemberCooperativeMemberships.map((item) => ({ ...item, memberKycId })),
+          data: familyMemberCooperativeMemberships.map((item: any) => ({ ...item, memberKycId })),
         });
       }
       if (familyMemberInThisInstitution && familyMemberInThisInstitution.length > 0) {
         await tx.familyMemberInThisInstitution.createMany({
-          data: familyMemberInThisInstitution.map((item) => ({ ...item, memberKycId })),
+          data: familyMemberInThisInstitution.map((item: any) => ({ ...item, memberKycId })),
         });
       }
       if (otherEarningFamilyMembers && otherEarningFamilyMembers.length > 0) {
         await tx.otherEarningFamilyMember.createMany({
-          data: otherEarningFamilyMembers.map((item) => ({ ...item, memberKycId })),
+          data: otherEarningFamilyMembers.map((item: any) => ({ ...item, memberKycId })),
         });
       }
       if (incomeSourceDetails && incomeSourceDetails.length > 0) {
         await tx.incomeSourceDetail.createMany({
-          data: incomeSourceDetails.map((item) => ({ ...item, memberKycId })),
+          data: incomeSourceDetails.map((item: any) => ({ ...item, memberKycId })),
         });
       }
 
@@ -203,7 +203,7 @@ router.put(
         });
 
         if (initialShareAmount > 0 && member?.memberNumber) {
-          const sharePrice = await getCurrentSharePrice(tenantId, 100);
+          const sharePrice = await getCurrentSharePrice(tenantId || req.currentCooperativeId!, 100);
           const shares = Math.floor(initialShareAmount / sharePrice);
 
           if (shares > 0) {
@@ -223,7 +223,13 @@ router.put(
         }
 
         if (entryFeeAmount > 0 && member?.memberNumber) {
-          await postEntryFee(tenantId, entryFeeAmount, memberId, member.memberNumber, new Date());
+          await postEntryFee(
+            tenantId || req.currentCooperativeId!,
+            entryFeeAmount,
+            memberId,
+            member.memberNumber,
+            new Date()
+          );
         }
       }
     } catch (accountingError) {
@@ -352,7 +358,13 @@ router.put(
       // Entry fee is posted directly to income (non-refundable, compulsory)
       if (entryFeeAmount > 0) {
         const tempMemberId = `TEMP-${memberId.substring(0, 8)}`;
-        await postEntryFee(tenantId, entryFeeAmount, memberId, tempMemberId, new Date());
+        await postEntryFee(
+          tenantId || req.currentCooperativeId!,
+          entryFeeAmount,
+          memberId,
+          tempMemberId,
+          new Date()
+        );
       }
 
       // Share capital and savings are recorded as advance payment (refundable if rejected)
@@ -363,7 +375,13 @@ router.put(
           existingMember.institutionName ||
           `${existingMember.firstName} ${existingMember.lastName}`.trim() ||
           'Unknown';
-        await postAdvancePayment(tenantId, advanceAmount, memberId, memberName, new Date());
+        await postAdvancePayment(
+          tenantId || req.currentCooperativeId!,
+          advanceAmount,
+          memberId,
+          memberName,
+          new Date()
+        );
       }
     } catch (paymentError) {
       console.error('Error recording payments for institution:', paymentError);
@@ -965,7 +983,7 @@ router.put(
     // 4. Generate Member Number if moving to 'active'
     let newMemberNumber = existingMember.memberNumber;
     if (toStatus === 'active' && existingMember.memberNumber === null) {
-      newMemberNumber = await generateMemberNumber(tenantId);
+      newMemberNumber = await generateMemberNumber(tenantId || req.currentCooperativeId!);
     }
 
     // 5. Run the update in a transaction
@@ -1015,7 +1033,7 @@ router.put(
         // Create share account for all approved members (even if they have no initial shares)
         // This ensures they appear on the share register
         if (!existingShares) {
-          const unitPrice = await getCurrentSharePrice(tenantId, 100);
+          const unitPrice = await getCurrentSharePrice(tenantId || req.currentCooperativeId!, 100);
 
           // Use transaction to ensure atomic certificate number generation
           existingShares = await prisma.$transaction(async (tx) => {
@@ -1084,7 +1102,10 @@ router.put(
               : false;
 
             if (!hasSharesAlready) {
-              const sharePrice = await getCurrentSharePrice(tenantId, 100);
+              const sharePrice = await getCurrentSharePrice(
+                tenantId || req.currentCooperativeId!,
+                100
+              );
               const shares = Math.floor(initialShareAmount / sharePrice);
 
               if (shares > 0) {
@@ -1173,10 +1194,10 @@ router.put(
 
             if (!existingEntryFee) {
               await postEntryFee(
-                tenantId,
+                tenantId || req.currentCooperativeId!,
                 entryFeeAmount,
                 memberId,
-                updatedMember.memberNumber,
+                updatedMember.memberNumber!,
                 new Date()
               );
             }
@@ -1192,7 +1213,7 @@ router.put(
     await createAuditLog({
       action: toStatus === 'active' ? AuditAction.MEMBER_ACTIVATED : AuditAction.MEMBER_UPDATED,
       userId: staffId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'Member',
       resourceId: memberId,
       ipAddress: req.ip,
@@ -1288,7 +1309,7 @@ router.put(
     await createAuditLog({
       action: AuditAction.MEMBER_UPDATED,
       userId: req.user!.userId,
-      tenantId,
+      tenantId: tenantId || undefined,
       resourceType: 'Member',
       resourceId: id,
       ipAddress: req.ip,

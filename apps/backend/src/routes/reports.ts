@@ -32,7 +32,7 @@ router.get(
     const { fiscalYear, month } = req.query;
 
     const report = await accountingController.generateMainReport(
-      tenantId,
+      tenantId || req.currentCooperativeId!,
       fiscalYear as string | undefined,
       month as string | undefined
     );
@@ -121,7 +121,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortOrder: sortOrder || 'desc' }
           ),
           sortBy,
           sortOrder,
@@ -145,7 +145,11 @@ router.get(
       }),
     ]);
 
-    const paginatedResponse = createPaginatedResponse(auditLogs, total, { page, limit });
+    const paginatedResponse = createPaginatedResponse(auditLogs, total, {
+      page,
+      limit,
+      sortOrder: sortOrder || 'desc',
+    });
 
     res.json({
       ...paginatedResponse,
@@ -183,7 +187,11 @@ router.post(
     const reportConfig: any = config;
     const customFilters: ReportFilter[] = filters || [];
 
-    const result = await ReportBuilder.build(tenantId, reportConfig, customFilters);
+    const result = await ReportBuilder.build(
+      tenantId || req.currentCooperativeId!,
+      reportConfig,
+      customFilters
+    );
 
     res.json(result);
   })
@@ -256,7 +264,11 @@ router.post(
     }
 
     const customFilters: ReportFilter[] = filters || [];
-    const result = await ReportBuilder.build(tenantId, ReportConfigs[configKey], customFilters);
+    const result = await ReportBuilder.build(
+      tenantId || req.currentCooperativeId!,
+      ReportConfigs[configKey],
+      customFilters
+    );
 
     res.json(result);
   })

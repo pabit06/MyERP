@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { env } from '../config/index.js';
 
@@ -13,9 +13,19 @@ export interface JWTPayload {
 }
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload as object, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  }) as string;
+  // Convert payload to plain object for jwt.sign
+  const tokenPayload: Record<string, string | null | undefined> = {
+    userId: payload.userId,
+    email: payload.email,
+    cooperativeId: payload.cooperativeId,
+  };
+  if (payload.roleId) {
+    tokenPayload.roleId = payload.roleId;
+  }
+  const options: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN as string | number,
+  };
+  return jwt.sign(tokenPayload, JWT_SECRET, options);
 };
 
 export const verifyToken = (token: string): JWTPayload => {

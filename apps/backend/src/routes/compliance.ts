@@ -640,7 +640,11 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { memberId } = req.params;
-      const tenantId = req.user!.tenantId;
+      const tenantId = req.user!.tenantId || req.currentCooperativeId;
+      if (!tenantId) {
+        res.status(400).json({ error: 'Tenant ID is required' });
+        return;
+      }
 
       const { matches } = await screenMember(memberId, tenantId);
 

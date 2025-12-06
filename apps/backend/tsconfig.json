@@ -7,6 +7,11 @@
     "moduleResolution": "bundler",
     "skipLibCheck": true
   },
-  "include": ["src/**/*", "scripts/**/*", "../../packages/shared-types/src/**/*"],
+  "include": [
+    "src/**/*",
+    "scripts/**/*",
+    "../../packages/shared-types/src/**/*",
+    "../../packages/db-schema/src/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }

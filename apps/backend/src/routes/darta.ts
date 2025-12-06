@@ -427,7 +427,11 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
       return;
     }
 
-    const fileInfo = await saveUploadedFile(req.file, 'darta-documents', tenantId);
+    const fileInfo = await saveUploadedFile(
+      req.file,
+      'darta-documents',
+      tenantId || req.currentCooperativeId!
+    );
 
     const document = await prisma.dartaDocument.create({
       data: {

@@ -15,7 +15,7 @@ const WEIGHTS = {
 };
 
 // High-risk occupations (using values from OCCUPATION_OPTIONS)
-const HIGH_RISK_OCCUPATIONS = OCCUPATION_OPTIONS.filter((opt) => opt.risk === 'HIGH').map(
+const _HIGH_RISK_OCCUPATIONS = OCCUPATION_OPTIONS.filter((opt) => opt.risk === 'HIGH').map(
   (opt) => opt.value
 );
 
@@ -68,7 +68,7 @@ export async function calculateRiskScore(memberId: string): Promise<{
   }
 
   // Factor 4: Geography Risk (placeholder - implement based on your requirements)
-  const geoScore = checkGeographyRisk(member.kyc?.country, member.kyc?.state);
+  const geoScore = checkGeographyRisk('NPL', member.kyc?.permanentProvince || undefined);
   if (geoScore > 0) {
     score += (geoScore / 100) * WEIGHTS.GEOGRAPHY;
     factors.push('GEOGRAPHY');
@@ -203,7 +203,7 @@ function checkGeographyRisk(country?: string | null, state?: string | null): num
  * Update member risk category and calculate next KYM review date
  */
 export async function updateMemberRisk(memberId: string): Promise<void> {
-  const { score, category, factors } = await calculateRiskScore(memberId);
+  const { score: _score, category, factors } = await calculateRiskScore(memberId);
 
   // Calculate next KYM review date based on risk category
   const lastKymUpdate = await prisma.member.findUnique({

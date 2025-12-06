@@ -1,9 +1,7 @@
 import { Prisma } from '@prisma/client';
-import { BaseController, HookContext } from './BaseController.js';
+import { BaseController } from './BaseController.js';
 import { hooks } from '../lib/hooks.js';
-import { prisma } from '../lib/prisma.js';
 import {
-  createJournalEntry as createJournalEntryUtil,
   postShareCapital as postShareCapitalUtil,
   postShareReturn as postShareReturnUtil,
   postEntryFee as postEntryFeeUtil,
@@ -95,9 +93,7 @@ export class AccountingController extends BaseController {
     let filteredAccounts = accounts;
     if (type) {
       const requestedType = type.toLowerCase();
-      filteredAccounts = accounts.filter(
-        (account) => account.type.toLowerCase() === requestedType
-      );
+      filteredAccounts = accounts.filter((account) => account.type.toLowerCase() === requestedType);
     }
 
     // Get latest balance for each account
@@ -314,8 +310,18 @@ export class AccountingController extends BaseController {
       });
 
       // Execute validation hooks
-      await hooks.execute('ChartOfAccounts', 'onValidate', { ...originalAccount, ...data }, context);
-      await hooks.execute('ChartOfAccounts', 'beforeUpdate', { ...originalAccount, ...data }, context);
+      await hooks.execute(
+        'ChartOfAccounts',
+        'onValidate',
+        { ...originalAccount, ...data },
+        context
+      );
+      await hooks.execute(
+        'ChartOfAccounts',
+        'beforeUpdate',
+        { ...originalAccount, ...data },
+        context
+      );
 
       // Update account
       const account = await tx.chartOfAccounts.update({
@@ -460,7 +466,7 @@ export class AccountingController extends BaseController {
       ]);
 
       // Create maps for O(1) lookup
-      const accountMap = new Map(accounts.map((acc) => [acc.id, acc]));
+      const accountMap = new Map(accounts.map((acc: any) => [acc.id, acc]));
       const balanceMap = new Map<string, number>();
       const seenAccounts = new Set<string>();
       for (const ledger of latestLedgers) {
@@ -473,7 +479,9 @@ export class AccountingController extends BaseController {
       // Create ledger entries with calculated balances
       const ledgerEntries = await Promise.all(
         entries.map(async (entry) => {
-          const account = accountMap.get(entry.accountId);
+          const account = accountMap.get(entry.accountId) as
+            | { id: string; type: string }
+            | undefined;
 
           if (!account) {
             throw new Error(`Account not found: ${entry.accountId}`);
@@ -664,11 +672,7 @@ export class AccountingController extends BaseController {
   /**
    * Get Product GL Mapping
    */
-  async getProductGLMap(
-    cooperativeId: string,
-    productType: 'loan' | 'saving',
-    productId: string
-  ) {
+  async getProductGLMap(cooperativeId: string, productType: 'loan' | 'saving', productId: string) {
     await this.validateTenant(cooperativeId);
     return this.prisma.productGLMap.findUnique({
       where: {
@@ -1042,4 +1046,3 @@ export class AccountingController extends BaseController {
 
 // Export singleton instance
 export const accountingController = new AccountingController();
-
