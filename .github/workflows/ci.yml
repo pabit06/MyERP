@@ -239,7 +239,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm --filter '@myerp/backend' exec playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Generate Prisma Client
         run: pnpm --filter '@myerp/db-schema' generate
