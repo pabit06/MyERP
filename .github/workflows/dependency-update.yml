@@ -34,18 +34,26 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Outdated Packages:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          pnpm outdated || echo "All packages are up to date" >> $GITHUB_STEP_SUMMARY
+          pnpm outdated > outdated.txt
+          cat outdated.txt >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ -s outdated.txt ]; then
+            echo "Updates available!"
+            exit 1
+          else
+            echo "All packages are up to date" >> $GITHUB_STEP_SUMMARY
+          fi
 
       - name: Create issue for major updates
         if: failure()
         uses: actions/github-script@v6
         with:
           script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: '📦 Dependency Updates Available',
-              body: 'Some dependencies have updates available. Please review and update as needed.\n\nSee workflow run for details: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}',
+              body: `Some dependencies have updates available. Please review and update as needed.\n\nSee workflow run for details: ${runUrl}`,
               labels: ['dependencies', 'maintenance']
             })

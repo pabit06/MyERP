@@ -7,7 +7,7 @@ on:
     paths:
       - '.github/workflows/**'
       - 'README.md'
-      - 'CICD_SETUP.md'
+      - 'docs/ci-cd/CICD_SETUP.md'
 
 jobs:
   test-trigger:

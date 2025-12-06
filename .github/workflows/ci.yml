@@ -81,6 +81,8 @@ jobs:
 
       - name: Build frontend
         run: pnpm --filter '@myerp/frontend-web' build
+        env:
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
   test-backend:
     name: Backend Tests
@@ -102,8 +104,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
-      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
       NODE_ENV: test
 
     steps:
@@ -179,8 +181,8 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
-      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
-      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
       NODE_ENV: test
       API_BASE_URL: http://localhost:4000
 
