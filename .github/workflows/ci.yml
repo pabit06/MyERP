@@ -104,13 +104,24 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
-      JWT_SECRET: ${{ secrets.JWT_SECRET }}
-      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
       NODE_ENV: test
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Set JWT environment variables
+        run: |
+          JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
+          JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
+          if [ -z "$JWT_SECRET_VALUE" ]; then
+            JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
+          fi
+          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
+            JWT_EXPIRES_IN_VALUE="7d"
+          fi
+          echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
+          echo "JWT_EXPIRES_IN=$JWT_EXPIRES_IN_VALUE" >> $GITHUB_ENV
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
