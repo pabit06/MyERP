@@ -115,35 +115,16 @@ jobs:
           - 5432:5432
 
     env:
-      # DATABASE_URL will be set in "Set environment variables" step (allows secret override)
+      # Set environment variables at job level (allows secret override with fallback values)
+      # Variables set here are available via ${{ env.VARIABLE_NAME }} context expressions
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/myerp_test' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
       NODE_ENV: test
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set environment variables
-        run: |
-          # Set DATABASE_URL (allow override from secrets, fallback to service container default)
-          DATABASE_URL_VALUE="${{ secrets.DATABASE_URL }}"
-          if [ -z "$DATABASE_URL_VALUE" ]; then
-            DATABASE_URL_VALUE="postgresql://postgres:postgres@localhost:5432/myerp_test"
-          fi
-          echo "DATABASE_URL=$DATABASE_URL_VALUE" >> $GITHUB_ENV
-          
-          # Set JWT environment variables (allow override from secrets, use fallback for CI testing)
-          JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
-          JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
-          # Use fallback values for CI testing if secrets are not configured
-          if [ -z "$JWT_SECRET_VALUE" ]; then
-            JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
-          fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
-            JWT_EXPIRES_IN_VALUE="7d"
-          fi
-          echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
-          echo "JWT_EXPIRES_IN=$JWT_EXPIRES_IN_VALUE" >> $GITHUB_ENV
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
@@ -218,36 +199,17 @@ jobs:
           - 5432:5432
 
     env:
-      # DATABASE_URL will be set in "Set environment variables" step (allows secret override)
+      # Set environment variables at job level (allows secret override with fallback values)
+      # Variables set here are available via ${{ env.VARIABLE_NAME }} context expressions
+      DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/myerp_test' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-secret-key-for-ci-minimum-32-characters-long' }}
+      JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN || '7d' }}
       NODE_ENV: test
       API_BASE_URL: http://localhost:4000
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set environment variables
-        run: |
-          # Set DATABASE_URL (allow override from secrets, fallback to service container default)
-          DATABASE_URL_VALUE="${{ secrets.DATABASE_URL }}"
-          if [ -z "$DATABASE_URL_VALUE" ]; then
-            DATABASE_URL_VALUE="postgresql://postgres:postgres@localhost:5432/myerp_test"
-          fi
-          echo "DATABASE_URL=$DATABASE_URL_VALUE" >> $GITHUB_ENV
-          
-          # Set JWT environment variables (allow override from secrets, use fallback for CI testing)
-          JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
-          JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
-          # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
-          # Use fallback values for CI testing if secrets are not configured
-          if [ -z "$JWT_SECRET_VALUE" ]; then
-            JWT_SECRET_VALUE="test-secret-key-for-ci-minimum-32-characters-long"
-          fi
-          if [ -z "$JWT_EXPIRES_IN_VALUE" ]; then
-            JWT_EXPIRES_IN_VALUE="7d"
-          fi
-          echo "JWT_SECRET=$JWT_SECRET_VALUE" >> $GITHUB_ENV
-          echo "JWT_EXPIRES_IN=$JWT_EXPIRES_IN_VALUE" >> $GITHUB_ENV
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
