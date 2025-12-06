@@ -115,7 +115,7 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
+      # DATABASE_URL will be set in "Set environment variables" step (allows secret override)
       NODE_ENV: test
 
     steps:
@@ -210,7 +210,7 @@ jobs:
           - 5432:5432
 
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/myerp_test
+      # DATABASE_URL will be set in "Set environment variables" step (allows secret override)
       NODE_ENV: test
       API_BASE_URL: http://localhost:4000
 
