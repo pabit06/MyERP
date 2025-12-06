@@ -41,7 +41,9 @@ jobs:
       - name: Create deployment package
         run: |
           cd apps/backend
-          tar -czf backend-dist.tar.gz dist/ package.json
+          # Copy lock file from root for frozen install
+          cp ../../pnpm-lock.yaml . || true
+          tar -czf backend-dist.tar.gz dist/ package.json pnpm-lock.yaml
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
