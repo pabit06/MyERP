@@ -36,8 +36,10 @@ jobs:
           # Run audit and check for vulnerabilities
           # Exit with error if moderate or higher vulnerabilities are found
           # Check if total vulnerabilities count is greater than 0
+          # Note: .vulnerabilities.total is the correct field to check (not object length)
           AUDIT_OUTPUT=$(pnpm audit --json --audit-level=moderate 2>&1)
-          VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq -r '.vulnerabilities.total // (.vulnerabilities | length) // 0')
+          # Check .vulnerabilities.total first (correct field), fallback to object keys count if structure differs
+          VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq -r 'if .vulnerabilities.total then .vulnerabilities.total elif (.vulnerabilities | type == "object") then (.vulnerabilities | keys | length) else 0 end')
           
           if [ "$VULN_COUNT" -gt 0 ]; then
             echo "⚠️ Security vulnerabilities found! (Total: $VULN_COUNT)"
