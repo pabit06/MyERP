@@ -122,8 +122,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set JWT environment variables
+      - name: Set environment variables
         run: |
+          # Set DATABASE_URL (allow override from secrets, fallback to service container default)
+          DATABASE_URL_VALUE="${{ secrets.DATABASE_URL }}"
+          if [ -z "$DATABASE_URL_VALUE" ]; then
+            DATABASE_URL_VALUE="postgresql://postgres:postgres@localhost:5432/myerp_test"
+          fi
+          echo "DATABASE_URL=$DATABASE_URL_VALUE" >> $GITHUB_ENV
+          
+          # Set JWT environment variables (allow override from secrets, use fallback for CI testing)
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
           # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
@@ -218,8 +226,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set JWT environment variables
+      - name: Set environment variables
         run: |
+          # Set DATABASE_URL (allow override from secrets, fallback to service container default)
+          DATABASE_URL_VALUE="${{ secrets.DATABASE_URL }}"
+          if [ -z "$DATABASE_URL_VALUE" ]; then
+            DATABASE_URL_VALUE="postgresql://postgres:postgres@localhost:5432/myerp_test"
+          fi
+          echo "DATABASE_URL=$DATABASE_URL_VALUE" >> $GITHUB_ENV
+          
+          # Set JWT environment variables (allow override from secrets, use fallback for CI testing)
           JWT_SECRET_VALUE="${{ secrets.JWT_SECRET }}"
           JWT_EXPIRES_IN_VALUE="${{ secrets.JWT_EXPIRES_IN }}"
           # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
