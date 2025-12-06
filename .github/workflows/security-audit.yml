@@ -35,8 +35,12 @@ jobs:
         run: |
           # Run audit and check for vulnerabilities
           # Exit with error if moderate or higher vulnerabilities are found
-          if pnpm audit --json --audit-level=moderate | jq -e '.vulnerabilities | length > 0' > /dev/null; then
-            echo "⚠️ Security vulnerabilities found!"
+          # Check if total vulnerabilities count is greater than 0
+          AUDIT_OUTPUT=$(pnpm audit --json --audit-level=moderate 2>&1)
+          VULN_COUNT=$(echo "$AUDIT_OUTPUT" | jq -r '.vulnerabilities.total // (.vulnerabilities | length) // 0')
+          
+          if [ "$VULN_COUNT" -gt 0 ]; then
+            echo "⚠️ Security vulnerabilities found! (Total: $VULN_COUNT)"
             pnpm audit --audit-level=moderate
             exit 1
           else
