@@ -9,13 +9,8 @@ import { validate, validateParams, validateQuery } from '../middleware/validate.
 import { asyncHandler } from '../middleware/error-handler.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
-import {
-  issueSharesSchema,
-  returnSharesSchema,
-  transferSharesSchema,
-  issueBonusSharesSchema,
-} from '@myerp/shared-types';
-import { idSchema, paginationWithSearchSchema } from '../validators/common.js';
+import { issueSharesSchema, returnSharesSchema, issueBonusSharesSchema } from '@myerp/shared-types';
+import { paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 
 const router: Router = Router();
@@ -29,45 +24,52 @@ router.use(isModuleEnabled('cbs'));
  * GET /api/shares/dashboard
  * Get summary statistics for shares
  */
-router.get('/dashboard', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
+router.get(
+  '/dashboard',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
-  const [totalAccounts, totalKitta, totalAmount, recentTransactions] = await Promise.all([
-    prisma.shareAccount.count({
-      where: { cooperativeId: tenantId },
-    }),
-    prisma.shareAccount.aggregate({
-      where: { cooperativeId: tenantId },
-      _sum: { totalKitta: true },
-    }),
-    prisma.shareAccount.aggregate({
-      where: { cooperativeId: tenantId },
-      _sum: { totalAmount: true },
-    }),
-    prisma.shareTransaction.findMany({
-      where: { cooperativeId: tenantId },
-      take: 10,
-      orderBy: { date: 'desc' },
-      include: {
-        member: {
-          select: {
-            id: true,
-            memberNumber: true,
-            firstName: true,
-            lastName: true,
+    const [totalAccounts, totalKitta, totalAmount, recentTransactions] = await Promise.all([
+      prisma.shareAccount.count({
+        where: { cooperativeId: tenantId! },
+      }),
+      prisma.shareAccount.aggregate({
+        where: { cooperativeId: tenantId! },
+        _sum: { totalKitta: true },
+      }),
+      prisma.shareAccount.aggregate({
+        where: { cooperativeId: tenantId! },
+        _sum: { totalAmount: true },
+      }),
+      prisma.shareTransaction.findMany({
+        where: { cooperativeId: tenantId! },
+        take: 10,
+        orderBy: { date: 'desc' },
+        include: {
+          member: {
+            select: {
+              id: true,
+              memberNumber: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  res.json({
-    totalShareCapital: totalAmount._sum.totalAmount || 0,
-    totalKitta: totalKitta._sum.totalKitta || 0,
-    totalMembers: totalAccounts,
-    recentTransactions,
-  });
-}));
+    res.json({
+      totalShareCapital: totalAmount._sum.totalAmount || 0,
+      totalKitta: totalKitta._sum.totalKitta || 0,
+      totalMembers: totalAccounts,
+      recentTransactions,
+    });
+  })
+);
 
 /**
  * GET /api/shares/accounts
@@ -87,7 +89,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, memberId, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -108,7 +110,7 @@ router.get(
     // Get all active members with member numbers
     const allActiveMembers = await prisma.member.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         workflowStatus: 'active',
         isActive: true,
         memberNumber: { not: null },
@@ -120,7 +122,7 @@ router.get(
 
     // Get all memberIds that already have share accounts
     const membersWithAccounts = await prisma.shareAccount.findMany({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       select: { memberId: true },
     });
     const memberIdsWithAccounts = new Set(membersWithAccounts.map((acc) => acc.memberId));
@@ -133,11 +135,11 @@ router.get(
     // Create share accounts for approved members who don't have them
     if (approvedMembersWithoutAccounts.length > 0) {
       const { getCurrentSharePrice } = await import('../services/accounting.js');
-      const unitPrice = await getCurrentSharePrice(tenantId, 100);
+      const unitPrice = await getCurrentSharePrice(tenantId!, 100);
 
       // Get the latest certificate number before the loop to ensure sequential numbering
       const latestCert = await prisma.shareAccount.findFirst({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         orderBy: { createdAt: 'desc' },
         select: { certificateNo: true },
       });
@@ -168,7 +170,7 @@ router.get(
               // Always get the current highest certificate number to keep nextCertNumber in sync
               // This ensures we don't reuse certificate numbers even if account creation is skipped
               const currentLatest = await tx.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -187,7 +189,7 @@ router.get(
 
                 await tx.shareAccount.create({
                   data: {
-                    cooperativeId: tenantId,
+                    cooperativeId: tenantId!,
                     memberId: member.id,
                     certificateNo: certNo,
                     unitPrice,
@@ -209,7 +211,7 @@ router.get(
             // Query the latest to get the most up-to-date certificate number
             try {
               const latestCert = await prisma.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -251,7 +253,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -261,7 +263,7 @@ router.get(
       prisma.shareAccount.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(accounts, total, { page, limit }));
+    res.json(createPaginatedResponse(accounts, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -269,16 +271,23 @@ router.get(
  * GET /api/shares/accounts/:memberId
  * Get share account for a specific member
  */
-router.get('/accounts/:memberId', validateParams(z.object({ memberId: z.string().min(1) })), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { memberId } = req.validatedParams!;
+router.get(
+  '/accounts/:memberId',
+  validateParams(z.object({ memberId: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId } = req.validatedParams!;
 
     // Verify member belongs to cooperative
     const member = await prisma.member.findUnique({
       where: { id: memberId },
     });
 
-    if (!member || member.cooperativeId !== tenantId) {
+    if (!member || member.cooperativeId !== tenantId!) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -306,14 +315,14 @@ router.get('/accounts/:memberId', validateParams(z.object({ memberId: z.string()
     // Create account if it doesn't exist
     if (!account) {
       const count = await prisma.shareAccount.count({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
       });
       const certNo = `CERT-${String(count + 1).padStart(6, '0')}`;
 
       account = await prisma.shareAccount.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           certificateNo: certNo,
           totalKitta: 0,
           unitPrice: 100,
@@ -329,28 +338,40 @@ router.get('/accounts/:memberId', validateParams(z.object({ memberId: z.string()
               fullName: true,
             },
           },
-          transactions: [],
+          transactions: {
+            orderBy: {
+              date: 'desc',
+            },
+          },
         },
       });
     }
 
     res.json({ account });
-}));
+  })
+);
 
 /**
  * GET /api/shares/statements/:memberId
  * Get member's share statement
  */
-router.get('/statements/:memberId', validateParams(z.object({ memberId: z.string().min(1) })), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { memberId } = req.validatedParams!;
+router.get(
+  '/statements/:memberId',
+  validateParams(z.object({ memberId: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId } = req.validatedParams!;
 
     // Verify member belongs to cooperative
     const member = await prisma.member.findUnique({
       where: { id: memberId },
     });
 
-    if (!member || member.cooperativeId !== tenantId) {
+    if (!member || member.cooperativeId !== tenantId!) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -378,14 +399,14 @@ router.get('/statements/:memberId', validateParams(z.object({ memberId: z.string
     // Create account if it doesn't exist
     if (!account) {
       const count = await prisma.shareAccount.count({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
       });
       const certNo = `CERT-${String(count + 1).padStart(6, '0')}`;
 
-      account = await prisma.shareAccount.create({
+      const newAccount = await prisma.shareAccount.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           certificateNo: certNo,
           totalKitta: 0,
           unitPrice: 100,
@@ -401,13 +422,19 @@ router.get('/statements/:memberId', validateParams(z.object({ memberId: z.string
               fullName: true,
             },
           },
-          transactions: [],
+          transactions: {
+            orderBy: {
+              date: 'desc',
+            },
+          },
         },
       });
+      account = newAccount;
     }
 
     res.json({ statement: { account } });
-}));
+  })
+);
 
 /**
  * GET /api/shares/certificates
@@ -418,10 +445,14 @@ router.get(
   validateQuery(paginationWithSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       totalKitta: { gt: 0 }, // Only accounts with shares
     };
 
@@ -452,7 +483,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -462,7 +493,7 @@ router.get(
       prisma.shareAccount.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(accounts, total, { page, limit }));
+    res.json(createPaginatedResponse(accounts, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -474,17 +505,24 @@ router.post(
   '/issue',
   validate(
     issueSharesSchema.extend({
-      kitta: z.union([z.number().int().positive(), z.string().transform((val) => parseInt(val, 10))]),
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const { memberId, kitta, date, paymentMode, bankAccountId, savingAccountId, remarks } =
       req.validated!;
 
     const transaction = await ShareService.issueShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
       kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
       date: new Date(date as string),
@@ -511,16 +549,23 @@ router.post(
   csrfProtection,
   validate(
     returnSharesSchema.extend({
-      kitta: z.union([z.number().int().positive(), z.string().transform((val) => parseInt(val, 10))]),
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const { memberId, kitta, date, paymentMode, bankAccountId, remarks } = req.validated!;
 
     const transaction = await ShareService.returnShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
       kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
       date: new Date(date as string),
@@ -531,16 +576,17 @@ router.post(
     });
 
     // Audit log
+    const auditTenantId = tenantId!;
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: auditTenantId,
       resourceType: 'ShareTransaction',
       resourceId: transaction.id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         action: 'return',
         memberId,
         kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
@@ -563,17 +609,33 @@ router.post(
   '/transfer',
   csrfProtection,
   validate(
-    transferSharesSchema.extend({
-      kitta: z.union([z.number().int().positive(), z.string().transform((val) => parseInt(val, 10))]),
-    })
+    z
+      .object({
+        fromMemberId: z.string().min(1),
+        toMemberId: z.string().min(1),
+        kitta: z.union([
+          z.number().int().positive(),
+          z.string().transform((val) => parseInt(val, 10)),
+        ]),
+        date: z.string().datetime().or(z.date()),
+        remarks: z.string().optional(),
+      })
+      .refine((data) => data.fromMemberId !== data.toMemberId, {
+        message: 'From and to member IDs must be different',
+        path: ['toMemberId'],
+      })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const { fromMemberId, toMemberId, kitta, date, remarks } = req.validated!;
 
     const result = await ShareService.transferShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       fromMemberId,
       toMemberId,
       kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
@@ -583,16 +645,17 @@ router.post(
     });
 
     // Audit log
+    const auditTenantId = tenantId!;
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: auditTenantId,
       resourceType: 'ShareTransaction',
       resourceId: result.fromTransaction?.id || result.toTransaction?.id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         action: 'transfer',
         fromMemberId,
         toMemberId,
@@ -616,16 +679,23 @@ router.post(
   csrfProtection,
   validate(
     issueBonusSharesSchema.extend({
-      kitta: z.union([z.number().int().positive(), z.string().transform((val) => parseInt(val, 10))]),
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const { memberId, kitta, date, remarks } = req.validated!;
 
     const transaction = await ShareService.issueBonusShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
       kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
       date: new Date(date as string),
@@ -634,16 +704,17 @@ router.post(
     });
 
     // Audit log
+    const auditTenantId = tenantId!;
     await createAuditLog({
       action: AuditAction.TRANSACTION_CREATED,
       userId,
-      tenantId,
+      tenantId: auditTenantId,
       resourceType: 'ShareTransaction',
       resourceId: transaction.id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         action: 'bonus_issue',
         memberId,
         kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
@@ -661,102 +732,116 @@ router.post(
  * GET /api/shares/transactions
  * Get all share transactions for the cooperative
  */
-router.get('/transactions', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { memberId, type } = req.query;
+router.get(
+  '/transactions',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId, type } = req.query;
 
-  const where: any = {
-    cooperativeId: tenantId,
-  };
+    const where: any = {
+      cooperativeId: tenantId!,
+    };
 
-  if (memberId) {
-    where.memberId = memberId as string;
-  }
+    if (memberId) {
+      where.memberId = memberId as string;
+    }
 
-  if (type) {
-    where.type = type as string;
-  }
+    if (type) {
+      where.type = type as string;
+    }
 
-  const transactions = await prisma.shareTransaction.findMany({
-    where,
-    include: {
-      member: {
-        select: {
-          id: true,
-          memberNumber: true,
-          firstName: true,
-          lastName: true,
-          fullName: true,
+    const transactions = await prisma.shareTransaction.findMany({
+      where,
+      include: {
+        member: {
+          select: {
+            id: true,
+            memberNumber: true,
+            firstName: true,
+            lastName: true,
+            fullName: true,
+          },
+        },
+        account: {
+          select: {
+            id: true,
+            certificateNo: true,
+          },
         },
       },
-      account: {
-        select: {
-          id: true,
-          certificateNo: true,
-        },
+      orderBy: {
+        date: 'desc',
       },
-    },
-    orderBy: {
-      date: 'desc',
-    },
-  });
+    });
 
-  res.json({ transactions });
-}));
+    res.json({ transactions });
+  })
+);
 
 // Legacy endpoints for backward compatibility
 /**
  * GET /api/shares/ledgers
  * @deprecated Use /api/shares/accounts instead
  */
-router.get('/ledgers', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { memberId } = req.query;
+router.get(
+  '/ledgers',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId } = req.query;
 
-  const where: any = {
-    cooperativeId: tenantId,
-  };
+    const where: any = {
+      cooperativeId: tenantId!,
+    };
 
-  if (memberId) {
-    where.memberId = memberId as string;
-  }
+    if (memberId) {
+      where.memberId = memberId as string;
+    }
 
-  const accounts = await prisma.shareAccount.findMany({
-    where,
-    include: {
-      member: {
-        select: {
-          id: true,
-          memberNumber: true,
-          firstName: true,
-          lastName: true,
+    const accounts = await prisma.shareAccount.findMany({
+      where,
+      include: {
+        member: {
+          select: {
+            id: true,
+            memberNumber: true,
+            firstName: true,
+            lastName: true,
+          },
+        },
+        _count: {
+          select: {
+            transactions: true,
+          },
         },
       },
-      _count: {
-        select: {
-          transactions: true,
-        },
+      orderBy: {
+        createdAt: 'desc',
       },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
+    });
 
-  // Map to old format for backward compatibility
-  const ledgers = accounts.map((acc) => ({
-    id: acc.id,
-    memberId: acc.memberId,
-    cooperativeId: acc.cooperativeId,
-    totalShares: acc.totalKitta,
-    shareValue: acc.unitPrice,
-    createdAt: acc.createdAt,
-    updatedAt: acc.updatedAt,
-    member: acc.member,
-    _count: acc._count,
-  }));
+    // Map to old format for backward compatibility
+    const ledgers = accounts.map((acc) => ({
+      id: acc.id,
+      memberId: acc.memberId,
+      cooperativeId: acc.cooperativeId,
+      totalShares: acc.totalKitta,
+      shareValue: acc.unitPrice,
+      createdAt: acc.createdAt,
+      updatedAt: acc.updatedAt,
+      member: acc.member,
+      _count: acc._count,
+    }));
 
-  res.json({ ledgers });
-}));
+    res.json({ ledgers });
+  })
+);
 
 export default router;

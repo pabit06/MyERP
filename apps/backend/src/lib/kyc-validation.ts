@@ -50,7 +50,7 @@ export const BackendKymFormSchema = z.preprocess((data) => {
       'estimatedLoanAmount',
       'monthlyIncome',
     ];
-    const result = { ...preprocessed };
+    const result: Record<string, any> = { ...preprocessed };
     for (const field of numericFields) {
       if (field in result && typeof result[field] === 'string' && result[field] !== '') {
         const num = Number(result[field]);
@@ -78,7 +78,7 @@ export const BackendInstitutionKymFormSchema = z.preprocess((data) => {
       'estimatedAnnualTransaction',
       'numberOfBranches',
     ];
-    const result = { ...preprocessed };
+    const result: Record<string, any> = { ...preprocessed };
     for (const field of numericFields) {
       if (field in result && typeof result[field] === 'string' && result[field] !== '') {
         const num = Number(result[field]);

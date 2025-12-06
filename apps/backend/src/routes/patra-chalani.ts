@@ -12,18 +12,18 @@ const router = Router();
 // Map frontend status values to ChalaniStatus enum values
 const mapChalaniStatus = (status: string): string | undefined => {
   const statusMap: Record<string, string> = {
-    'DRAFT': 'DRAFT',
-    'PENDING': 'PENDING',
-    'IN_PROGRESS': 'IN_PROGRESS',
-    'APPROVED': 'APPROVED',
-    'SENT': 'SENT',
-    'COMPLETED': 'COMPLETED',
-    'ARCHIVED': 'ARCHIVED',
-    'CANCELLED': 'CANCELLED',
+    DRAFT: 'DRAFT',
+    PENDING: 'PENDING',
+    IN_PROGRESS: 'IN_PROGRESS',
+    APPROVED: 'APPROVED',
+    SENT: 'SENT',
+    COMPLETED: 'COMPLETED',
+    ARCHIVED: 'ARCHIVED',
+    CANCELLED: 'CANCELLED',
     // Map invalid statuses that might come from frontend
-    'ACTIVE': 'PENDING',        // Frontend "ACTIVE" maps to "PENDING" for Chalani
-    'PROCESSING': 'IN_PROGRESS', // Frontend "PROCESSING" maps to "IN_PROGRESS" for Chalani
-    'DONE': 'COMPLETED',        // Frontend "DONE" maps to "COMPLETED"
+    ACTIVE: 'PENDING', // Frontend "ACTIVE" maps to "PENDING" for Chalani
+    PROCESSING: 'IN_PROGRESS', // Frontend "PROCESSING" maps to "IN_PROGRESS" for Chalani
+    DONE: 'COMPLETED', // Frontend "DONE" maps to "COMPLETED"
   };
   return statusMap[status.toUpperCase()];
 };
@@ -66,14 +66,28 @@ router.use(isModuleEnabled('dms'));
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { type, status, category, search, fiscalYear, startDate, endDate, page = '1', limit = '20' } = req.query;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const {
+      type,
+      status,
+      category,
+      search,
+      fiscalYear,
+      startDate,
+      endDate,
+      page = '1',
+      limit = '20',
+    } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (type) {
@@ -170,7 +184,7 @@ router.get('/:id', async (req: Request, res: Response) => {
     const patraChalani = await prisma.patraChalani.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         documents: {
@@ -236,12 +250,12 @@ router.post('/', async (req: Request, res: Response) => {
     // Fiscal year runs from Shrawan (month 4) to Ashad (month 3 of next year)
     const currentFiscalYear = getCurrentNepaliFiscalYear();
     let fiscalYearStr = fiscalYear || currentFiscalYear.label.replace('FY ', '');
-    
+
     // Normalize fiscal year format to shortened format (2-digit/2-digit) to match frontend
     // Accepts both "2081/82" and "081/082" formats, normalizes to "081/082"
     let bsYear: number;
     if (fiscalYearStr.includes('/')) {
-      const [startYearStr, endYearStr] = fiscalYearStr.split('/');
+      const [startYearStr] = fiscalYearStr.split('/');
       if (startYearStr.length === 2) {
         // Already in shortened format "080/081"
         bsYear = 2000 + parseInt(startYearStr);
@@ -257,12 +271,12 @@ router.post('/', async (req: Request, res: Response) => {
       bsYear = currentFiscalYear.bsYear;
       fiscalYearStr = `${String(bsYear).slice(-2)}/${String(bsYear + 1).slice(-2)}`;
     }
-    
+
     // Count documents with the same fiscalYear string (not by date, to handle custom fiscal years)
     // This ensures the count matches the fiscal year used in the document number
     const count = await prisma.patraChalani.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         type: type as string,
         fiscalYear: fiscalYearStr,
       },
@@ -271,7 +285,7 @@ router.post('/', async (req: Request, res: Response) => {
 
     const patraChalani = await prisma.patraChalani.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear: fiscalYearStr,
         serialNo: count + 1,
         chalaniNumber,
@@ -336,7 +350,7 @@ router.put('/:id', async (req: Request, res: Response) => {
     const patraChalani = await prisma.patraChalani.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -353,7 +367,8 @@ router.put('/:id', async (req: Request, res: Response) => {
     if (senderName !== undefined) updateData.senderName = senderName;
     if (senderAddress !== undefined) updateData.senderAddress = senderAddress;
     if (date) updateData.date = new Date(date);
-    if (receivedDate !== undefined) updateData.receivedDate = receivedDate ? new Date(receivedDate) : null;
+    if (receivedDate !== undefined)
+      updateData.receivedDate = receivedDate ? new Date(receivedDate) : null;
     if (sentDate !== undefined) updateData.sentDate = sentDate ? new Date(sentDate) : null;
     if (priority) updateData.priority = (priority as string).toUpperCase();
     if (bodhartha !== undefined) updateData.bodhartha = bodhartha;
@@ -399,7 +414,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     const patraChalani = await prisma.patraChalani.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         documents: true,
@@ -447,7 +462,7 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
     const patraChalani = await prisma.patraChalani.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -461,7 +476,7 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
     const document = await prisma.patraChalaniDocument.create({
       data: {
         patraChalaniId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         title: title || req.file.originalname,
         fileName: fileInfo.fileName,
         filePath: fileInfo.filePath,
@@ -501,7 +516,7 @@ router.post('/:id/action', async (req: Request, res: Response) => {
     const patraChalani = await prisma.patraChalani.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -513,7 +528,7 @@ router.post('/:id/action', async (req: Request, res: Response) => {
     const action = await prisma.patraChalaniAction.create({
       data: {
         patraChalaniId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         actionType,
         actionTo,
         remarks,
@@ -522,7 +537,7 @@ router.post('/:id/action', async (req: Request, res: Response) => {
     });
 
     // Update status based on action type
-    let statusUpdate: any = {};
+    const statusUpdate: any = {};
     if (actionType === 'complete') {
       statusUpdate.status = 'completed';
       statusUpdate.completedAt = new Date();
@@ -559,7 +574,7 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
       where: {
         id: docId,
         patraChalaniId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -570,7 +585,9 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
 
     const { promises: fs } = await import('fs');
     const path = await import('path');
-    const cleanPath = document.filePath.startsWith('/') ? document.filePath.slice(1) : document.filePath;
+    const cleanPath = document.filePath.startsWith('/')
+      ? document.filePath.slice(1)
+      : document.filePath;
     const fullPath = path.join(process.cwd(), cleanPath);
 
     try {
@@ -588,4 +605,3 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
 });
 
 export default router;
-

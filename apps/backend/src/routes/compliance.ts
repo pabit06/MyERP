@@ -11,15 +11,11 @@ import { updateMemberRisk } from '../services/aml/risk.js';
 import { saveUploadedFile, deleteFile } from '../lib/upload.js';
 import multer from 'multer';
 import * as fs from 'fs/promises';
-import { validate, validateAll, validateParams, validateQuery } from '../middleware/validate.js';
+import { validate, validateAll, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { paginationSchema, paginationWithSearchSchema, dateRangeSchema } from '../validators/common.js';
+import { paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
-import {
-  createAmlCaseSchema,
-  updateAmlCaseStatusSchema,
-  updateMemberRiskCategorySchema,
-} from '@myerp/shared-types';
+import { createAmlCaseSchema, updateAmlCaseStatusSchema } from '@myerp/shared-types';
 import { idSchema } from '../validators/common.js';
 
 // Configure multer for file uploads
@@ -65,6 +61,10 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const {
       page,
       limit,
@@ -80,7 +80,7 @@ router.get(
     } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (action) {
@@ -124,7 +124,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -134,7 +134,7 @@ router.get(
       prisma.auditLog.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(auditLogs, total, { page, limit }));
+    res.json(createPaginatedResponse(auditLogs, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -161,7 +161,7 @@ router.post(
 
     const auditLog = await prisma.auditLog.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         action,
         entityType,
         entityId: entityId || null,
@@ -199,7 +199,7 @@ router.post(
     const amlFlag = await prisma.amlFlag.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         type: 'SUSPICIOUS_ATTEMPT',
         details,
         isAttempted: true,
@@ -211,7 +211,7 @@ router.post(
     const existingCase = await prisma.amlCase.findFirst({
       where: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         type: 'SUSPICIOUS_ATTEMPT',
         status: 'open',
       },
@@ -221,7 +221,7 @@ router.post(
       await prisma.amlCase.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           type: 'SUSPICIOUS_ATTEMPT',
           status: 'open',
           notes: notes || 'Suspicious attempt logged',
@@ -254,7 +254,7 @@ router.get(
       req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (status) {
@@ -293,7 +293,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -315,7 +315,7 @@ router.get(
     const allSofDeclarations = await prisma.sourceOfFundsDeclaration.findMany({
       where: {
         memberId: { in: memberIds },
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         OR: dateRanges.map((range) => ({
           memberId: range.memberId,
           createdAt: {
@@ -330,7 +330,7 @@ router.get(
     });
 
     // Create a map of memberId + date -> SOF declaration
-    const sofMap = new Map<string, typeof allSofDeclarations[0]>();
+    const sofMap = new Map<string, (typeof allSofDeclarations)[0]>();
     for (const sof of allSofDeclarations) {
       const key = `${sof.memberId}-${sof.createdAt.toISOString().split('T')[0]}`;
       if (!sofMap.has(key)) {
@@ -350,7 +350,7 @@ router.get(
       };
     });
 
-    res.json(createPaginatedResponse(reportsWithSof, total, { page, limit }));
+    res.json(createPaginatedResponse(reportsWithSof, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -461,7 +461,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, status, type, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (status) {
@@ -495,7 +495,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -505,7 +505,7 @@ router.get(
       prisma.amlCase.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(cases, total, { page, limit }));
+    res.json(createPaginatedResponse(cases, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -519,15 +519,19 @@ router.post(
   validate(createAmlCaseSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId, caseType, description, priority } = req.validated!;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId, caseType, description } = req.validated!;
 
     const amlCase = await prisma.amlCase.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
-        type,
+        cooperativeId: tenantId!,
+        type: caseType,
         status: 'open',
-        notes: notes || null,
+        notes: description || null,
         isConfidential: true,
       },
     });
@@ -610,7 +614,7 @@ router.post(
       const whitelisted = await prisma.whitelistedMatch.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           sanctionListId,
           sanctionListType,
           reason,
@@ -661,7 +665,7 @@ router.get(
       const { expired, pepOnly } = req.query;
 
       const where: any = {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         isActive: true,
       };
 
@@ -747,6 +751,10 @@ router.post(
       }
 
       const tenantId = req.user!.tenantId;
+      if (!tenantId) {
+        res.status(403).json({ error: 'Tenant context required' });
+        return;
+      }
 
       // Save file to disk
       const fileInfo = await saveUploadedFile(req.file, 'sof', tenantId);
@@ -814,7 +822,7 @@ router.post(
         data: {
           transactionId,
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           declaredText,
           attachmentPath: attachmentPath || null,
         },
@@ -845,7 +853,7 @@ router.get(
       // Filter members created during the report year
       const members = await prisma.member.findMany({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           isActive: true,
           createdAt: {
             gte: startDate, // Members created on or after January 1st of the report year

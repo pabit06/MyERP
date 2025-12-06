@@ -16,14 +16,14 @@ const router = Router();
 // Map frontend status values to DartaStatus enum values
 const mapDartaStatus = (status: string): string | undefined => {
   const statusMap: Record<string, string> = {
-    'PENDING': 'ACTIVE',      // Frontend "PENDING" maps to "ACTIVE" in schema
-    'ACTIVE': 'ACTIVE',
-    'IN_PROGRESS': 'PROCESSING', // Frontend "IN_PROGRESS" maps to "PROCESSING" in schema
-    'PROCESSING': 'PROCESSING',
-    'COMPLETED': 'COMPLETED',
-    'DONE': 'COMPLETED',
-    'ARCHIVED': 'ARCHIVED',
-    'CANCELLED': 'CANCELLED',
+    PENDING: 'ACTIVE', // Frontend "PENDING" maps to "ACTIVE" in schema
+    ACTIVE: 'ACTIVE',
+    IN_PROGRESS: 'PROCESSING', // Frontend "IN_PROGRESS" maps to "PROCESSING" in schema
+    PROCESSING: 'PROCESSING',
+    COMPLETED: 'COMPLETED',
+    DONE: 'COMPLETED',
+    ARCHIVED: 'ARCHIVED',
+    CANCELLED: 'CANCELLED',
   };
   return statusMap[status.toUpperCase()];
 };
@@ -63,16 +63,22 @@ router.use(isModuleEnabled('dms'));
  * GET /api/darta
  * Get all dartas with filters
  */
-router.get('/', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { status, category, search, fiscalYear, page = '1', limit = '20' } = req.query;
+router.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { status, category, search, fiscalYear, page = '1', limit = '20' } = req.query;
 
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (status) {
@@ -131,20 +137,24 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
         total,
       },
     });
-}));
+  })
+);
 
 /**
  * GET /api/darta/:id
  * Get single darta with details
  */
-router.get('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.get(
+  '/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
     const darta = await prisma.darta.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         documents: {
@@ -165,7 +175,8 @@ router.get('/:id', validateParams(idSchema), asyncHandler(async (req: Request, r
     }
 
     res.json({ darta });
-}));
+  })
+);
 
 /**
  * POST /api/darta
@@ -211,12 +222,12 @@ router.post(
     // Fiscal year runs from Shrawan (month 4) to Ashad (month 3 of next year)
     const currentFiscalYear = getCurrentNepaliFiscalYear();
     let fiscalYearStr = fiscalYearParam || currentFiscalYear.label.replace('FY ', '');
-    
+
     // Normalize fiscal year format to shortened format (2-digit/2-digit) to match frontend
     // Accepts both "2081/82" and "081/082" formats, normalizes to "081/082"
     let bsYear: number;
     if (fiscalYearStr.includes('/')) {
-      const [startYearStr, endYearStr] = fiscalYearStr.split('/');
+      const [startYearStr] = fiscalYearStr.split('/');
       if (startYearStr.length === 2) {
         // Already in shortened format "080/081"
         bsYear = 2000 + parseInt(startYearStr);
@@ -232,12 +243,12 @@ router.post(
       bsYear = currentFiscalYear.bsYear;
       fiscalYearStr = `${String(bsYear).slice(-2)}/${String(bsYear + 1).slice(-2)}`;
     }
-    
+
     // Count documents with the same fiscalYear string (not by date, to handle custom fiscal years)
     // This ensures the count matches the fiscal year used in the document number
     const count = await prisma.darta.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear: fiscalYearStr,
       },
     });
@@ -245,7 +256,7 @@ router.post(
 
     const darta = await prisma.darta.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear: fiscalYearStr,
         serialNo: count + 1,
         dartaNumber,
@@ -272,8 +283,8 @@ router.post(
     await prisma.dartaMovement.create({
       data: {
         dartaId: darta.id,
-        cooperativeId: tenantId,
-        movementType: 'create',
+        cooperativeId: tenantId!,
+        movementType: 'CREATE',
         movedBy: req.user!.userId,
       },
     });
@@ -308,7 +319,7 @@ router.put(
     const darta = await prisma.darta.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -352,14 +363,17 @@ router.put(
  * DELETE /api/darta/:id
  * Delete darta
  */
-router.delete('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.delete(
+  '/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
     const darta = await prisma.darta.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         documents: true,
@@ -383,7 +397,8 @@ router.delete('/:id', validateParams(idSchema), asyncHandler(async (req: Request
     });
 
     res.json({ message: 'Darta deleted successfully' });
-}));
+  })
+);
 
 /**
  * POST /api/darta/:id/upload
@@ -403,7 +418,7 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
     const darta = await prisma.darta.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -417,7 +432,7 @@ router.post('/:id/upload', upload.single('file'), async (req: Request, res: Resp
     const document = await prisma.dartaDocument.create({
       data: {
         dartaId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         title: title || req.file.originalname,
         fileName: fileInfo.fileName,
         filePath: fileInfo.filePath,
@@ -465,7 +480,7 @@ router.post(
     const darta = await prisma.darta.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -477,7 +492,7 @@ router.post(
     const movement = await prisma.dartaMovement.create({
       data: {
         dartaId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         movementType,
         fromUserId,
         toUserId,
@@ -505,7 +520,7 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
       where: {
         id: docId,
         dartaId: id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -516,7 +531,9 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
 
     const { promises: fs } = await import('fs');
     const path = await import('path');
-    const cleanPath = document.filePath.startsWith('/') ? document.filePath.slice(1) : document.filePath;
+    const cleanPath = document.filePath.startsWith('/')
+      ? document.filePath.slice(1)
+      : document.filePath;
     const fullPath = path.join(process.cwd(), cleanPath);
 
     try {
@@ -534,4 +551,3 @@ router.get('/:id/download/:docId', async (req: Request, res: Response) => {
 });
 
 export default router;
-

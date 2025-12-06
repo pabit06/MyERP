@@ -2,8 +2,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { env } from '../config/index.js';
 
-const JWT_SECRET = env.JWT_SECRET;
-const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN;
+const JWT_SECRET = env.JWT_SECRET as string;
+const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN as string;
 
 export interface JWTPayload {
   userId: string;
@@ -13,9 +13,9 @@ export interface JWTPayload {
 }
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload as object, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  }) as string;
 };
 
 export const verifyToken = (token: string): JWTPayload => {

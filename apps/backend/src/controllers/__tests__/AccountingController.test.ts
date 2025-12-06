@@ -2,36 +2,40 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AccountingController } from '../AccountingController.js';
 import { hooks } from '../../lib/hooks.js';
 
-// Mock Prisma
-const mockPrisma: any = {
-  cooperative: {
-    findUnique: vi.fn(),
-  },
-  chartOfAccounts: {
-    findMany: vi.fn(),
-    findUnique: vi.fn(),
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-    count: vi.fn(),
-  },
-  journalEntry: {
-    create: vi.fn(),
-    count: vi.fn(),
-  },
-  ledger: {
-    create: vi.fn(),
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    count: vi.fn(),
-  },
-  $transaction: vi.fn((fn: any) => fn(mockPrisma)),
-};
+// Mock Prisma - must be defined before vi.mock to avoid hoisting issues
+vi.mock('../../lib/prisma.js', () => {
+  const mockPrisma: any = {
+    cooperative: {
+      findUnique: vi.fn(),
+    },
+    chartOfAccounts: {
+      findMany: vi.fn(),
+      findUnique: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+      count: vi.fn(),
+    },
+    journalEntry: {
+      create: vi.fn(),
+      count: vi.fn(),
+    },
+    ledger: {
+      create: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
+    $transaction: vi.fn((fn: any) => fn(mockPrisma)),
+  };
+  return {
+    prisma: mockPrisma,
+  };
+});
 
-vi.mock('../../lib/prisma.js', () => ({
-  prisma: mockPrisma,
-}));
+// Import after mock to get the mocked prisma
+import { prisma as mockPrisma } from '../../lib/prisma.js';
 
 describe('AccountingController', () => {
   let controller: AccountingController;

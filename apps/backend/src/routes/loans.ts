@@ -8,12 +8,7 @@ import { validate, validateAll, validateParams, validateQuery } from '../middlew
 import { asyncHandler } from '../middleware/error-handler.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
-import {
-  createLoanProductSchema,
-  createLoanApplicationSchema,
-  updateLoanApplicationStatusSchema,
-  disburseLoanSchema,
-} from '@myerp/shared-types';
+import { createLoanProductSchema, createLoanApplicationSchema } from '@myerp/shared-types';
 import { idSchema, paginationSchema, paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 import { prisma } from '../lib/prisma.js';
@@ -34,10 +29,14 @@ router.get(
   validateQuery(paginationSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder } = req.validatedQuery!;
 
     const where = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     const [products, total] = await Promise.all([
@@ -47,7 +46,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -57,7 +56,7 @@ router.get(
       prisma.loanProduct.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(products, total, { page, limit }));
+    res.json(createPaginatedResponse(products, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -65,34 +64,39 @@ router.get(
  * POST /api/loans/products
  * Create a new loan product
  */
-router.post('/products', csrfProtection, validate(createLoanProductSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const data = req.validated!;
+router.post(
+  '/products',
+  csrfProtection,
+  validate(createLoanProductSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const data = req.validated!;
 
-  const product = await loansController.createProduct(
-    {
-      cooperativeId: tenantId,
-      ...data,
-    },
-    userId
-  );
+    const product = await loansController.createProduct(
+      {
+        cooperativeId: tenantId!,
+        ...data,
+      },
+      userId
+    );
 
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.CONFIGURATION_CHANGED,
-    userId,
-    tenantId,
-    resourceType: 'LoanProduct',
-    resourceId: product.id,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'created', productName: product.name },
-  });
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId,
+      resourceType: 'LoanProduct',
+      resourceId: product.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'created', productName: product.name },
+    });
 
-  res.status(201).json({ product });
-}));
+    res.status(201).json({ product });
+  })
+);
 
 /**
  * GET /api/loans/applications
@@ -111,7 +115,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, memberId, status, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -173,38 +177,43 @@ router.get(
  * POST /api/loans/applications
  * Create a new loan application
  */
-router.post('/applications', csrfProtection, validate(createLoanApplicationSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const data = req.validated!;
+router.post(
+  '/applications',
+  csrfProtection,
+  validate(createLoanApplicationSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const data = req.validated!;
 
-  const application = await loansController.createApplication(
-    {
-      cooperativeId: tenantId,
-      ...data,
-    },
-    userId
-  );
+    const application = await loansController.createApplication(
+      {
+        cooperativeId: tenantId!,
+        ...data,
+      },
+      userId
+    );
 
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.TRANSACTION_CREATED,
-    userId,
-    tenantId,
-    resourceType: 'LoanApplication',
-    resourceId: application.id,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { 
-      action: 'created', 
-      memberId: application.memberId,
-      amount: application.requestedAmount?.toString(),
-    },
-  });
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.TRANSACTION_CREATED,
+      userId,
+      tenantId,
+      resourceType: 'LoanApplication',
+      resourceId: application.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: {
+        action: 'created',
+        memberId: application.memberId,
+        amount: application.requestedAmount?.toString(),
+      },
+    });
 
-  res.status(201).json({ application });
-}));
+    res.status(201).json({ application });
+  })
+);
 
 /**
  * POST /api/loans/applications/:id/approve
@@ -244,8 +253,8 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
-        action: 'approved', 
+      details: {
+        action: 'approved',
         memberId: result.application.memberId,
         amount: result.application.approvedAmount?.toString(),
       },
@@ -263,12 +272,16 @@ router.post(
  * GET /api/loans/applications/:id/emi-schedule
  * Get EMI schedule for a loan application
  */
-router.get('/applications/:id/emi-schedule', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.get(
+  '/applications/:id/emi-schedule',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
-  const emiSchedule = await loansController.getEMISchedule(id, tenantId);
-  res.json({ emiSchedule });
-}));
+    const emiSchedule = await loansController.getEMISchedule(id, tenantId);
+    res.json({ emiSchedule });
+  })
+);
 
 export default router;

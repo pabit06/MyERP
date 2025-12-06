@@ -48,6 +48,10 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const cooperativeId = req.user!.tenantId;
+    if (!cooperativeId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const userId = req.user!.userId;
     const { page, limit, type, channel, status, unreadOnly } = req.validatedQuery!;
 
@@ -79,58 +83,80 @@ router.get(
  * GET /api/notifications/unread-count
  * Get unread notification count for the current user
  */
-router.get('/unread-count', asyncHandler(async (req: Request, res: Response) => {
-  const cooperativeId = req.user!.tenantId;
-  const userId = req.user!.userId;
+router.get(
+  '/unread-count',
+  asyncHandler(async (req: Request, res: Response) => {
+    const cooperativeId = req.user!.tenantId;
+    if (!cooperativeId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
 
-  const count = await getUnreadCount(cooperativeId, userId);
+    const count = await getUnreadCount(cooperativeId!, userId);
 
-  res.json({ count });
-}));
+    res.json({ count });
+  })
+);
 
 /**
  * PUT /api/notifications/read-all
  * Mark all notifications as read for the current user
  * NOTE: This route must be defined before /:id/read to avoid route matching conflicts
  */
-router.put('/read-all', asyncHandler(async (req: Request, res: Response) => {
-  const cooperativeId = req.user!.tenantId;
-  const userId = req.user!.userId;
+router.put(
+  '/read-all',
+  asyncHandler(async (req: Request, res: Response) => {
+    const cooperativeId = req.user!.tenantId;
+    if (!cooperativeId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
 
-  const count = await markAllAsRead(cooperativeId, userId);
+    const count = await markAllAsRead(cooperativeId!, userId);
 
-  res.json({
-    message: 'All notifications marked as read',
-    count,
-  });
-}));
+    res.json({
+      message: 'All notifications marked as read',
+      count,
+    });
+  })
+);
 
 /**
  * PUT /api/notifications/:id/read
  * Mark a notification as read
  */
-router.put('/:id/read', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
-  const cooperativeId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.put(
+  '/:id/read',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const cooperativeId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
-  await markAsRead(id, userId, cooperativeId);
+    await markAsRead(id, userId, cooperativeId);
 
-  res.json({ message: 'Notification marked as read' });
-}));
+    res.json({ message: 'Notification marked as read' });
+  })
+);
 
 /**
  * DELETE /api/notifications/:id
  * Delete a notification
  */
-router.delete('/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const userId = req.user!.userId;
-  const cooperativeId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.delete(
+  '/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const cooperativeId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
-  await deleteNotification(id, userId, cooperativeId);
+    await deleteNotification(id, userId, cooperativeId);
 
-  res.json({ message: 'Notification deleted' });
-}));
+    res.json({ message: 'Notification deleted' });
+  })
+);
 
 export default router;

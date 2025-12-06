@@ -18,10 +18,14 @@ router.use(isModuleEnabled('inventory'));
 router.get('/categories', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     const categories = await prisma.inventoryCategory.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         _count: {
@@ -60,7 +64,7 @@ router.post('/categories', async (req: Request, res: Response) => {
     const existing = await prisma.inventoryCategory.findUnique({
       where: {
         cooperativeId_name: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           name,
         },
       },
@@ -73,7 +77,7 @@ router.post('/categories', async (req: Request, res: Response) => {
 
     const category = await prisma.inventoryCategory.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         name,
         description,
         parentId: parentId || null,
@@ -97,7 +101,7 @@ router.get('/items', async (req: Request, res: Response) => {
     const { categoryId, isActive } = req.query;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (categoryId) {
@@ -159,7 +163,7 @@ router.post('/items', async (req: Request, res: Response) => {
     const existing = await prisma.inventoryItem.findUnique({
       where: {
         cooperativeId_code: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           code,
         },
       },
@@ -172,7 +176,7 @@ router.post('/items', async (req: Request, res: Response) => {
 
     const item = await prisma.inventoryItem.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         code,
         name,
         description,
@@ -226,7 +230,7 @@ router.put('/items/:id', async (req: Request, res: Response) => {
     const item = await prisma.inventoryItem.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -278,7 +282,7 @@ router.get('/items/:id', async (req: Request, res: Response) => {
     const item = await prisma.inventoryItem.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         category: {

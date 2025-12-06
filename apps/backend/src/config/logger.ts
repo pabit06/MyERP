@@ -88,8 +88,9 @@ const redactFormat = winston.format((info) => {
   if (info.meta && typeof info.meta === 'object') {
     info.meta = redactSensitiveData(info.meta);
   }
-  if (info[Symbol.for('splat')]) {
-    info[Symbol.for('splat')] = info[Symbol.for('splat')].map((arg: any) =>
+  const splat = info[Symbol.for('splat')];
+  if (splat && Array.isArray(splat)) {
+    info[Symbol.for('splat')] = splat.map((arg: any) =>
       typeof arg === 'object' ? redactSensitiveData(arg) : arg
     );
   }
@@ -188,4 +189,3 @@ export const logRequest = (req: any) => {
     params: redactSensitiveData(params),
   });
 };
-

@@ -55,6 +55,16 @@ async function testPermissions() {
       const userId = firstUser.id;
       const tenantId = firstUser.cooperativeId;
 
+      if (!tenantId) {
+        console.error('❌ User does not have a cooperativeId');
+        return;
+      }
+
+      if (!firstUser.cooperative) {
+        console.error('❌ User is not associated with a cooperative');
+        return;
+      }
+
       console.log(`✅ Using user: ${firstUser.email}`);
       console.log(`   Name: ${firstUser.firstName} ${firstUser.lastName}`);
       console.log(`   Cooperative: ${firstUser.cooperative.name}`);
@@ -81,6 +91,11 @@ async function runTests(userId: string, tenantId: string) {
 
   if (!user) {
     console.error('❌ User not found');
+    return;
+  }
+
+  if (!user.cooperative) {
+    console.error('❌ User is not associated with a cooperative');
     return;
   }
 

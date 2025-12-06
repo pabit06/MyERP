@@ -1,6 +1,6 @@
 /**
  * Enhanced Error Handling Middleware
- * 
+ *
  * Provides consistent error responses and proper logging
  */
 
@@ -9,8 +9,7 @@ import { AppError } from '../lib/errors.js';
 import { logger } from '../config/index.js';
 import { env } from '../config/index.js';
 import { Prisma } from '@prisma/client';
-import * as Sentry from '@sentry/node';
-import { captureException, setSentryUser, clearSentryUser } from '../config/sentry.js';
+import { captureException, setSentryUser } from '../config/sentry.js';
 
 /**
  * Enhanced error handling middleware
@@ -20,11 +19,11 @@ export function errorHandler(
   err: Error | AppError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) {
   // Set user context for Sentry if available
   if (req.user?.userId) {
-    setSentryUser(req.user.userId, req.user.email, req.user.tenantId);
+    setSentryUser(req.user.userId, req.user.email, req.user.tenantId || undefined);
   }
 
   // Handle known application errors
@@ -107,11 +106,7 @@ export function errorHandler(
 /**
  * Handle Prisma-specific errors
  */
-function handlePrismaError(
-  err: Prisma.PrismaClientKnownRequestError,
-  req: Request,
-  res: Response
-) {
+function handlePrismaError(err: Prisma.PrismaClientKnownRequestError, req: Request, res: Response) {
   logger.error('Prisma error', {
     code: err.code,
     error: err.message,
@@ -120,7 +115,7 @@ function handlePrismaError(
   });
 
   switch (err.code) {
-    case 'P2002':
+    case 'P2002': {
       // Unique constraint violation
       const target = (err.meta?.target as string[]) || [];
       return res.status(409).json({
@@ -128,6 +123,7 @@ function handlePrismaError(
         code: 'CONFLICT',
         ...(env.NODE_ENV === 'development' && { details: err.meta }),
       });
+    }
 
     case 'P2025':
       // Record not found
@@ -177,10 +173,9 @@ export function asyncHandler(
  * 404 Not Found handler
  * Should be used after all routes but before error handler
  */
-export function notFoundHandler(req: Request, res: Response, next: NextFunction) {
+export function notFoundHandler(req: Request, res: Response, _next: NextFunction) {
   res.status(404).json({
     error: `Route ${req.method} ${req.path} not found`,
     code: 'NOT_FOUND',
   });
 }
-

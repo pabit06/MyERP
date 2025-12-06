@@ -54,6 +54,10 @@ router.use(isModuleEnabled('governance'));
 router.get('/meetings', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page = '1', limit = '20', search, meetingType, status, startDate, endDate } = req.query;
 
     // Parse pagination
@@ -63,7 +67,7 @@ router.get('/meetings', async (req: Request, res: Response) => {
 
     // Build where clause
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -159,7 +163,11 @@ router.post(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.userId || req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const {
       title,
       description,
@@ -193,7 +201,7 @@ router.post(
       const committee = await prisma.committee.findFirst({
         where: {
           id: committeeId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
       if (committee) {
@@ -203,7 +211,7 @@ router.post(
 
     const meeting = await prisma.meeting.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         title,
         description,
         meetingType,
@@ -272,7 +280,7 @@ router.post(
     ) {
       await prisma.memberKYC.updateMany({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           memberId: {
             in: assignPendingAgendaItems,
           },
@@ -287,7 +295,7 @@ router.post(
       const members = await prisma.member.findMany({
         where: {
           id: { in: assignPendingAgendaItems },
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
 
@@ -360,12 +368,16 @@ router.post(
 router.get('/meetings/:id', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         minutes: true,
@@ -422,7 +434,7 @@ router.get('/meetings/:id', async (req: Request, res: Response) => {
     // First get assigned to this meeting
     const assignedMemberApprovals = await prisma.memberKYC.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         bodMeetingId: id,
         member: {
           workflowStatus: 'bod_pending',
@@ -449,7 +461,7 @@ router.get('/meetings/:id', async (req: Request, res: Response) => {
     // Get all pending member approvals (not assigned to any meeting yet)
     const allPendingMemberApprovals = await prisma.memberKYC.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         bodMeetingId: null, // Not assigned to any meeting
         member: {
           workflowStatus: 'bod_pending',
@@ -552,13 +564,17 @@ router.get('/meetings/:id', async (req: Request, res: Response) => {
 router.delete('/meetings/:id', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     // Verify meeting exists and belongs to cooperative
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -578,7 +594,7 @@ router.delete('/meetings/:id', async (req: Request, res: Response) => {
     // Unassign pending agenda items (MemberKYC records) from this meeting
     await prisma.memberKYC.updateMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         bodMeetingId: id,
       },
       data: {
@@ -611,6 +627,10 @@ router.delete('/meetings/:id', async (req: Request, res: Response) => {
 router.post('/meetings/:id/agenda', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
     const { title, description } = req.body;
 
@@ -623,7 +643,7 @@ router.post('/meetings/:id/agenda', async (req: Request, res: Response) => {
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -672,6 +692,10 @@ router.post('/meetings/:id/agenda', async (req: Request, res: Response) => {
 router.put('/meetings/:id/agenda/:agendaId', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id, agendaId } = req.params;
     const { title, description, order } = req.body;
 
@@ -679,7 +703,7 @@ router.put('/meetings/:id/agenda/:agendaId', async (req: Request, res: Response)
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -733,13 +757,17 @@ router.put('/meetings/:id/agenda/:agendaId', async (req: Request, res: Response)
 router.delete('/meetings/:id/agenda/:agendaId', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id, agendaId } = req.params;
 
     // Verify meeting exists and belongs to cooperative
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -791,13 +819,17 @@ router.delete('/meetings/:id/agenda/:agendaId', async (req: Request, res: Respon
 router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     // Verify meeting exists and belongs to cooperative
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         committee: {
@@ -823,7 +855,9 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
               include: {
                 member: {
                   select: {
+                    id: true,
                     phone: true,
+                    email: true,
                   },
                 },
               },
@@ -874,13 +908,13 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
       : null;
 
     const attendees = meeting.meetingAttendees.map((attendee) => ({
-      phone: attendee.committeeMember?.member?.phone || null,
-      email: attendee.committeeMember?.member?.email || null,
-      userId: attendee.committeeMember?.member?.id || null,
+      phone: attendee.committeeMember?.member?.phone ?? null,
+      email: attendee.committeeMember?.member?.email ?? null,
+      userId: attendee.committeeMember?.member?.id,
     }));
 
     const notificationCount = await sendMeetingNotifications(
-      tenantId,
+      tenantId!,
       meeting.committee?.name || meeting.title || 'Meeting',
       meetingDate,
       meetingTime,
@@ -914,6 +948,10 @@ router.post('/meetings/:id/schedule', async (req: Request, res: Response) => {
 router.put('/meetings/:id', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
     const {
       title,
@@ -931,7 +969,7 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1001,7 +1039,7 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
     ) {
       await prisma.memberKYC.updateMany({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           memberId: {
             in: assignPendingAgendaItems,
           },
@@ -1016,7 +1054,7 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
       const members = await prisma.member.findMany({
         where: {
           id: { in: assignPendingAgendaItems },
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
 
@@ -1086,6 +1124,10 @@ router.put('/meetings/:id', async (req: Request, res: Response) => {
 router.post('/meetings/:id/approve-member', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id: meetingId } = req.params;
     const { memberId, approvalDate, decisionNumber, remarks } = req.body;
 
@@ -1098,7 +1140,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
     const meeting = await prisma.meeting.findFirst({
       where: {
         id: meetingId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1111,7 +1153,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         workflowStatus: 'bod_pending',
       },
     });
@@ -1179,17 +1221,18 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
           const shares = Math.floor(initialShareAmount / sharePrice);
 
           if (shares > 0) {
-            let shareLedger = await prisma.shareLedger.findUnique({
+            let shareAccount = await prisma.shareAccount.findUnique({
               where: { memberId },
             });
 
-            if (!shareLedger) {
-              shareLedger = await prisma.shareLedger.create({
+            if (!shareAccount) {
+              shareAccount = await prisma.shareAccount.create({
                 data: {
                   memberId,
-                  cooperativeId: tenantId,
-                  totalShares: 0,
-                  shareValue: sharePrice,
+                  cooperativeId: tenantId!,
+                  totalKitta: 0,
+                  unitPrice: sharePrice,
+                  totalAmount: 0,
                 },
               });
             }
@@ -1209,45 +1252,50 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
               const year = new Date().getFullYear();
               const txCount = await prisma.shareTransaction.count({
                 where: {
-                  cooperativeId: tenantId,
-                  transactionDate: {
+                  cooperativeId: tenantId!,
+                  date: {
                     gte: new Date(`${year}-01-01`),
                     lt: new Date(`${year + 1}-01-01`),
                   },
                 },
               });
-              const transactionNumber = `SHARE-${year}-${String(txCount + 1).padStart(4, '0')}`;
+              const transactionNo = `SHARE-${year}-${String(txCount + 1).padStart(4, '0')}`;
 
               const shareTransaction = await prisma.shareTransaction.create({
                 data: {
-                  transactionNumber,
-                  ledgerId: shareLedger.id,
+                  transactionNo,
+                  accountId: shareAccount.id,
                   memberId,
-                  cooperativeId: tenantId,
+                  cooperativeId: tenantId!,
                   type: ShareTxType.PURCHASE,
-                  shares,
+                  kitta: shares,
                   amount: shares * sharePrice,
-                  sharePrice,
-                  transactionDate: approvalDate ? new Date(approvalDate) : new Date(),
+                  date: approvalDate ? new Date(approvalDate) : new Date(),
+                  paymentMode: 'CASH',
                   remarks: 'Initial share purchase upon BOD approval',
+                  createdBy: req.user!.userId,
                 },
               });
 
-              await prisma.shareLedger.update({
-                where: { id: shareLedger.id },
+              await prisma.shareAccount.update({
+                where: { id: shareAccount.id },
                 data: {
-                  totalShares: shareLedger.totalShares + shares,
-                  shareValue: sharePrice,
+                  totalKitta: { increment: shares },
+                  totalAmount: { increment: shares * sharePrice },
+                  unitPrice: sharePrice,
                 },
               });
 
               await postShareCapital(
-                tenantId,
+                tenantId!,
                 shares * sharePrice,
                 memberId,
                 memberNumber,
                 sharePrice,
                 shares,
+                'CASH',
+                undefined,
+                undefined,
                 approvalDate ? new Date(approvalDate) : new Date()
               );
 
@@ -1257,7 +1305,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
                 currency: 'NPR',
                 isCash: true,
                 transactionId: shareTransaction.id,
-                occurredOn: shareTransaction.transactionDate,
+                occurredOn: shareTransaction.date,
                 transactionType: 'share_purchase',
                 counterpartyType: 'MEMBER',
               });
@@ -1284,7 +1332,7 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
     await prisma.memberWorkflowHistory.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fromStatus: member.workflowStatus,
         toStatus: 'active',
         action: 'bod_approved',
@@ -1312,6 +1360,10 @@ router.post('/meetings/:id/approve-member', async (req: Request, res: Response) 
 router.put('/meetings/:id/minutes', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
     const { agendas } = req.body; // Array of { id, decision, decisionStatus }
 
@@ -1324,7 +1376,7 @@ router.put('/meetings/:id/minutes', async (req: Request, res: Response) => {
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1382,6 +1434,10 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const tenantId = req.user!.tenantId;
+      if (!tenantId) {
+        res.status(403).json({ error: 'Tenant context required' });
+        return;
+      }
       const { id } = req.params;
 
       if (!req.file) {
@@ -1393,7 +1449,7 @@ router.post(
       const meeting = await prisma.meeting.findFirst({
         where: {
           id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
 
@@ -1457,6 +1513,10 @@ router.post(
 router.put('/meetings/:id/attendance', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
     const { attendees } = req.body; // Array of { id, isPresent, allowance }
 
@@ -1469,7 +1529,7 @@ router.put('/meetings/:id/attendance', async (req: Request, res: Response) => {
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1545,6 +1605,10 @@ router.put('/meetings/:id/attendance', async (req: Request, res: Response) => {
 router.post('/meetings/:id/attendees', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
     const { name, role, allowance } = req.body;
 
@@ -1557,7 +1621,7 @@ router.post('/meetings/:id/attendees', async (req: Request, res: Response) => {
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1609,6 +1673,10 @@ router.post('/meetings/:id/attendees', async (req: Request, res: Response) => {
 router.put('/meetings/:id/attendees/:attendeeId', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id, attendeeId } = req.params;
     const { name, role, isPresent, allowance } = req.body;
 
@@ -1616,7 +1684,7 @@ router.put('/meetings/:id/attendees/:attendeeId', async (req: Request, res: Resp
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1677,13 +1745,17 @@ router.put('/meetings/:id/attendees/:attendeeId', async (req: Request, res: Resp
 router.post('/meetings/:id/finalize', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     // Verify meeting exists and belongs to cooperative
     const meeting = await prisma.meeting.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         agendas: true,
@@ -1782,7 +1854,7 @@ router.get('/committees', async (req: Request, res: Response) => {
 
     // Build where clause
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -1883,7 +1955,7 @@ router.post(
 
     const committee = await prisma.committee.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         name,
         nameNepali,
         description,
@@ -1914,7 +1986,7 @@ router.get('/committees/:id', async (req: Request, res: Response) => {
     const committee = await prisma.committee.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         members: {
@@ -1976,7 +2048,7 @@ router.put('/committees/:id', async (req: Request, res: Response) => {
     const committee = await prisma.committee.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2022,7 +2094,7 @@ router.delete('/committees/:id', async (req: Request, res: Response) => {
     const committee = await prisma.committee.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2076,7 +2148,7 @@ router.post('/committees/:id/members', async (req: Request, res: Response) => {
     const committee = await prisma.committee.findFirst({
       where: {
         id: committeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2089,7 +2161,7 @@ router.post('/committees/:id/members', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2165,7 +2237,7 @@ router.put('/committees/:id/members/:memberId', async (req: Request, res: Respon
         committeeId,
         memberId,
         committee: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       },
     });
@@ -2231,7 +2303,7 @@ router.delete('/committees/:id/members/:memberId', async (req: Request, res: Res
         committeeId,
         memberId,
         committee: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       },
     });
@@ -2278,7 +2350,7 @@ router.post('/committees/:id/tenure', async (req: Request, res: Response) => {
     const committee = await prisma.committee.findFirst({
       where: {
         id: committeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2375,7 +2447,7 @@ router.put('/committees/:id/tenure/:tenureId', async (req: Request, res: Respons
         id: tenureId,
         committeeId,
         committee: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       },
     });
@@ -2472,7 +2544,7 @@ router.delete('/committees/:id/tenure/:tenureId', async (req: Request, res: Resp
         id: tenureId,
         committeeId,
         committee: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       },
     });
@@ -2526,7 +2598,7 @@ router.get('/agm', async (req: Request, res: Response) => {
 
     // Build where clause
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -2635,7 +2707,7 @@ router.post(
     const existingAGM = await prisma.aGM.findUnique({
       where: {
         cooperativeId_fiscalYear: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           fiscalYear,
         },
       },
@@ -2648,7 +2720,7 @@ router.post(
 
     const agm = await prisma.aGM.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear,
         agmNumber: agmNumber || 1,
         bookCloseDate: bookCloseDate ? new Date(bookCloseDate) : null,
@@ -2687,7 +2759,7 @@ router.get('/agm/:id', async (req: Request, res: Response) => {
     const agm = await prisma.aGM.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2730,7 +2802,7 @@ router.put('/agm/:id', async (req: Request, res: Response) => {
     const agm = await prisma.aGM.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2744,7 +2816,7 @@ router.put('/agm/:id', async (req: Request, res: Response) => {
       const existingAGM = await prisma.aGM.findUnique({
         where: {
           cooperativeId_fiscalYear: {
-            cooperativeId: tenantId,
+            cooperativeId: tenantId!,
             fiscalYear,
           },
         },
@@ -2802,7 +2874,7 @@ router.delete('/agm/:id', async (req: Request, res: Response) => {
     const agm = await prisma.aGM.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -2838,7 +2910,7 @@ router.get('/committees/export', async (req: Request, res: Response) => {
 
     // Build where clause (same as GET /committees)
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -2928,7 +3000,7 @@ router.get('/meetings/export', async (req: Request, res: Response) => {
 
     // Build where clause (same as GET /meetings)
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -2987,7 +3059,7 @@ router.get('/meetings/export', async (req: Request, res: Response) => {
       m.title,
       m.meetingType,
       m.status,
-      new Date(m.scheduledDate).toLocaleDateString(),
+      m.scheduledDate ? new Date(m.scheduledDate).toLocaleDateString() : '',
       m.location || '',
       m.committee?.name || '',
       (m.description || '').replace(/,/g, ';'),
@@ -3025,7 +3097,7 @@ router.get('/agm/export', async (req: Request, res: Response) => {
 
     // Build where clause (same as GET /agm)
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -3132,7 +3204,7 @@ router.get('/meetings/upcoming', async (req: Request, res: Response) => {
 
     const meetings = await prisma.meeting.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: MeetingStatus.SCHEDULED,
         scheduledDate: {
           gte: today,
@@ -3173,7 +3245,7 @@ router.get('/reports', async (req: Request, res: Response) => {
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (fiscalYear) {
@@ -3253,7 +3325,7 @@ router.post(
     // Check if report already exists for this fiscal year and month
     const existing = await prisma.managerReport.findFirst({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear,
         month,
       },
@@ -3268,7 +3340,7 @@ router.post(
 
     const report = await prisma.managerReport.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         title: reportTitle,
         fiscalYear,
         month,
@@ -3297,7 +3369,7 @@ router.get('/reports/:id', async (req: Request, res: Response) => {
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         meeting: {
@@ -3348,7 +3420,7 @@ router.put('/reports/:id', async (req: Request, res: Response) => {
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3403,7 +3475,7 @@ router.post('/reports/:id/fetch-data', async (req: Request, res: Response) => {
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3418,7 +3490,7 @@ router.post('/reports/:id/fetch-data', async (req: Request, res: Response) => {
     }
 
     // Fetch all data from CBS/Accounting
-    const reportData = await fetchReportData(tenantId, report.fiscalYear, report.month);
+    const reportData = await fetchReportData(tenantId!, report.fiscalYear, report.month);
 
     // Update report with fetched data
     const updatedReport = await prisma.managerReport.update({
@@ -3455,7 +3527,7 @@ router.post('/reports/:id/finalize', async (req: Request, res: Response) => {
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3470,7 +3542,7 @@ router.post('/reports/:id/finalize', async (req: Request, res: Response) => {
     }
 
     // CRITICAL SNAPSHOT STEP: Re-fetch all current data from CBS/Accounting
-    const reportData = await fetchReportData(tenantId, report.fiscalYear, report.month);
+    const reportData = await fetchReportData(tenantId!, report.fiscalYear, report.month);
 
     // FREEZE DATA: Store the fetched JSON data into the ManagerReport database fields
     const finalizedReport = await prisma.managerReport.update({
@@ -3512,7 +3584,7 @@ router.delete('/reports/:id', async (req: Request, res: Response) => {
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3551,7 +3623,7 @@ router.get('/reports/:id/previous-month', async (req: Request, res: Response) =>
     const report = await prisma.managerReport.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3581,7 +3653,7 @@ router.get('/reports/:id/previous-month', async (req: Request, res: Response) =>
 
     const previousReport = await prisma.managerReport.findFirst({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fiscalYear: report.fiscalYear,
         month: previousMonth,
         status: 'FINALIZED',
@@ -3616,7 +3688,7 @@ router.get('/meetings/:id/available-reports', async (req: Request, res: Response
 
     const reports = await prisma.managerReport.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: 'FINALIZED',
         OR: [
           { presentedInMeetingId: null },
@@ -3661,7 +3733,7 @@ router.put('/meetings/:id/attach-report', async (req: Request, res: Response) =>
     const meeting = await prisma.meeting.findFirst({
       where: {
         id: meetingId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -3674,7 +3746,7 @@ router.put('/meetings/:id/attach-report', async (req: Request, res: Response) =>
     const report = await prisma.managerReport.findFirst({
       where: {
         id: reportId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: 'FINALIZED',
       },
     });

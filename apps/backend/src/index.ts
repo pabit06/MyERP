@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import * as Sentry from '@sentry/node';
 import { initializeSentry } from './config/sentry.js';
 import saasRoutes from './routes/saas.js';
 import authRoutes from './routes/auth.js';
@@ -38,7 +37,6 @@ import {
   helmetConfig,
   apiLimiter,
   authLimiter,
-  passwordResetLimiter,
   requestSizeLimit,
   trustProxy,
 } from './middleware/security.js';
@@ -52,11 +50,8 @@ const app = express();
 const PORT = env.PORT;
 const API_PREFIX = env.API_PREFIX;
 
-// Sentry request handler (must be first middleware)
-if (env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.requestHandler());
-  app.use(Sentry.Handlers.tracingHandler());
-}
+// Sentry Express integration is handled automatically via expressIntegration() in sentry.ts
+// No need for manual request/tracing handlers in v8
 
 // Trust proxy (important for rate limiting behind reverse proxies)
 if (trustProxy) {
@@ -122,10 +117,8 @@ app.use(`${API_PREFIX}/workflow`, apiLimiter, workflowRoutes);
 app.use(`${API_PREFIX}/notifications`, apiLimiter, notificationsRoutes);
 app.use(`${API_PREFIX}/system-admin`, apiLimiter, systemAdminRoutes);
 
-// Sentry error handler (must be before errorHandler)
-if (env.SENTRY_DSN) {
-  app.use(Sentry.Handlers.errorHandler());
-}
+// Sentry error handler is handled automatically via expressIntegration() in sentry.ts
+// Our custom errorHandler middleware will still work and can call Sentry.captureException
 
 // 404 handler (must be after all routes)
 app.use(notFoundHandler);

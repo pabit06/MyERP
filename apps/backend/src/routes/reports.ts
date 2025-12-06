@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
-import { AccountingService } from '../services/accounting.js';
 import { accountingController } from '../controllers/AccountingController.js';
 import { ReportBuilder, ReportConfigs, ReportFilter } from '../lib/report-builder.js';
 import { prisma } from '../lib/prisma.js';
@@ -11,10 +10,8 @@ import {
   getCurrentNepaliCalendarYear,
   generateFiscalYears,
   generateCalendarYears,
-  getFiscalYearRange,
-  getCalendarYearRange,
 } from '../lib/nepali-fiscal-year.js';
-import { validate, validateParams, validateQuery } from '../middleware/validate.js';
+import { validate, validateParams, validateQuery, validateAll } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
@@ -28,18 +25,21 @@ router.use(requireTenant);
  * GET /api/reports/main
  * Generate main financial report with assets, liabilities, income, and expenses
  */
-router.get('/main', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { fiscalYear, month } = req.query;
+router.get(
+  '/main',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { fiscalYear, month } = req.query;
 
-  const report = await accountingController.generateMainReport(
-    tenantId,
-    fiscalYear as string | undefined,
-    month as string | undefined
-  );
+    const report = await accountingController.generateMainReport(
+      tenantId,
+      fiscalYear as string | undefined,
+      month as string | undefined
+    );
 
-  res.json(report);
-}));
+    res.json(report);
+  })
+);
 
 /**
  * GET /api/reports/audit
@@ -193,36 +193,43 @@ router.post(
  * GET /api/reports/configs
  * Get available report configurations
  */
-router.get('/configs', asyncHandler(async (req: Request, res: Response) => {
-  res.json({
-    configs: Object.values(ReportConfigs).map((config) => ({
-      name: config.name,
-      description: config.description,
-      entityType: config.entityType,
-      columns: config.columns.map((col) => ({
-        key: col.key,
-        label: col.label,
-        type: col.type,
+router.get(
+  '/configs',
+  asyncHandler(async (req: Request, res: Response) => {
+    res.json({
+      configs: Object.values(ReportConfigs).map((config) => ({
+        name: config.name,
+        description: config.description,
+        entityType: config.entityType,
+        columns: config.columns.map((col) => ({
+          key: col.key,
+          label: col.label,
+          type: col.type,
+        })),
       })),
-    })),
-  });
-}));
+    });
+  })
+);
 
 /**
  * GET /api/reports/configs/:name
  * Get a specific report configuration
  */
-router.get('/configs/:name', validateParams(z.object({ name: z.string().min(1) })), asyncHandler(async (req: Request, res: Response) => {
-  const { name } = req.validatedParams!;
-  const configKey = name as keyof typeof ReportConfigs;
+router.get(
+  '/configs/:name',
+  validateParams(z.object({ name: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { name } = req.validatedParams!;
+    const configKey = name as keyof typeof ReportConfigs;
 
-  if (!ReportConfigs[configKey]) {
-    res.status(404).json({ error: 'Report configuration not found' });
-    return;
-  }
+    if (!ReportConfigs[configKey]) {
+      res.status(404).json({ error: 'Report configuration not found' });
+      return;
+    }
 
-  res.json({ config: ReportConfigs[configKey] });
-}));
+    res.json({ config: ReportConfigs[configKey] });
+  })
+);
 
 /**
  * POST /api/reports/configs/:name/execute
@@ -260,34 +267,37 @@ router.post(
  * Get Nepali fiscal years and calendar years
  * Query params: type (fiscal|calendar|both), start (BS year), count (number of years)
  */
-router.get('/fiscal-years', asyncHandler(async (req: Request, res: Response) => {
-  const { type = 'both', start, count = '10' } = req.query;
-  const startYear = start ? parseInt(start as string) : null;
-  const countNum = parseInt(count as string) || 10;
+router.get(
+  '/fiscal-years',
+  asyncHandler(async (req: Request, res: Response) => {
+    const { type = 'both', start, count = '10' } = req.query;
+    const startYear = start ? parseInt(start as string) : null;
+    const countNum = parseInt(count as string) || 10;
 
-  const result: any = {};
+    const result: any = {};
 
-  if (type === 'both' || type === 'fiscal') {
-    if (startYear) {
-      result.fiscalYears = generateFiscalYears(startYear, countNum);
-    } else {
-      const current = getCurrentNepaliFiscalYear();
-      result.currentFiscalYear = current;
-      result.fiscalYears = generateFiscalYears(current.bsYear, countNum);
+    if (type === 'both' || type === 'fiscal') {
+      if (startYear) {
+        result.fiscalYears = generateFiscalYears(startYear, countNum);
+      } else {
+        const current = getCurrentNepaliFiscalYear();
+        result.currentFiscalYear = current;
+        result.fiscalYears = generateFiscalYears(current.bsYear, countNum);
+      }
     }
-  }
 
-  if (type === 'both' || type === 'calendar') {
-    if (startYear) {
-      result.calendarYears = generateCalendarYears(startYear, countNum);
-    } else {
-      const current = getCurrentNepaliCalendarYear();
-      result.currentCalendarYear = current;
-      result.calendarYears = generateCalendarYears(current.bsYear, countNum);
+    if (type === 'both' || type === 'calendar') {
+      if (startYear) {
+        result.calendarYears = generateCalendarYears(startYear, countNum);
+      } else {
+        const current = getCurrentNepaliCalendarYear();
+        result.currentCalendarYear = current;
+        result.calendarYears = generateCalendarYears(current.bsYear, countNum);
+      }
     }
-  }
 
-  res.json(result);
-}));
+    res.json(result);
+  })
+);
 
 export default router;

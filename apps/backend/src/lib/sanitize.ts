@@ -1,6 +1,6 @@
 /**
  * Input Sanitization Utilities
- * 
+ *
  * Provides functions to sanitize user inputs to prevent XSS attacks
  * and other security vulnerabilities.
  */
@@ -9,7 +9,7 @@ import DOMPurify from 'isomorphic-dompurify';
 
 /**
  * Sanitize HTML content to prevent XSS attacks
- * 
+ *
  * @param html - HTML string to sanitize
  * @returns Sanitized HTML string
  */
@@ -18,7 +18,24 @@ export function sanitizeHtml(html: string): string {
     return '';
   }
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'a', 'p', 'br', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+    ALLOWED_TAGS: [
+      'b',
+      'i',
+      'em',
+      'strong',
+      'a',
+      'p',
+      'br',
+      'ul',
+      'ol',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+    ],
     ALLOWED_ATTR: ['href', 'title'],
     ALLOW_DATA_ATTR: false,
   });
@@ -26,7 +43,7 @@ export function sanitizeHtml(html: string): string {
 
 /**
  * Sanitize plain text by removing HTML tags and encoding special characters
- * 
+ *
  * @param text - Text to sanitize
  * @returns Sanitized plain text
  */
@@ -49,7 +66,7 @@ export function sanitizeText(text: string): string {
 /**
  * Sanitize a string by removing potentially dangerous characters
  * Useful for filenames, usernames, etc.
- * 
+ *
  * @param input - String to sanitize
  * @param allowSpaces - Whether to allow spaces (default: false)
  * @returns Sanitized string
@@ -59,7 +76,7 @@ export function sanitizeFilename(input: string, allowSpaces: boolean = false): s
     return '';
   }
   // Remove path traversal attempts
-  let sanitized = input.replace(/\.\./g, '').replace(/[\/\\]/g, '');
+  let sanitized = input.replace(/\.\./g, '').replace(/[/\\]/g, '');
   // Remove special characters except allowed ones
   const pattern = allowSpaces ? /[^a-zA-Z0-9\s\-_]/g : /[^a-zA-Z0-9\-_]/g;
   sanitized = sanitized.replace(pattern, '');
@@ -69,7 +86,7 @@ export function sanitizeFilename(input: string, allowSpaces: boolean = false): s
 
 /**
  * Sanitize email address
- * 
+ *
  * @param email - Email to sanitize
  * @returns Sanitized email or empty string if invalid
  */
@@ -85,7 +102,7 @@ export function sanitizeEmail(email: string): string {
 
 /**
  * Sanitize URL
- * 
+ *
  * @param url - URL to sanitize
  * @returns Sanitized URL or empty string if invalid
  */
@@ -108,7 +125,7 @@ export function sanitizeUrl(url: string): string {
 /**
  * Sanitize SQL-like patterns (additional layer of protection)
  * Note: Prisma already handles SQL injection, but this adds extra safety
- * 
+ *
  * @param input - String to check for SQL patterns
  * @returns Sanitized string
  */
@@ -126,7 +143,7 @@ export function sanitizeSqlPattern(input: string): string {
 
 /**
  * Sanitize object recursively
- * 
+ *
  * @param obj - Object to sanitize
  * @param options - Sanitization options
  * @returns Sanitized object
@@ -149,7 +166,7 @@ export function sanitizeObject<T extends Record<string, any>>(
     return obj;
   }
 
-  const sanitized = Array.isArray(obj) ? [...obj] : { ...obj };
+  const sanitized: any = Array.isArray(obj) ? [...obj] : { ...obj };
 
   for (const key in sanitized) {
     if (Object.prototype.hasOwnProperty.call(sanitized, key)) {

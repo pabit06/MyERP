@@ -12,10 +12,8 @@ import {
   KymFormSchema,
   InstitutionKymFormSchema,
 } from '@myerp/shared-types';
-import { Prisma } from '@prisma/client';
 import { postEntryFee, getCurrentSharePrice } from '../services/accounting.js';
-import { env } from '../config/index.js';
-import { NotFoundError, ValidationError, BadRequestError, ConflictError } from '../lib/errors.js';
+import { NotFoundError, ValidationError, BadRequestError } from '../lib/errors.js';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { validate, validateAll } from '../middleware/validate.js';
 import { csrfProtection } from '../middleware/csrf.js';
@@ -36,10 +34,14 @@ router.get(
   '/:id/kym',
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id: memberId } = req.params;
 
     const member = await prisma.member.findFirst({
-      where: { id: memberId, cooperativeId: tenantId },
+      where: { id: memberId, cooperativeId: tenantId! },
     });
 
     if (!member) {
@@ -83,7 +85,7 @@ router.put(
     const kycData = req.validated!;
 
     const existingMember = await prisma.member.findFirst({
-      where: { id: memberId, cooperativeId: tenantId },
+      where: { id: memberId, cooperativeId: tenantId! },
     });
 
     if (!existingMember) {
@@ -96,8 +98,8 @@ router.put(
       familyMemberInThisInstitution,
       otherEarningFamilyMembers,
       incomeSourceDetails,
-      firstName, // Remove - this belongs to Member model, not MemberKYC
-      surname, // Remove - this belongs to Member model, not MemberKYC
+      firstName: _firstName, // Remove - this belongs to Member model, not MemberKYC
+      surname: _surname, // Remove - this belongs to Member model, not MemberKYC
       ...mainKycData
     } = kycData;
 
@@ -113,7 +115,7 @@ router.put(
         create: {
           ...mainKycData,
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           isComplete: true,
           completedAt: new Date(),
         },
@@ -164,7 +166,7 @@ router.put(
       });
       let memberNumber = currentMember?.memberNumber;
       if (!memberNumber) {
-        memberNumber = await generateMemberNumber(tenantId);
+        memberNumber = await generateMemberNumber(tenantId!);
         await tx.member.update({
           where: { id: memberId },
           data: { memberNumber },
@@ -208,7 +210,7 @@ router.put(
             // Use ShareService to issue shares (handles account creation, transaction, and accounting)
             const { ShareService } = await import('../services/share.service.js');
             await ShareService.issueShares({
-              cooperativeId: tenantId,
+              cooperativeId: tenantId!,
               memberId,
               kitta: shares,
               amount: initialShareAmount, // Use exact initialShareAmount to ensure accounting matches
@@ -251,7 +253,7 @@ router.put(
     const kycData = req.validated!;
 
     const existingMember = await prisma.member.findFirst({
-      where: { id: memberId, cooperativeId: tenantId },
+      where: { id: memberId, cooperativeId: tenantId! },
     });
 
     if (!existingMember) {
@@ -262,12 +264,12 @@ router.put(
       boardOfDirectors,
       chiefExecutive,
       accountOperators,
-      hasBylawsConstitution,
-      hasOfficialLetter,
-      hasFinancialStatement,
-      hasTaxClearance,
-      hasTaxFilingDetails,
-      hasBoardDecision,
+      hasBylawsConstitution: _hasBylawsConstitution,
+      hasOfficialLetter: _hasOfficialLetter,
+      hasFinancialStatement: _hasFinancialStatement,
+      hasTaxClearance: _hasTaxClearance,
+      hasTaxFilingDetails: _hasTaxFilingDetails,
+      hasBoardDecision: _hasBoardDecision,
       ...mainKycData
     } = kycData;
 
@@ -320,7 +322,7 @@ router.put(
           chiefExecutive: chiefExecutive as any,
           accountOperators: accountOperators as any,
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           isComplete: true,
           completedAt: new Date(),
         },
@@ -336,10 +338,16 @@ router.put(
     // Record payments when application is submitted (same as individual members)
     try {
       const { postEntryFee, postAdvancePayment } = await import('../services/accounting.js');
-      
-      const initialShareAmount = mainKycData.initialShareAmount ? Number(mainKycData.initialShareAmount) : 0;
-      const initialSavingsAmount = mainKycData.initialSavingsAmount ? Number(mainKycData.initialSavingsAmount) : 0;
-      const entryFeeAmount = mainKycData.initialOtherAmount ? Number(mainKycData.initialOtherAmount) : 0;
+
+      const initialShareAmount = mainKycData.initialShareAmount
+        ? Number(mainKycData.initialShareAmount)
+        : 0;
+      const initialSavingsAmount = mainKycData.initialSavingsAmount
+        ? Number(mainKycData.initialSavingsAmount)
+        : 0;
+      const entryFeeAmount = mainKycData.initialOtherAmount
+        ? Number(mainKycData.initialOtherAmount)
+        : 0;
 
       // Entry fee is posted directly to income (non-refundable, compulsory)
       if (entryFeeAmount > 0) {
@@ -350,14 +358,12 @@ router.put(
       // Share capital and savings are recorded as advance payment (refundable if rejected)
       const advanceAmount = initialShareAmount + initialSavingsAmount;
       if (advanceAmount > 0) {
-        const memberName = existingMember.fullName || existingMember.institutionName || `${existingMember.firstName} ${existingMember.lastName}`.trim() || 'Unknown';
-        await postAdvancePayment(
-          tenantId,
-          advanceAmount,
-          memberId,
-          memberName,
-          new Date()
-        );
+        const memberName =
+          existingMember.fullName ||
+          existingMember.institutionName ||
+          `${existingMember.firstName} ${existingMember.lastName}`.trim() ||
+          'Unknown';
+        await postAdvancePayment(tenantId, advanceAmount, memberId, memberName, new Date());
       }
     } catch (paymentError) {
       console.error('Error recording payments for institution:', paymentError);
@@ -375,26 +381,30 @@ router.put(
 router.get('/summary', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     // Fast count queries
     const [totalMembers, activeMembers, pendingKYC, membersWithCapitalLedger] = await Promise.all([
       // Count only actual members (those with member numbers)
       prisma.member.count({
-        where: { 
-          cooperativeId: tenantId,
-          memberNumber: { not: null }
+        where: {
+          cooperativeId: tenantId!,
+          memberNumber: { not: null },
         },
       }),
       prisma.member.count({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           isActive: true,
-          memberNumber: { not: null } // Active members must have member numbers
+          memberNumber: { not: null }, // Active members must have member numbers
         },
       }),
       prisma.member.count({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           workflowStatus: {
             in: ['application', 'under_review'],
           },
@@ -403,7 +413,7 @@ router.get('/summary', async (req: Request, res: Response) => {
       // Count members who have share accounts
       prisma.member.count({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           shareAccount: {
             isNot: null,
           },
@@ -432,6 +442,10 @@ router.get(
   '/charts',
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const cacheKey = `members:charts:${tenantId}`;
 
     // Check cache first
@@ -454,14 +468,14 @@ router.get(
       // 1. Workflow Breakdown
       prisma.member.groupBy({
         by: ['workflowStatus'],
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         _count: { workflowStatus: true },
       }),
 
       // 2. Status Distribution (Active vs. Inactive)
       prisma.member.groupBy({
         by: ['isActive'],
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         _count: { isActive: true },
       }),
 
@@ -469,7 +483,7 @@ router.get(
       prisma.memberKYC.groupBy({
         by: ['gender'],
         where: {
-          member: { cooperativeId: tenantId },
+          member: { cooperativeId: tenantId! },
           gender: { not: null },
         },
         _count: { gender: true },
@@ -479,7 +493,7 @@ router.get(
       prisma.memberKYC.groupBy({
         by: ['permanentProvince'],
         where: {
-          member: { cooperativeId: tenantId },
+          member: { cooperativeId: tenantId! },
           permanentProvince: { not: null },
         },
         _count: { permanentProvince: true },
@@ -703,6 +717,10 @@ router.get(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { isActive, search, page = '1', limit = '20', hasMemberNumber } = req.query;
 
     // Parse and validate pagination parameters
@@ -711,7 +729,7 @@ router.get(
     const skip = (pageNum - 1) * limitNum;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (isActive !== undefined) {
@@ -770,12 +788,16 @@ router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     const member = await prisma.member.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -786,7 +808,7 @@ router.get(
     // Fetch related data in parallel for optimal performance
     const [savingAccounts, loanApplications, shareAccount] = await Promise.all([
       prisma.savingAccount.findMany({
-        where: { memberId: id, cooperativeId: tenantId },
+        where: { memberId: id, cooperativeId: tenantId! },
         select: {
           id: true,
           accountNumber: true,
@@ -800,7 +822,7 @@ router.get(
         },
       }),
       prisma.loanApplication.findMany({
-        where: { memberId: id, cooperativeId: tenantId },
+        where: { memberId: id, cooperativeId: tenantId! },
         select: {
           id: true,
           applicationNumber: true,
@@ -850,6 +872,10 @@ router.post(
   validate(createMemberSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     // Request body is already validated and available in req.validated
     const {
@@ -880,7 +906,7 @@ router.post(
       data: {
         memberNumber: null, // Will be generated after approval
         memberType: (memberType || 'INDIVIDUAL') as any, // Type assertion until Prisma client is regenerated
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         firstName: memberType === 'INSTITUTION' ? null : firstName?.toUpperCase() || null,
         middleName:
           memberType === 'INSTITUTION' ? null : middleName ? middleName.toUpperCase() : null,
@@ -922,7 +948,7 @@ router.put(
 
     // 2. Get the current member
     const existingMember = await prisma.member.findFirst({
-      where: { id: memberId, cooperativeId: tenantId },
+      where: { id: memberId, cooperativeId: tenantId! },
     });
 
     if (!existingMember) {
@@ -957,7 +983,7 @@ router.put(
       // 5b. Log the change in the new history table
       prisma.workflowHistory.create({
         data: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           memberId: memberId,
           changedById: staffId,
           fromStatus: fromStatus,
@@ -975,9 +1001,11 @@ router.put(
         });
 
         // Also check Institution KYC if not found
-        const kyc = kycData || await prisma.institutionKYC.findUnique({
-          where: { memberId },
-        });
+        const kyc =
+          kycData ||
+          (await prisma.institutionKYC.findUnique({
+            where: { memberId },
+          }));
 
         // Check if share account already exists
         let existingShares = await prisma.shareAccount.findUnique({
@@ -999,7 +1027,7 @@ router.put(
             if (!stillMissing) {
               // Get the current highest certificate number in this transaction
               const latestCert = await tx.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -1016,7 +1044,7 @@ router.put(
 
               return await tx.shareAccount.create({
                 data: {
-                  cooperativeId: tenantId,
+                  cooperativeId: tenantId!,
                   memberId,
                   certificateNo: certNo,
                   unitPrice,
@@ -1051,10 +1079,10 @@ router.put(
             });
 
             // Check if shares have already been issued (account has shares > 0)
-            const hasSharesAlready = currentShareAccount 
-              ? (currentShareAccount.totalKitta > 0 || currentShareAccount.totalAmount > 0)
+            const hasSharesAlready = currentShareAccount
+              ? currentShareAccount.totalKitta > 0 || currentShareAccount.totalAmount > 0
               : false;
-            
+
             if (!hasSharesAlready) {
               const sharePrice = await getCurrentSharePrice(tenantId, 100);
               const shares = Math.floor(initialShareAmount / sharePrice);
@@ -1062,7 +1090,7 @@ router.put(
               if (shares > 0) {
                 const { ShareService } = await import('../services/share.service.js');
                 await ShareService.issueShares({
-                  cooperativeId: tenantId,
+                  cooperativeId: tenantId!,
                   memberId,
                   kitta: shares,
                   amount: initialShareAmount,
@@ -1087,17 +1115,29 @@ router.put(
             const tempMemberIdPattern = `TEMP-${memberId.substring(0, 8)}`;
             const existingEntryFee = await prisma.journalEntry.findFirst({
               where: {
-                cooperativeId: tenantId,
+                cooperativeId: tenantId!,
                 OR: [
                   // Check by actual memberNumber (used during approval or if posted after member number is assigned)
                   {
                     AND: [
-                      { description: { contains: updatedMember.memberNumber, mode: 'insensitive' as const } },
+                      {
+                        description: {
+                          contains: updatedMember.memberNumber,
+                          mode: 'insensitive' as const,
+                        },
+                      },
                       {
                         OR: [
                           { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
-                          { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
-                          { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
+                          {
+                            description: {
+                              contains: 'Prabesh Shulka',
+                              mode: 'insensitive' as const,
+                            },
+                          },
+                          {
+                            description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const },
+                          },
                         ],
                       },
                     ],
@@ -1105,12 +1145,24 @@ router.put(
                   // Check by tempMemberId pattern (used during KYC submission before member number is assigned)
                   {
                     AND: [
-                      { description: { contains: tempMemberIdPattern, mode: 'insensitive' as const } },
+                      {
+                        description: {
+                          contains: tempMemberIdPattern,
+                          mode: 'insensitive' as const,
+                        },
+                      },
                       {
                         OR: [
                           { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
-                          { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
-                          { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
+                          {
+                            description: {
+                              contains: 'Prabesh Shulka',
+                              mode: 'insensitive' as const,
+                            },
+                          },
+                          {
+                            description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const },
+                          },
                         ],
                       },
                     ],
@@ -1120,7 +1172,13 @@ router.put(
             });
 
             if (!existingEntryFee) {
-              await postEntryFee(tenantId, entryFeeAmount, memberId, updatedMember.memberNumber, new Date());
+              await postEntryFee(
+                tenantId,
+                entryFeeAmount,
+                memberId,
+                updatedMember.memberNumber,
+                new Date()
+              );
             }
           }
         }
@@ -1140,7 +1198,7 @@ router.put(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         fromStatus,
         toStatus,
         memberNumber: updatedMember.memberNumber,
@@ -1172,7 +1230,7 @@ router.put(
     const existing = await prisma.member.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1236,7 +1294,7 @@ router.put(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         changes: Object.keys(updateData),
       },
     });
@@ -1260,7 +1318,7 @@ router.delete(
     const existing = await prisma.member.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 

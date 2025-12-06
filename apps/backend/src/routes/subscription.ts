@@ -16,9 +16,13 @@ router.use(requireTenant);
 router.get('/', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     const cooperative = await prisma.cooperative.findUnique({
-      where: { id: tenantId },
+      where: { id: tenantId! },
       include: {
         subscription: {
           include: {
@@ -88,6 +92,10 @@ router.get('/plans', async (req: Request, res: Response) => {
 router.put('/change-plan', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { planId } = req.body;
 
     if (!planId) {
@@ -107,7 +115,7 @@ router.put('/change-plan', async (req: Request, res: Response) => {
 
     // Update subscription
     const subscription = await prisma.subscription.update({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       data: {
         planId,
         status: 'active',

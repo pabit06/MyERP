@@ -57,10 +57,14 @@ router.get(
   validateQuery(paginationSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder } = req.validatedQuery!;
 
     const where = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     const [products, total] = await Promise.all([
@@ -88,34 +92,39 @@ router.get(
  * POST /api/savings/products
  * Create a new saving product
  */
-router.post('/products', csrfProtection, validate(createSavingProductSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const data = req.validated!;
+router.post(
+  '/products',
+  csrfProtection,
+  validate(createSavingProductSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const data = req.validated!;
 
-  const product = await savingsController.createProduct(
-    {
-      cooperativeId: tenantId,
-      ...data,
-    },
-    userId
-  );
+    const product = await savingsController.createProduct(
+      {
+        cooperativeId: tenantId!,
+        ...data,
+      },
+      userId
+    );
 
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.CONFIGURATION_CHANGED,
-    userId,
-    tenantId,
-    resourceType: 'SavingProduct',
-    resourceId: product.id,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'created', productName: product.name },
-  });
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId,
+      resourceType: 'SavingProduct',
+      resourceId: product.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'created', productName: product.name },
+    });
 
-  res.status(201).json({ product });
-}));
+    res.status(201).json({ product });
+  })
+);
 
 /**
  * @swagger
@@ -171,7 +180,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, memberId, status, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -233,46 +242,55 @@ router.get(
  * POST /api/savings/accounts
  * Create a new saving account
  */
-router.post('/accounts', csrfProtection, validate(createSavingAccountSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const data = req.validated!;
+router.post(
+  '/accounts',
+  csrfProtection,
+  validate(createSavingAccountSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const data = req.validated!;
 
-  const account = await savingsController.createAccount(
-    {
-      cooperativeId: tenantId,
-      ...data,
-    },
-    userId
-  );
+    const account = await savingsController.createAccount(
+      {
+        cooperativeId: tenantId!,
+        ...data,
+      },
+      userId
+    );
 
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.TRANSACTION_CREATED,
-    userId,
-    tenantId,
-    resourceType: 'SavingAccount',
-    resourceId: account.id,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'created', memberId: account.memberId },
-  });
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.TRANSACTION_CREATED,
+      userId,
+      tenantId,
+      resourceType: 'SavingAccount',
+      resourceId: account.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'created', memberId: account.memberId },
+    });
 
-  res.status(201).json({ account });
-}));
+    res.status(201).json({ account });
+  })
+);
 
 /**
  * GET /api/savings/accounts/:id
  * Get a specific saving account
  */
-router.get('/accounts/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.get(
+  '/accounts/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { id } = req.validatedParams!;
 
-  const account = await savingsController.getAccount(id, tenantId);
-  res.json({ account });
-}));
+    const account = await savingsController.getAccount(id, tenantId);
+    res.json({ account });
+  })
+);
 
 /**
  * POST /api/savings/accounts/:id/deposit
@@ -299,7 +317,7 @@ router.post(
       {
         accountId: id,
         amount,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         paymentMode,
         cashAccountCode,
         bankAccountId,
@@ -319,8 +337,8 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
-        action: 'deposit', 
+      details: {
+        action: 'deposit',
         amount: amount.toString(),
         transactionId: result.transaction?.id,
       },
@@ -355,7 +373,7 @@ router.post(
       {
         accountId: id,
         amount,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         paymentMode,
         cashAccountCode,
         bankAccountId,
@@ -375,8 +393,8 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
-        action: 'withdraw', 
+      details: {
+        action: 'withdraw',
         amount: amount.toString(),
         transactionId: result.transaction?.id,
       },
@@ -432,7 +450,7 @@ router.post(
 
     const result = await savingsController.postInterest(
       {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         productId,
         interestExpenseGLCode,
         tdsPayableGLCode,
@@ -451,8 +469,8 @@ router.post(
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
-        action: 'interest_posted', 
+      details: {
+        action: 'interest_posted',
         accountsAffected: result.accountsAffected,
       },
     });

@@ -84,9 +84,10 @@ jobs:
           NEXT_PUBLIC_API_URL_VALUE="${{ secrets.NEXT_PUBLIC_API_URL }}"
           # Check if value is empty (GitHub Actions expands missing secrets to empty strings)
           # Use fallback value for CI builds if secret is not configured
+          # Backend API runs on port 4000 as configured in playwright.config.ts
           if [ -z "$NEXT_PUBLIC_API_URL_VALUE" ]; then
             echo "⚠️  Warning: NEXT_PUBLIC_API_URL secret not configured, using fallback value"
-            NEXT_PUBLIC_API_URL_VALUE="http://localhost:3001/api"
+            NEXT_PUBLIC_API_URL_VALUE="http://localhost:4000/api"
           fi
           echo "NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL_VALUE" >> $GITHUB_ENV
 

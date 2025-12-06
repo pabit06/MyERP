@@ -1,6 +1,6 @@
 /**
  * Sentry Error Tracking Configuration
- * 
+ *
  * Initializes Sentry for error tracking and performance monitoring.
  * Only initializes if SENTRY_DSN is configured.
  */
@@ -19,28 +19,20 @@ export function initializeSentry() {
   }
 
   try {
-    const integrations: any[] = [
-      // Enable HTTP instrumentation
-      new Sentry.Integrations.Http({ tracing: true }),
-      // Express integration is handled via middleware in index.ts
-      // Note: Profiling integration disabled due to native module compatibility issues
-      // Can be enabled later if needed: nodeProfilingIntegration() from '@sentry/profiling-node'
-    ];
-
     Sentry.init({
       dsn: env.SENTRY_DSN,
       environment: env.SENTRY_ENVIRONMENT || env.NODE_ENV,
       tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE || 1.0,
       profilesSampleRate: 0, // Disabled - requires native module that may not be available on all platforms
-      integrations,
-      // Filter out health check endpoints from tracking
-      ignoreErrors: [
-        'ECONNRESET',
-        'ECONNREFUSED',
-        'ETIMEDOUT',
-        'ENOTFOUND',
+      integrations: [
+        // HTTP instrumentation is automatic in v8
+        // Express integration is handled automatically in v8
+        // Note: Profiling integration disabled due to native module compatibility issues
+        // Can be enabled later if needed: nodeProfilingIntegration() from '@sentry/profiling-node'
       ],
-      beforeSend(event, hint) {
+      // Filter out health check endpoints from tracking
+      ignoreErrors: ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND'],
+      beforeSend(event, _hint) {
         // Filter out health check requests
         if (event.request?.url?.includes('/health')) {
           return null;
@@ -104,7 +96,11 @@ export function captureException(error: Error, context?: Record<string, any>) {
 /**
  * Capture message manually
  */
-export function captureMessage(message: string, level: Sentry.SeverityLevel = 'info', context?: Record<string, any>) {
+export function captureMessage(
+  message: string,
+  level: Sentry.SeverityLevel = 'info',
+  context?: Record<string, any>
+) {
   if (!env.SENTRY_DSN) {
     logger.log(level, message, context);
     return;
@@ -119,7 +115,12 @@ export function captureMessage(message: string, level: Sentry.SeverityLevel = 'i
 /**
  * Add breadcrumb for debugging
  */
-export function addBreadcrumb(message: string, category?: string, level: Sentry.SeverityLevel = 'info', data?: Record<string, any>) {
+export function addBreadcrumb(
+  message: string,
+  category?: string,
+  level: Sentry.SeverityLevel = 'info',
+  data?: Record<string, any>
+) {
   if (!env.SENTRY_DSN) return;
 
   Sentry.addBreadcrumb({

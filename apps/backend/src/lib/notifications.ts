@@ -7,7 +7,7 @@ import { prisma } from './prisma.js';
 import { NotificationChannel, NotificationStatus, Prisma } from '@prisma/client';
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
-import { env } from '../config/index.js';
+import { env, logger } from '../config/index.js';
 
 export interface NotificationData {
   cooperativeId: string;
@@ -276,7 +276,11 @@ async function getFCMAdmin() {
 
   try {
     // Dynamic import to avoid requiring firebase-admin if not configured
-    const admin = await import('firebase-admin');
+    const admin = await import('firebase-admin').catch(() => null);
+    if (!admin) {
+      logger.warn('firebase-admin not available, push notifications disabled');
+      return;
+    }
 
     if (!admin.apps.length) {
       // Initialize Firebase Admin if not already initialized

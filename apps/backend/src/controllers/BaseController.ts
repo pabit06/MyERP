@@ -1,5 +1,8 @@
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
+
+// Type assertion for extended prisma client
+type ExtendedPrismaClient = typeof prisma;
 import {
   hasPermission,
   hasAnyPermission,
@@ -24,10 +27,10 @@ export interface HookContext {
  * Base Controller class providing common patterns for all domain controllers
  */
 export abstract class BaseController {
-  protected prisma: PrismaClient;
+  protected prisma: ExtendedPrismaClient;
 
   constructor() {
-    this.prisma = prisma;
+    this.prisma = prisma as ExtendedPrismaClient;
   }
 
   /**
@@ -51,10 +54,10 @@ export abstract class BaseController {
   protected async handleTransaction<T>(
     fn: (tx: Prisma.TransactionClient) => Promise<T>
   ): Promise<T> {
-    return this.prisma.$transaction(fn, {
+    return (await this.prisma.$transaction(fn, {
       maxWait: 10000, // 10 seconds
       timeout: 30000, // 30 seconds
-    });
+    })) as T;
   }
 
   /**

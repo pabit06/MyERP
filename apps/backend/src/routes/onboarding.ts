@@ -21,11 +21,15 @@ interface UpdateProfileRequest {
 router.put('/profile', authenticate, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { description, logoUrl, website, address, phone, email }: UpdateProfileRequest = req.body;
 
     // Update or create cooperative profile
     const profile = await prisma.cooperativeProfile.upsert({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       update: {
         description,
         logoUrl,
@@ -35,7 +39,7 @@ router.put('/profile', authenticate, requireTenant, async (req: Request, res: Re
         email,
       },
       create: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         description,
         logoUrl,
         website,
@@ -62,9 +66,13 @@ router.put('/profile', authenticate, requireTenant, async (req: Request, res: Re
 router.get('/profile', authenticate, requireTenant, async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     const profile = await prisma.cooperativeProfile.findUnique({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       include: {
         cooperative: {
           select: {

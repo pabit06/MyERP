@@ -1,4 +1,4 @@
-import { BaseController, HookContext } from './BaseController.js';
+import { BaseController } from './BaseController.js';
 import { hooks } from '../lib/hooks.js';
 import { generateEMISchedule } from '../lib/emi.js';
 
@@ -45,7 +45,13 @@ export class LoansController extends BaseController {
 
     return this.handleTransaction(async (tx) => {
       // Validate required fields
-      this.validateRequired(data, ['code', 'name', 'interestRate', 'maxLoanAmount', 'maxTenureMonths']);
+      this.validateRequired(data, [
+        'code',
+        'name',
+        'interestRate',
+        'maxLoanAmount',
+        'maxTenureMonths',
+      ]);
 
       // Check if code already exists
       const existing = await tx.loanProduct.findUnique({
@@ -191,16 +197,16 @@ export class LoansController extends BaseController {
       const tenureMonthsNum = parseInt(String(data.tenureMonths));
 
       // Validate loan parameters
-      if (loanAmountNum < Number(product.minLoanAmount) || loanAmountNum > Number(product.maxLoanAmount)) {
+      if (
+        loanAmountNum < Number(product.minLoanAmount) ||
+        loanAmountNum > Number(product.maxLoanAmount)
+      ) {
         throw new Error(
           `Loan amount must be between ${product.minLoanAmount} and ${product.maxLoanAmount}`
         );
       }
 
-      if (
-        tenureMonthsNum < product.minTenureMonths ||
-        tenureMonthsNum > product.maxTenureMonths
-      ) {
+      if (tenureMonthsNum < product.minTenureMonths || tenureMonthsNum > product.maxTenureMonths) {
         throw new Error(
           `Tenure must be between ${product.minTenureMonths} and ${product.maxTenureMonths} months`
         );
@@ -321,7 +327,12 @@ export class LoansController extends BaseController {
       });
 
       // Execute before approve hooks
-      await hooks.execute('LoanApplication', 'beforeUpdate', { ...application, status: 'approved' }, context);
+      await hooks.execute(
+        'LoanApplication',
+        'beforeUpdate',
+        { ...application, status: 'approved' },
+        context
+      );
 
       // Update application status
       const updatedApplication = await tx.loanApplication.update({
@@ -336,7 +347,7 @@ export class LoansController extends BaseController {
       // Create EMI schedule entries
       const emiSchedules = await Promise.all(
         schedule.map((item) =>
-          tx.emiSchedule.create({
+          tx.eMISchedule.create({
             data: {
               applicationId: applicationId,
               cooperativeId,
@@ -379,7 +390,7 @@ export class LoansController extends BaseController {
       throw new Error('Application not found');
     }
 
-    return this.prisma.emiSchedule.findMany({
+    return this.prisma.eMISchedule.findMany({
       where: {
         applicationId,
         cooperativeId,
@@ -393,4 +404,3 @@ export class LoansController extends BaseController {
 
 // Export singleton instance
 export const loansController = new LoansController();
-

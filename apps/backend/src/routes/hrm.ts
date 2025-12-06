@@ -12,9 +12,8 @@ import {
   getEmployeeLeaveBalances,
 } from '../services/hrm/leave-service.js';
 import { getFiscalYearForDate } from '../lib/nepali-fiscal-year.js';
-import { getEmployeeLoanDeduction } from '../services/hrm/loan-deduction.js';
 import { getBatchEmployeeLoanDeductions } from '../services/hrm/loan-deduction-batch.js';
-import { validate, validateAll, validateParams, validateQuery } from '../middleware/validate.js';
+import { validate, validateParams, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { paginationSchema, paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
@@ -22,7 +21,6 @@ import {
   createEmployeeSchema,
   createLeaveRequestSchema,
   createPayrollRunSchema,
-  updateLeaveRequestStatusSchema,
 } from '@myerp/shared-types';
 import { idSchema } from '../validators/common.js';
 
@@ -48,11 +46,15 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, status, department, departmentId, search } =
       req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (status) {
@@ -99,7 +101,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -109,7 +111,7 @@ router.get(
       prisma.employee.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(employees, total, { page, limit }));
+    res.json(createPaginatedResponse(employees, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -133,6 +135,10 @@ router.post(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const {
       employeeNumber,
       firstName,
@@ -150,7 +156,7 @@ router.post(
     const existing = await prisma.employee.findUnique({
       where: {
         cooperativeId_employeeNumber: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           employeeNumber,
         },
       },
@@ -163,8 +169,9 @@ router.post(
 
     const employee = await prisma.employee.create({
       data: {
+        code: employeeNumber,
         employeeNumber,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         firstName,
         lastName,
         email,
@@ -172,8 +179,8 @@ router.post(
         address,
         position,
         department,
-        hireDate: hireDate ? new Date(hireDate as string) : new Date(),
-        salary: salary || null,
+        joinDate: hireDate ? new Date(hireDate as string) : new Date(),
+        basicSalary: salary ? parseFloat(salary.toString()) : 0,
         status: 'active',
       },
     });
@@ -186,14 +193,21 @@ router.post(
  * GET /api/hrm/employees/:id
  * Get a specific employee
  */
-router.get('/employees/:id', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.get(
+  '/employees/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
 
     const employee = await prisma.employee.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         _count: {
@@ -211,7 +225,8 @@ router.get('/employees/:id', validateParams(idSchema), asyncHandler(async (req: 
     }
 
     res.json({ employee });
-}));
+  })
+);
 
 /**
  * POST /api/hrm/payroll
@@ -232,6 +247,10 @@ router.post(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const {
       employeeId,
       payPeriodStart,
@@ -246,7 +265,7 @@ router.post(
     const employee = await prisma.employee.findFirst({
       where: {
         id: employeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -260,7 +279,7 @@ router.post(
     const payroll = await prisma.payrollLog.create({
       data: {
         employeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         payPeriodStart: new Date(payPeriodStart as string),
         payPeriodEnd: new Date(payPeriodEnd as string),
         grossSalary,
@@ -303,7 +322,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, employeeId, status, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (employeeId) {
@@ -340,7 +359,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -350,7 +369,7 @@ router.get(
       prisma.payrollLog.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(payrollLogs, total, { page, limit }));
+    res.json(createPaginatedResponse(payrollLogs, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -378,7 +397,7 @@ router.post(
     const employee = await prisma.employee.findFirst({
       where: {
         id: employeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -415,7 +434,7 @@ router.post(
       },
       create: {
         employeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         date: attendanceDate,
         checkIn: checkIn ? new Date(checkIn) : null,
         checkOut: checkOut ? new Date(checkOut) : null,
@@ -455,11 +474,15 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, employeeId, startDate, endDate, status, search } =
       req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (employeeId) {
@@ -506,7 +529,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -516,7 +539,7 @@ router.get(
       prisma.attendanceLog.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(attendanceLogs, total, { page, limit }));
+    res.json(createPaginatedResponse(attendanceLogs, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -537,11 +560,15 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, sessionType, startDate, endDate, search } =
       req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (sessionType) {
@@ -586,7 +613,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -596,7 +623,7 @@ router.get(
       prisma.trainingSession.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(sessions, total, { page, limit }));
+    res.json(createPaginatedResponse(sessions, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
@@ -607,6 +634,10 @@ router.get(
 router.post('/training', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { title, description, sessionType, sessionDate, duration, conductedBy } = req.body;
 
     if (!title || !sessionDate) {
@@ -622,7 +653,7 @@ router.post('/training', async (req: Request, res: Response) => {
         sessionDate: new Date(sessionDate),
         duration: duration ? parseInt(duration) : null,
         conductedBy: conductedBy || req.user!.userId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -640,6 +671,10 @@ router.post('/training', async (req: Request, res: Response) => {
 router.post('/training/:sessionId/attendance', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { sessionId } = req.params;
     const { employeeId, attended, remarks } = req.body;
 
@@ -658,7 +693,7 @@ router.post('/training/:sessionId/attendance', async (req: Request, res: Respons
       create: {
         sessionId,
         employeeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         attended: attended !== false,
         remarks: remarks || null,
       },
@@ -682,10 +717,14 @@ router.get(
   validateQuery(paginationWithSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -699,7 +738,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy: sortBy || 'name', sortOrder: sortOrder || 'asc' }
           ),
           sortBy || 'name',
           sortOrder || 'asc',
@@ -709,20 +748,31 @@ router.get(
       prisma.department.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(departments, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(departments, total, {
+        page,
+        limit,
+        sortBy: sortBy || 'name',
+        sortOrder: sortOrder || 'asc',
+      })
+    );
   })
 );
 
 router.post('/departments', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { name } = req.body;
     if (!name) {
       res.status(400).json({ error: 'Missing required field: name' });
       return;
     }
     const department = await prisma.department.create({
-      data: { cooperativeId: tenantId, name },
+      data: { cooperativeId: tenantId!, name },
     });
     res.status(201).json({ department });
   } catch (error: any) {
@@ -742,10 +792,14 @@ router.get(
   validateQuery(paginationWithSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -759,7 +813,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy: sortBy || 'rank', sortOrder: sortOrder || 'asc' }
           ),
           sortBy || 'rank',
           sortOrder || 'asc',
@@ -769,20 +823,31 @@ router.get(
       prisma.designation.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(designations, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(designations, total, {
+        page,
+        limit,
+        sortBy: sortBy || 'rank',
+        sortOrder: sortOrder || 'asc',
+      })
+    );
   })
 );
 
 router.post('/designations', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { title, rank } = req.body;
     if (!title) {
       res.status(400).json({ error: 'Missing required field: title' });
       return;
     }
     const designation = await prisma.designation.create({
-      data: { cooperativeId: tenantId, title, rank: rank || 0 },
+      data: { cooperativeId: tenantId!, title, rank: rank || 0 },
     });
     res.status(201).json({ designation });
   } catch (error: any) {
@@ -802,10 +867,14 @@ router.get(
   validateQuery(paginationWithSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -819,7 +888,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy: sortBy || 'name', sortOrder: sortOrder || 'asc' }
           ),
           sortBy || 'name',
           sortOrder || 'asc',
@@ -829,13 +898,24 @@ router.get(
       prisma.shift.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(shifts, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(shifts, total, {
+        page,
+        limit,
+        sortBy: sortBy || 'name',
+        sortOrder: sortOrder || 'asc',
+      })
+    );
   })
 );
 
 router.post('/shifts', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { name, expectedCheckIn, expectedCheckOut, graceMinutes } = req.body;
     if (!name || !expectedCheckIn || !expectedCheckOut) {
       res
@@ -845,7 +925,7 @@ router.post('/shifts', async (req: Request, res: Response) => {
     }
     const shift = await prisma.shift.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         name,
         expectedCheckIn: new Date(expectedCheckIn),
         expectedCheckOut: new Date(expectedCheckOut),
@@ -870,10 +950,14 @@ router.get(
   validateQuery(paginationWithSearchSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (search) {
@@ -887,7 +971,7 @@ router.get(
             {
               where,
             },
-            { page, limit }
+            { page, limit, sortBy: sortBy || 'name', sortOrder: sortOrder || 'asc' }
           ),
           sortBy || 'name',
           sortOrder || 'asc',
@@ -897,7 +981,14 @@ router.get(
       prisma.leaveType.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(leaveTypes, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(leaveTypes, total, {
+        page,
+        limit,
+        sortBy: sortBy || 'name',
+        sortOrder: sortOrder || 'asc',
+      })
+    );
   })
 );
 
@@ -911,7 +1002,7 @@ router.post('/leave/types', async (req: Request, res: Response) => {
     }
     const leaveType = await prisma.leaveType.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         name,
         isPaid: isPaid !== false,
         defaultAnnualQuota: defaultAnnualQuota || 0,
@@ -943,7 +1034,7 @@ router.get(
     const { page, limit, sortBy, sortOrder, employeeId, status, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (employeeId) {
@@ -974,7 +1065,7 @@ router.get(
                 leaveType: { select: { id: true, name: true } },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -984,13 +1075,20 @@ router.get(
       prisma.leaveRequest.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(requests, total, { page, limit }));
+    res.json(createPaginatedResponse(requests, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
-router.post('/leave/requests', validate(createLeaveRequestSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { employeeId, leaveTypeId, startDate, endDate, comment } = req.validated!;
+router.post(
+  '/leave/requests',
+  validate(createLeaveRequestSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { employeeId, leaveTypeId, startDate, endDate, comment } = req.validated!;
 
     const start = new Date(startDate);
     const end = new Date(endDate);
@@ -1000,7 +1098,7 @@ router.post('/leave/requests', validate(createLeaveRequestSchema), asyncHandler(
       data: {
         employeeId,
         leaveTypeId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         startDate: start,
         endDate: end,
         days,
@@ -1013,15 +1111,20 @@ router.post('/leave/requests', validate(createLeaveRequestSchema), asyncHandler(
       },
     });
     res.status(201).json({ request });
-}));
+  })
+);
 
 router.post('/leave/requests/:id/approve', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     const request = await prisma.leaveRequest.findFirst({
-      where: { id, cooperativeId: tenantId },
+      where: { id, cooperativeId: tenantId! },
       include: { leaveType: true, employee: true },
     });
 
@@ -1090,6 +1193,10 @@ router.get('/leave/balances', async (req: Request, res: Response) => {
 router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { fiscalYear, monthBs, employeeIds } = req.body;
 
     if (!fiscalYear || !monthBs) {
@@ -1098,7 +1205,7 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
     }
 
     const settings = await prisma.payrollSettings.findUnique({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
     });
 
     if (!settings) {
@@ -1106,7 +1213,7 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
       return;
     }
 
-    const where: any = { cooperativeId: tenantId, status: 'active' };
+    const where: any = { cooperativeId: tenantId!, status: 'active' };
     if (employeeIds && Array.isArray(employeeIds) && employeeIds.length > 0) {
       where.id = { in: employeeIds };
     }
@@ -1185,15 +1292,22 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
   }
 });
 
-router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeIds: z.array(z.string()).optional() })), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { fiscalYear, monthBs, employeeIds } = req.validated!;
+router.post(
+  '/payroll/runs',
+  validate(createPayrollRunSchema.extend({ employeeIds: z.array(z.string()).optional() })),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { fiscalYear, monthBs, employeeIds } = req.validated!;
 
     // Check if run already exists
     const existing = await prisma.payrollRun.findUnique({
       where: {
         cooperativeId_fiscalYear_monthBs: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           fiscalYear,
           monthBs,
         },
@@ -1206,7 +1320,7 @@ router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeId
     }
 
     const settings = await prisma.payrollSettings.findUnique({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
     });
 
     if (!settings) {
@@ -1214,7 +1328,7 @@ router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeId
       return;
     }
 
-    const where: any = { cooperativeId: tenantId, status: 'active' };
+    const where: any = { cooperativeId: tenantId!, status: 'active' };
     if (employeeIds && Array.isArray(employeeIds) && employeeIds.length > 0) {
       where.id = { in: employeeIds };
     }
@@ -1233,7 +1347,7 @@ router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeId
     const payrollRun = await prisma.$transaction(async (tx) => {
       const run = await tx.payrollRun.create({
         data: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           fiscalYear,
           monthBs,
           status: 'DRAFT',
@@ -1262,7 +1376,7 @@ router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeId
             data: {
               employeeId: emp.id,
               payrollRunId: run.id,
-              cooperativeId: tenantId,
+              cooperativeId: tenantId!,
               fiscalYear,
               monthBs,
               ...payrollData,
@@ -1293,21 +1407,29 @@ router.post('/payroll/runs', validate(createPayrollRunSchema.extend({ employeeId
     });
 
     res.status(201).json({ payrollRun });
-}));
+  })
+);
 
 router.get(
   '/payroll/runs',
   validateQuery(
     paginationSchema.extend({
       fiscalYear: z.string().optional(),
-      monthBs: z.string().optional().transform((val) => (val ? parseInt(val, 10) : undefined)),
+      monthBs: z
+        .string()
+        .optional()
+        .transform((val) => (val ? parseInt(val, 10) : undefined)),
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { page, limit, sortBy, sortOrder, fiscalYear, monthBs } = req.validatedQuery!;
 
-    const where: any = { cooperativeId: tenantId };
+    const where: any = { cooperativeId: tenantId! };
     if (fiscalYear) where.fiscalYear = fiscalYear;
     if (monthBs) where.monthBs = monthBs;
 
@@ -1321,7 +1443,7 @@ router.get(
                 _count: { select: { payrolls: true } },
               },
             },
-            { page, limit }
+            { page, limit, sortBy, sortOrder }
           ),
           sortBy,
           sortOrder,
@@ -1331,17 +1453,21 @@ router.get(
       prisma.payrollRun.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(runs, total, { page, limit }));
+    res.json(createPaginatedResponse(runs, total, { page, limit, sortBy, sortOrder }));
   })
 );
 
 router.post('/payroll/runs/:runId/finalize', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { runId } = req.params;
 
     const run = await prisma.payrollRun.findFirst({
-      where: { id: runId, cooperativeId: tenantId },
+      where: { id: runId, cooperativeId: tenantId! },
     });
 
     if (!run) {
@@ -1377,10 +1503,14 @@ router.post('/payroll/runs/:runId/finalize', async (req: Request, res: Response)
 router.get('/payroll/:id/payslip', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.params;
 
     const payroll = await prisma.payroll.findFirst({
-      where: { id, cooperativeId: tenantId },
+      where: { id, cooperativeId: tenantId! },
       include: {
         employee: true,
         payrollRun: true,
@@ -1404,8 +1534,12 @@ router.get('/payroll/:id/payslip', async (req: Request, res: Response) => {
 router.get('/settings/payroll', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const settings = await prisma.payrollSettings.findUnique({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
     });
     res.json({ settings });
   } catch (error) {
@@ -1417,6 +1551,10 @@ router.get('/settings/payroll', async (req: Request, res: Response) => {
 router.put('/settings/payroll', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const {
       scheme,
       tdsConfig,
@@ -1430,9 +1568,9 @@ router.put('/settings/payroll', async (req: Request, res: Response) => {
     } = req.body;
 
     const settings = await prisma.payrollSettings.upsert({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       create: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         scheme: scheme || 'SSF',
         tdsConfig: tdsConfig || {},
         glSalaryExpense: glSalaryExpense || '',
@@ -1476,7 +1614,7 @@ router.post('/attendance/mark', async (req: Request, res: Response) => {
     }
 
     const employee = await prisma.employee.findFirst({
-      where: { id: employeeId, cooperativeId: tenantId },
+      where: { id: employeeId, cooperativeId: tenantId! },
     });
 
     if (!employee) {
@@ -1511,18 +1649,18 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
 
     // Get total employees
     const totalEmployees = await prisma.employee.count({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
     });
 
     // Get active employees
     const activeEmployees = await prisma.employee.count({
-      where: { cooperativeId: tenantId, status: 'active' },
+      where: { cooperativeId: tenantId!, status: 'active' },
     });
 
     // Get pending leave requests
     const pendingLeaveRequests = await prisma.leaveRequest.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: 'PENDING',
       },
     });
@@ -1535,7 +1673,7 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
 
     const employeesOnLeave = await prisma.leaveRequest.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: 'APPROVED',
         startDate: { lte: today }, // Only count leaves that have already started
         endDate: { gte: today },
@@ -1550,7 +1688,7 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
 
     const recentAttendance = await prisma.attendance.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         date: { gte: sevenDaysAgo },
         status: 'PRESENT',
       },
@@ -1559,7 +1697,7 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
     // Get pending payroll runs
     const pendingPayrollRuns = await prisma.payrollRun.count({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         status: 'DRAFT',
       },
     });
@@ -1567,12 +1705,12 @@ router.get('/dashboard/stats', async (req: Request, res: Response) => {
     // Get department distribution
     const departmentStats = await prisma.employee.groupBy({
       by: ['departmentId'],
-      where: { cooperativeId: tenantId, status: 'active' },
+      where: { cooperativeId: tenantId!, status: 'active' },
       _count: { id: true },
     });
 
     const departments = await prisma.department.findMany({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       select: { id: true, name: true },
     });
 

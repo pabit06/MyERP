@@ -11,11 +11,7 @@ import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 import { paginationSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
-import {
-  createChartOfAccountsSchema,
-  updateChartOfAccountsSchema,
-  createJournalEntrySchema,
-} from '@myerp/shared-types';
+import { createChartOfAccountsSchema, updateChartOfAccountsSchema } from '@myerp/shared-types';
 import { idSchema } from '../validators/common.js';
 
 const router: Router = Router();
@@ -27,25 +23,33 @@ router.use(requireTenant);
  * POST /api/accounting/seed
  * Trigger the default NFRS Chart of Accounts seeding
  */
-router.post('/seed', csrfProtection, asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const result = await accountingController.seedDefaultAccounts(tenantId, userId);
-  
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.CONFIGURATION_CHANGED,
-    userId,
-    tenantId,
-    resourceType: 'ChartOfAccounts',
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'seed_default_accounts' },
-  });
-  
-  res.json(result);
-}));
+router.post(
+  '/seed',
+  csrfProtection,
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
+    const result = await accountingController.seedDefaultAccounts(tenantId, userId);
+
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId: userId || undefined,
+      tenantId,
+      resourceType: 'ChartOfAccounts',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'seed_default_accounts' },
+    });
+
+    res.json(result);
+  })
+);
 
 /**
  * GET /api/accounting/accounts
@@ -91,7 +95,7 @@ router.get(
                 },
               },
             },
-            { page, limit }
+            { page, limit, sortOrder: sortOrder || 'asc', sortBy: sortBy || 'code' }
           ),
           sortBy || 'code',
           sortOrder || 'asc',
@@ -101,7 +105,14 @@ router.get(
       prisma.chartOfAccounts.count({ where }),
     ]);
 
-    res.json(createPaginatedResponse(accounts, total, { page, limit }));
+    res.json(
+      createPaginatedResponse(accounts, total, {
+        page,
+        limit,
+        sortOrder: sortOrder || 'asc',
+        sortBy: sortBy || 'code',
+      })
+    );
   })
 );
 
@@ -124,6 +135,10 @@ router.post(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const userId = req.user!.userId;
     const data = req.validated!;
 
@@ -138,7 +153,7 @@ router.post(
     // Audit log
     await createAuditLog({
       action: AuditAction.CONFIGURATION_CHANGED,
-      userId,
+      userId: userId || undefined,
       tenantId,
       resourceType: 'ChartOfAccounts',
       resourceId: account.id,
@@ -167,6 +182,10 @@ router.post(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { type, subType = '00', branch = '00' } = req.validated!;
 
     const code = await accountingController.generateAccountCode(tenantId, type, subType, branch);
@@ -187,6 +206,10 @@ router.put(
   }),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { id } = req.validatedParams!;
     const data = req.validated!;
 
@@ -197,7 +220,7 @@ router.put(
     await createAuditLog({
       action: AuditAction.CONFIGURATION_CHANGED,
       userId,
-      tenantId,
+      tenantId: tenantId!,
       resourceType: 'ChartOfAccounts',
       resourceId: id,
       ipAddress: req.ip,
@@ -214,28 +237,37 @@ router.put(
  * DELETE /api/accounting/accounts/:id
  * Delete an account (only if unused)
  */
-router.delete('/accounts/:id', csrfProtection, validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.delete(
+  '/accounts/:id',
+  csrfProtection,
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
 
-  const userId = req.user!.userId;
-  await accountingController.deleteAccount(id, tenantId, userId);
+    const userId = req.user!.userId;
+    await accountingController.deleteAccount(id, tenantId, userId);
 
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.CONFIGURATION_CHANGED,
-    userId,
-    tenantId,
-    resourceType: 'ChartOfAccounts',
-    resourceId: id,
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'deleted' },
-  });
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ChartOfAccounts',
+      resourceId: id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'deleted' },
+    });
 
-  res.json({ message: 'Account deleted successfully' });
-}));
+    res.json({ message: 'Account deleted successfully' });
+  })
+);
 
 /**
  * POST /api/accounting/product-gl-map
@@ -258,7 +290,7 @@ router.post(
     const { productType, productId, mapping } = req.validated!;
 
     const result = await accountingController.setProductGLMap(
-      tenantId,
+      tenantId!,
       productType,
       productId,
       mapping
@@ -268,7 +300,7 @@ router.post(
     await createAuditLog({
       action: AuditAction.CONFIGURATION_CHANGED,
       userId,
-      tenantId,
+      tenantId: tenantId!,
       resourceType: 'ProductGLMapping',
       resourceId: productId,
       ipAddress: req.ip,
@@ -298,7 +330,7 @@ router.get(
     const { productType, productId } = req.validatedParams!;
 
     const mapping = await accountingController.getProductGLMap(
-      tenantId,
+      tenantId!,
       productType as 'loan' | 'saving',
       productId
     );
@@ -344,7 +376,7 @@ router.post(
     } = req.validated!;
 
     const result = await accountingController.loanRepaymentEntry(
-      tenantId,
+      tenantId!,
       loanProductId,
       memberLoanAccountCode,
       principalAmount,
@@ -359,13 +391,13 @@ router.post(
     await createAuditLog({
       action: AuditAction.PAYMENT_PROCESSED,
       userId,
-      tenantId,
+      tenantId: tenantId!,
       resourceType: 'LoanRepayment',
       resourceId: result.journalEntry?.id,
       ipAddress: req.ip,
       userAgent: req.get('user-agent'),
       success: true,
-      details: { 
+      details: {
         loanProductId,
         principalAmount: principalAmount.toString(),
         interestAmount: interestAmount.toString(),
@@ -383,31 +415,41 @@ router.post(
  * Calculate Net Profit (Total Income - Total Expenses)
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/net-profit', asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { startDate, endDate } = req.query;
+router.get(
+  '/net-profit',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { startDate, endDate } = req.query;
 
-  const start = startDate ? new Date(startDate as string) : undefined;
-  const end = endDate ? new Date(endDate as string) : undefined;
+    const start = startDate ? new Date(startDate as string) : undefined;
+    const end = endDate ? new Date(endDate as string) : undefined;
 
-  const result = await accountingController.calculateNetProfit(tenantId, start, end);
+    const result = await accountingController.calculateNetProfit(tenantId!, start, end);
 
-  res.json(result);
-}));
+    res.json(result);
+  })
+);
 
 /**
  * GET /api/accounting/accounts/:id/statement
  * Get ledger statement for a specific account
  */
-router.get('/accounts/:id/statement', validateParams(idSchema), asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const { id } = req.validatedParams!;
+router.get(
+  '/accounts/:id/statement',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
     const { startDate, endDate } = req.query;
 
     const account = await prisma.chartOfAccounts.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         isActive: true,
       },
     });
@@ -462,7 +504,7 @@ router.get('/accounts/:id/statement', validateParams(idSchema), asyncHandler(asy
       const openingLedger = await prisma.ledger.findFirst({
         where: {
           accountId: id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           createdAt: { lt: new Date(startDate as string) },
         },
         orderBy: { createdAt: 'desc' },
@@ -490,7 +532,8 @@ router.get('/accounts/:id/statement', validateParams(idSchema), asyncHandler(asy
         balance: Number(entry.balance),
       })),
     });
-}));
+  })
+);
 
 /**
  * GET /api/accounting/journal-entries/:entryNumber
@@ -506,7 +549,7 @@ router.get(
     const journalEntry = await prisma.journalEntry.findFirst({
       where: {
         entryNumber,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         ledgers: {
@@ -532,10 +575,7 @@ router.get(
     }
 
     // Calculate totals
-    const totalDebit = journalEntry.ledgers.reduce(
-      (sum, ledger) => sum + Number(ledger.debit),
-      0
-    );
+    const totalDebit = journalEntry.ledgers.reduce((sum, ledger) => sum + Number(ledger.debit), 0);
     const totalCredit = journalEntry.ledgers.reduce(
       (sum, ledger) => sum + Number(ledger.credit),
       0
@@ -574,24 +614,28 @@ router.get(
  * Migrate old account codes to NFRS format
  * Consolidates balances from old accounts (1001, 3001, 4001) to NFRS accounts
  */
-router.post('/migrate-old-accounts', csrfProtection, asyncHandler(async (req: Request, res: Response) => {
-  const tenantId = req.user!.tenantId;
-  const userId = req.user!.userId;
-  const result = await AccountingService.migrateOldAccountsToNFRS(tenantId);
-  
-  // Audit log
-  await createAuditLog({
-    action: AuditAction.SYSTEM_BACKUP,
-    userId,
-    tenantId,
-    resourceType: 'ChartOfAccounts',
-    ipAddress: req.ip,
-    userAgent: req.get('user-agent'),
-    success: true,
-    details: { action: 'migrate_old_accounts' },
-  });
-  
-  res.json(result);
-}));
+router.post(
+  '/migrate-old-accounts',
+  csrfProtection,
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const result = await AccountingService.migrateOldAccountsToNFRS(tenantId!);
+
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.SYSTEM_BACKUP,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ChartOfAccounts',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'migrate_old_accounts' },
+    });
+
+    res.json(result);
+  })
+);
 
 export default router;
