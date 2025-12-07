@@ -46,6 +46,19 @@ This project is a monorepo managed with **pnpm** workspaces.
 
 ## 📚 Documentation
 
+### Wiki
+
+Comprehensive wiki documentation is available in the `.github/wiki/` directory:
+- **[Wiki Home](.github/wiki/Home.md)** - Complete wiki index and navigation
+- **[Getting Started](.github/wiki/Getting-Started.md)** - Installation and setup guide
+- **[Architecture](.github/wiki/Architecture.md)** - System architecture overview
+- **[Development Guide](.github/wiki/Development.md)** - Development workflows and best practices
+- **[FAQ](.github/wiki/FAQ.md)** - Frequently asked questions
+
+The wiki can be used to populate GitHub Wiki or serve as local documentation.
+
+### Project Documentation
+
 All project documentation is organized in the `docs/` directory:
 
 - **Setup & Configuration**: `docs/setup/` - Database setup, credentials, notification setup
