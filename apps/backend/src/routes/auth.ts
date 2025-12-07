@@ -1,269 +1,48 @@
-import { Router, Request, Response } from 'express';
-import { prisma } from '../lib/prisma.js';
-import { comparePassword, generateToken } from '../lib/auth.js';
+import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { validateRequest } from '../middleware/validate-request.js';
+import { loginSchema, memberLoginSchema } from '../validators/auth.js';
+import { authController } from '../controllers/AuthController.js';
 
 const router = Router();
 
-interface LoginRequest {
-  email: string;
-  password: string;
-}
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticate user and return JWT token
+ *     tags: [Authentication]
+ */
+router.post(
+  '/login',
+  validateRequest(loginSchema),
+  asyncHandler((req, res) => authController.login(req, res))
+);
 
 /**
- * POST /auth/login
- * Login user and return JWT token
+ * @swagger
+ * /auth/member-login:
+ *   post:
+ *     summary: Member login
+ *     description: Authenticate member and return JWT token
+ *     tags: [Authentication]
  */
-router.post('/login', async (req: Request, res: Response) => {
-  try {
-    const { email, password }: LoginRequest = req.body;
-
-    if (!email || !password) {
-      res.status(400).json({ error: 'Email and password are required' });
-      return;
-    }
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        role: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        cooperative: {
-          include: {
-            profile: {
-              select: {
-                logoUrl: true,
-              },
-            },
-            subscription: {
-              include: {
-                plan: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user || !user.isActive) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    // Verify password
-    const isValidPassword = await comparePassword(password, user.passwordHash);
-
-    if (!isValidPassword) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      cooperativeId: user.cooperativeId,
-      roleId: user.roleId || undefined,
-    });
-
-    // Get enabled modules from subscription
-    const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
-
-    res.json({
-      message: 'Login successful',
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        cooperativeId: user.cooperativeId,
-        roleId: user.roleId,
-        role: user.role || null,
-      },
-      cooperative: {
-        id: user.cooperative.id,
-        name: user.cooperative.name,
-        subdomain: user.cooperative.subdomain,
-        logoUrl: user.cooperative.profile?.logoUrl || null,
-        enabledModules,
-      },
-      token,
-    });
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-/**
- * POST /auth/member-login
- * Login for members using subdomain, member number, and password
- * This is for mobile app member access
- */
-router.post('/member-login', async (req: Request, res: Response) => {
-  try {
-    const { subdomain, memberNumber, password } = req.body;
-
-    if (!subdomain || !memberNumber || !password) {
-      res.status(400).json({ error: 'Subdomain, member number, and password are required' });
-      return;
-    }
-
-    // Find cooperative by subdomain
-    const cooperative = await prisma.cooperative.findUnique({
-      where: { subdomain },
-      include: {
-        subscription: {
-          include: {
-            plan: true,
-          },
-        },
-      },
-    });
-
-    if (!cooperative) {
-      res.status(404).json({ error: 'Cooperative not found' });
-      return;
-    }
-
-    // Find member by member number within the cooperative
-    const member = await prisma.member.findFirst({
-      where: {
-        cooperativeId: cooperative.id,
-        memberNumber,
-        isActive: true,
-      },
-    });
-
-    if (!member) {
-      res.status(401).json({ error: 'Invalid credentials' });
-      return;
-    }
-
-    // For now, we'll use a simple password check
-    // In production, you should hash member passwords and store them
-    // For this implementation, we'll generate a token based on member info
-    // TODO: Implement proper member password authentication
-
-    // Generate a member token (simplified - in production, use proper member authentication)
-    const token = generateToken({
-      userId: member.id,
-      email: member.email || `${member.memberNumber}@${subdomain}`,
-      cooperativeId: cooperative.id,
-    });
-
-    const enabledModules = (cooperative.subscription?.plan?.enabledModules as string[]) || [];
-
-    res.json({
-      message: 'Login successful',
-      member: {
-        id: member.id,
-        memberNumber: member.memberNumber,
-        firstName: member.firstName,
-        lastName: member.lastName,
-        email: member.email,
-        phone: member.phone,
-        cooperativeId: member.cooperativeId,
-      },
-      cooperative: {
-        id: cooperative.id,
-        name: cooperative.name,
-        subdomain: cooperative.subdomain,
-        enabledModules,
-      },
-      token,
-    });
-  } catch (error) {
-    console.error('Member login error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.post(
+  '/member-login',
+  validateRequest(memberLoginSchema),
+  asyncHandler((req, res) => authController.memberLogin(req, res))
+);
 
 /**
  * GET /auth/me
  * Get current user information (protected route)
  */
-router.get('/me', authenticate, async (req: Request, res: Response) => {
-  try {
-    const userId = req.user!.userId;
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        cooperativeId: true,
-        roleId: true,
-        isActive: true,
-        role: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-        cooperative: {
-          select: {
-            id: true,
-            name: true,
-            subdomain: true,
-            profile: {
-              select: {
-                logoUrl: true,
-              },
-            },
-            subscription: {
-              select: {
-                status: true,
-                plan: {
-                  select: {
-                    id: true,
-                    name: true,
-                    monthlyPrice: true,
-                    enabledModules: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (!user) {
-      res.status(404).json({ error: 'User not found' });
-      return;
-    }
-
-    const enabledModules = (user.cooperative.subscription?.plan?.enabledModules as string[]) || [];
-
-    res.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        roleId: user.roleId,
-        role: user.role || null,
-      },
-      cooperative: {
-        id: user.cooperative.id,
-        name: user.cooperative.name,
-        subdomain: user.cooperative.subdomain,
-        logoUrl: user.cooperative.profile?.logoUrl || null,
-        enabledModules,
-      },
-    });
-  } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler((req, res) => authController.getMe(req, res))
+);
 
 export default router;

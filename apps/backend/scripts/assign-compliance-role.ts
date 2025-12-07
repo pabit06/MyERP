@@ -21,8 +21,18 @@ async function assignComplianceRole(userEmail: string) {
       process.exit(1);
     }
 
+    if (!user.cooperative) {
+      console.error(`❌ User is not associated with a cooperative`);
+      process.exit(1);
+    }
+
     console.log(`Found user: ${user.firstName} ${user.lastName} (${user.email})`);
     console.log(`Cooperative: ${user.cooperative.name}`);
+
+    if (!user.cooperativeId) {
+      console.error(`❌ User does not have a cooperativeId`);
+      process.exit(1);
+    }
 
     // Find or create ComplianceOfficer role
     let role = await prisma.role.findFirst({

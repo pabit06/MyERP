@@ -14,18 +14,23 @@ import {
   RELATIONSHIP_OPTIONS,
   RESIDENCE_TYPE_OPTIONS,
 } from '@myerp/shared-types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import NepaliDatePicker from '@/components/NepaliDatePicker';
+import {
+  Button,
+  Input,
+  Checkbox,
+  NepaliDatePicker,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/features/components/shared';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from '@/features/components/shared';
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface KymFormProps {

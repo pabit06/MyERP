@@ -2,8 +2,8 @@
 
 import { useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import ProtectedRoute from '../../../../components/ProtectedRoute';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { ProtectedRoute } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Redirect old /meetings/new/[type] route to /governance/meetings/new/[type]
 export default function NewMeetingByTypePage() {

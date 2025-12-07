@@ -17,13 +17,34 @@ import { prisma } from './prisma.js';
 export type Permission = string;
 
 /**
+ * Check if user is a system admin
+ */
+export async function isSystemAdmin(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isSystemAdmin: true },
+  });
+  return user?.isSystemAdmin === true;
+}
+
+/**
  * Check if user has a specific permission
  */
 export async function hasPermission(
   userId: string,
-  tenantId: string,
+  tenantId: string | null, // Make nullable for system admins
   permission: Permission
 ): Promise<boolean> {
+  // System admins have all permissions
+  if (await isSystemAdmin(userId)) {
+    return true;
+  }
+
+  // Non-system admins must have a tenant
+  if (!tenantId) {
+    return false;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
@@ -94,9 +115,14 @@ function matchesPermission(permissionParts: string[], permParts: string[]): bool
  */
 export async function hasAnyPermission(
   userId: string,
-  tenantId: string,
+  tenantId: string | null, // Make nullable for system admins
   permissions: Permission[]
 ): Promise<boolean> {
+  // System admins have all permissions
+  if (await isSystemAdmin(userId)) {
+    return true;
+  }
+
   for (const permission of permissions) {
     if (await hasPermission(userId, tenantId, permission)) {
       return true;
@@ -110,9 +136,14 @@ export async function hasAnyPermission(
  */
 export async function hasAllPermissions(
   userId: string,
-  tenantId: string,
+  tenantId: string | null, // Make nullable for system admins
   permissions: Permission[]
 ): Promise<boolean> {
+  // System admins have all permissions
+  if (await isSystemAdmin(userId)) {
+    return true;
+  }
+
   for (const permission of permissions) {
     if (!(await hasPermission(userId, tenantId, permission))) {
       return false;
@@ -126,9 +157,19 @@ export async function hasAllPermissions(
  */
 export async function hasRole(
   userId: string,
-  tenantId: string,
+  tenantId: string | null, // Make nullable for system admins
   roleName: string
 ): Promise<boolean> {
+  // System admins bypass role checks
+  if (await isSystemAdmin(userId)) {
+    return true;
+  }
+
+  // Non-system admins must have a tenant
+  if (!tenantId) {
+    return false;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
@@ -150,9 +191,19 @@ export async function hasRole(
  */
 export async function hasAnyRole(
   userId: string,
-  tenantId: string,
+  tenantId: string | null, // Make nullable for system admins
   roleNames: string[]
 ): Promise<boolean> {
+  // System admins bypass role checks
+  if (await isSystemAdmin(userId)) {
+    return true;
+  }
+
+  // Non-system admins must have a tenant
+  if (!tenantId) {
+    return false;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
@@ -173,7 +224,17 @@ export async function hasAnyRole(
 /**
  * Get user's permissions
  */
-export async function getUserPermissions(userId: string, tenantId: string): Promise<Permission[]> {
+export async function getUserPermissions(userId: string, tenantId: string | null): Promise<Permission[]> {
+  // System admins have all permissions
+  if (await isSystemAdmin(userId)) {
+    return ['*'];
+  }
+
+  // Non-system admins must have a tenant
+  if (!tenantId) {
+    return [];
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },
@@ -190,7 +251,17 @@ export async function getUserPermissions(userId: string, tenantId: string): Prom
 /**
  * Get user's role name
  */
-export async function getUserRole(userId: string, tenantId: string): Promise<string | null> {
+export async function getUserRole(userId: string, tenantId: string | null): Promise<string | null> {
+  // System admins return special role name
+  if (await isSystemAdmin(userId)) {
+    return 'System Admin';
+  }
+
+  // Non-system admins must have a tenant
+  if (!tenantId) {
+    return null;
+  }
+
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { role: true },

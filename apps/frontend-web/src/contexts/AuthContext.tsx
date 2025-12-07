@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { apiClient } from '../lib/api';
 
 interface User {
   id: string;
@@ -36,13 +37,30 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [cooperative, setCooperative] = useState<Cooperative | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Handle logout (defined early for use in useEffect)
+  const handleLogout = React.useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    setCooperative(null);
+  }, []);
+
+  // Initialize API client with token getter and unauthorized handler
+  useEffect(() => {
+    // Set token getter
+    apiClient.setTokenGetter(() => token);
+
+    // Set unauthorized handler
+    apiClient.setUnauthorizedHandler(() => {
+      handleLogout();
+    });
+  }, [token, handleLogout]);
 
   // Load auth state from localStorage on mount
   useEffect(() => {
@@ -57,29 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchUserData = async (authToken: string) => {
     try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
+      const data = await apiClient.get<{ user: User; cooperative: Cooperative }>('/auth/me', {
+        skipErrorToast: true, // Don't show toast for auth check failures
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUser(data.user);
-        setCooperative(data.cooperative);
-      } else {
-        // Token invalid, clear auth
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
-        setCooperative(null);
-      }
+      setUser(data.user);
+      setCooperative(data.cooperative);
     } catch (error) {
-      console.error('Failed to fetch user data:', error);
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
-      setCooperative(null);
+      // Token invalid, clear auth
+      handleLogout();
     } finally {
       setIsLoading(false);
     }
@@ -87,37 +90,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      const data = await apiClient.post<{
+        token: string;
+        user: User;
+        cooperative: Cooperative;
+      }>('/auth/login', { email, password }, { skipAuth: true });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data = await response.json();
       const authToken = data.token;
-
       localStorage.setItem('token', authToken);
       setToken(authToken);
       setUser(data.user);
       setCooperative(data.cooperative);
     } catch (error) {
-      console.error('Login error:', error);
+      // Error is already handled by API client (toast shown)
       throw error;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    setCooperative(null);
+    handleLogout();
   };
 
   const refreshAuth = async () => {

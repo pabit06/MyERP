@@ -1,0 +1,301 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# Cancel in-progress runs for the same workflow and branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    # Note: To use environment-specific secrets and protection rules,
+    # create a 'production' environment in Settings > Environments
+    # and uncomment the environment block below:
+    # environment:
+    #   name: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.15.0
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm --filter '@myerp/backend' build
+
+      - name: Create deployment package
+        run: |
+          cd apps/backend
+          # Copy lock file from root for frozen install
+          cp ../../pnpm-lock.yaml . || true
+          tar -czf backend-dist.tar.gz dist/ package.json pnpm-lock.yaml
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-dist-${{ github.sha }}
+          path: apps/backend/backend-dist.tar.gz
+          retention-days: 30
+          compression-level: 6
+
+      # Deployment options - Uncomment and configure based on your infrastructure:
+
+      # Option 1: Deploy via SSH (Traditional Server)
+      # - name: Deploy to server via SSH
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.HOST }}
+      #     username: ${{ secrets.USERNAME }}
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: |
+      #       cd /path/to/backend
+      #       # Stop service
+      #       pm2 stop backend || true
+      #       # Extract new build
+      #       tar -xzf backend-dist.tar.gz
+      #       # Install production dependencies
+      #       pnpm install --prod --frozen-lockfile
+      #       # Run database migrations
+      #       pnpm --filter '@myerp/db-schema' prisma migrate deploy
+      #       # Start service
+      #       pm2 restart backend || pm2 start dist/index.js --name backend
+
+      # Option 2: Deploy to Docker Hub and pull on server
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKER_USERNAME }}
+      #     password: ${{ secrets.DOCKER_PASSWORD }}
+      #
+      # - name: Build and push Docker image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./apps/backend
+      #     push: true
+      #     tags: |
+      #       ${{ secrets.DOCKER_USERNAME }}/myerp-backend:latest
+      #       ${{ secrets.DOCKER_USERNAME }}/myerp-backend:${{ github.sha }}
+      #
+      # - name: Deploy to server
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.HOST }}
+      #     username: ${{ secrets.USERNAME }}
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: |
+      #       docker pull ${{ secrets.DOCKER_USERNAME }}/myerp-backend:latest
+      #       docker-compose up -d backend
+
+      # Option 3: Deploy to AWS ECS
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      #
+      # - name: Login to Amazon ECR
+      #   id: login-ecr
+      #   uses: aws-actions/amazon-ecr-login@v2
+      #
+      # - name: Build and push Docker image
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: ./apps/backend
+      #     push: true
+      #     tags: ${{ steps.login-ecr.outputs.registry }}/myerp-backend:latest
+      #
+      # - name: Deploy to ECS
+      #   uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      #   with:
+      #     task-definition: task-definition.json
+      #     service: myerp-backend
+      #     cluster: myerp-cluster
+
+      # Option 4: Deploy to Kubernetes
+      # - name: Set up kubectl
+      #   uses: azure/setup-kubectl@v3
+      #
+      # - name: Configure kubeconfig
+      #   run: |
+      #     echo "${{ secrets.KUBECONFIG }}" | base64 -d > kubeconfig
+      #     export KUBECONFIG=kubeconfig
+      #
+      # - name: Deploy to Kubernetes
+      #   run: |
+      #     kubectl set image deployment/backend backend=${{ secrets.DOCKER_USERNAME }}/myerp-backend:${{ github.sha }}
+      #     kubectl rollout status deployment/backend
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
+    # Note: To use environment-specific secrets and protection rules,
+    # create a 'production' environment in Settings > Environments
+    # and uncomment the environment block below:
+    # environment:
+    #   name: production
+    env:
+      # NEXT_PUBLIC_API_URL is required for production builds
+      # This will fail if the secret is not configured (empty string)
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "$NEXT_PUBLIC_API_URL" ]; then
+            echo "❌ Error: NEXT_PUBLIC_API_URL secret is required for production deployment"
+            echo "Please configure NEXT_PUBLIC_API_URL in repository secrets"
+            exit 1
+          fi
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8.15.0
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+            node_modules
+            **/node_modules
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        run: pnpm --filter '@myerp/frontend-web' build
+
+      - name: Create deployment package
+        run: |
+          cd apps/frontend-web
+          # Copy lock file from root for frozen install
+          cp ../../pnpm-lock.yaml . || true
+          tar -czf frontend-dist.tar.gz .next/ public/ package.json pnpm-lock.yaml
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist-${{ github.sha }}
+          path: apps/frontend-web/frontend-dist.tar.gz
+          retention-days: 30
+          compression-level: 6
+
+      # Deployment options - Uncomment and configure based on your infrastructure:
+
+      # Option 1: Deploy to Vercel
+      # - name: Deploy to Vercel
+      #   uses: amondnet/vercel-action@v25
+      #   with:
+      #     vercel-token: ${{ secrets.VERCEL_TOKEN }}
+      #     vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+      #     vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+      #     vercel-args: '--prod'
+      #     working-directory: ./apps/frontend-web
+
+      # Option 2: Deploy to Netlify
+      # - name: Deploy to Netlify
+      #   uses: nwtgck/actions-netlify@v3.0
+      #   with:
+      #     publish-dir: './apps/frontend-web/.next'
+      #     production-branch: main
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     deploy-message: "Deploy from GitHub Actions"
+      #   env:
+      #     NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      #     NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+      # Option 3: Deploy via SSH (Traditional Server)
+      # - name: Deploy to server via SSH
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.HOST }}
+      #     username: ${{ secrets.USERNAME }}
+      #     key: ${{ secrets.SSH_KEY }}
+      #     script: |
+      #       cd /path/to/frontend
+      #       # Extract new build
+      #       tar -xzf frontend-dist.tar.gz
+      #       # Install production dependencies
+      #       pnpm install --prod --frozen-lockfile
+      #       # Build Next.js app (if needed)
+      #       pnpm build
+      #       # Restart service
+      #       pm2 restart frontend || pm2 start pnpm --name frontend -- start
+
+      # Option 4: Deploy to AWS S3 + CloudFront
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      #
+      # - name: Deploy to S3
+      #   run: |
+      #     aws s3 sync ./apps/frontend-web/.next/static s3://${{ secrets.S3_BUCKET }}/_next/static --delete
+      #     aws s3 sync ./apps/frontend-web/public s3://${{ secrets.S3_BUCKET }}/public --delete
+      #
+      # - name: Invalidate CloudFront cache
+      #   run: |
+      #     aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"

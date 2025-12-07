@@ -116,6 +116,7 @@ export default function Sidebar() {
         group: 'banking',
         submenu: [
           { label: 'Dashboard', href: '/general-ledger', icon: LayoutDashboard },
+          { label: 'Day Begin/End', href: '/general-ledger/day-book', icon: CalendarDays },
           { label: 'Assets', href: '/general-ledger/assets', icon: TrendingUp },
           { label: 'Liabilities', href: '/general-ledger/liabilities', icon: TrendingDown },
           { label: 'Equity', href: '/general-ledger/equity', icon: Activity },

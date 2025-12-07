@@ -5,8 +5,12 @@ import { requireTenant } from '../middleware/tenant.js';
 import { generateMemberNumber } from '../lib/member-number.js';
 import { updateMemberRisk } from '../services/aml/risk.js';
 import { getOccupationRisk } from '@myerp/shared-types';
-import { postEntryFee, getCurrentSharePrice, postAdvancePayment, transferAdvancePayment, refundAdvancePayment, refundOrWaiveEntryFee } from '../services/accounting.js';
-import { amlEvents, AML_EVENTS } from '../lib/events.js';
+import {
+  postEntryFee,
+  getCurrentSharePrice,
+  postAdvancePayment,
+  refundAdvancePayment,
+} from '../services/accounting.js';
 
 const router: Router = Router();
 
@@ -21,12 +25,16 @@ router.use(requireTenant);
 router.get('/:memberId/kyc', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { memberId } = req.params;
 
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -37,7 +45,7 @@ router.get('/:memberId/kyc', async (req: Request, res: Response) => {
 
     // Check for KYC based on member type
     let kyc = null;
-    
+
     if (member.memberType === 'INSTITUTION') {
       kyc = await prisma.institutionKYC.findUnique({
         where: { memberId },
@@ -82,7 +90,7 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -103,8 +111,8 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
       familyMemberInstitutionMemberships,
       otherEarningFamilyMembers,
       incomeSourceDetails,
-      name,
-      surname,
+      name: _name,
+      surname: _surname,
       ...kycMainData
     } = kycData;
 
@@ -112,7 +120,7 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
     const kycDataToSave: any = {
       ...kycMainData,
       memberId,
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       isComplete: true,
       completedAt: new Date(),
     };
@@ -129,9 +137,9 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
 
     // Validate required fields
     if (!kycDataToSave.initialShareAmount || Number(kycDataToSave.initialShareAmount) <= 0) {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Share amount is required and must be greater than 0',
-        field: 'initialShareAmount'
+        field: 'initialShareAmount',
       });
       return;
     }
@@ -139,9 +147,9 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
     // Validate share amount is divisible by 100 (per kitta = Rs. 100)
     const shareAmount = Number(kycDataToSave.initialShareAmount);
     if (shareAmount % 100 !== 0) {
-      res.status(400).json({ 
+      res.status(400).json({
         error: 'Share amount must be divisible by 100 (per kitta = Rs. 100)',
-        field: 'initialShareAmount'
+        field: 'initialShareAmount',
       });
       return;
     }
@@ -264,7 +272,7 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
     });
 
     // Use transaction to ensure data consistency
-    const kyc = await prisma.$transaction(async (tx) => {
+    const _kyc = await prisma.$transaction(async (tx) => {
       let savedKyc;
       if (existingKYC) {
         savedKyc = await tx.memberKYC.update({
@@ -394,12 +402,18 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
 
     // Record payments when application is submitted
     try {
-      const initialShareAmount = kycDataToSave.initialShareAmount ? Number(kycDataToSave.initialShareAmount) : 0;
-      const initialSavingsAmount = kycDataToSave.initialSavingsAmount ? Number(kycDataToSave.initialSavingsAmount) : 0;
-      const entryFeeAmount = kycDataToSave.initialOtherAmount ? Number(kycDataToSave.initialOtherAmount) : 0;
+      const initialShareAmount = kycDataToSave.initialShareAmount
+        ? Number(kycDataToSave.initialShareAmount)
+        : 0;
+      const initialSavingsAmount = kycDataToSave.initialSavingsAmount
+        ? Number(kycDataToSave.initialSavingsAmount)
+        : 0;
+      const entryFeeAmount = kycDataToSave.initialOtherAmount
+        ? Number(kycDataToSave.initialOtherAmount)
+        : 0;
 
       // Entry fee is posted directly to income (non-refundable, compulsory)
-      if (entryFeeAmount > 0) {
+      if (entryFeeAmount > 0 && tenantId) {
         // Generate temporary member identifier for entry fee posting
         const tempMemberId = `TEMP-${memberId.substring(0, 8)}`;
         await postEntryFee(tenantId, entryFeeAmount, memberId, tempMemberId, new Date());
@@ -407,15 +421,13 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
 
       // Share capital and savings are recorded as advance payment (refundable if rejected)
       const advanceAmount = initialShareAmount + initialSavingsAmount;
-      if (advanceAmount > 0) {
-        const memberName = member.fullName || member.institutionName || `${member.firstName} ${member.lastName}`.trim() || 'Unknown';
-        await postAdvancePayment(
-          tenantId,
-          advanceAmount,
-          memberId,
-          memberName,
-          new Date()
-        );
+      if (advanceAmount > 0 && tenantId) {
+        const memberName =
+          member.fullName ||
+          member.institutionName ||
+          `${member.firstName} ${member.lastName}`.trim() ||
+          'Unknown';
+        await postAdvancePayment(tenantId, advanceAmount, memberId, memberName, new Date());
       }
     } catch (paymentError) {
       console.error('Error recording payments:', paymentError);
@@ -426,7 +438,7 @@ router.post('/:memberId/kyc', async (req: Request, res: Response) => {
     await prisma.memberWorkflowHistory.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fromStatus: member.workflowStatus,
         toStatus: 'under_review',
         action: 'kyc_submitted',
@@ -466,7 +478,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -478,7 +490,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
     // Get KYC based on member type
     let kyc: any = null;
     let isInstitution = false;
-    
+
     if (member.memberType === 'INSTITUTION') {
       kyc = await prisma.institutionKYC.findUnique({
         where: { memberId },
@@ -547,7 +559,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
         let retries = 0;
         while (retries < maxRetries) {
           try {
-            memberNumber = await generateMemberNumber(tenantId);
+            memberNumber = await generateMemberNumber(tenantId!);
             await prisma.member.update({
               where: { id: memberId },
               data: { memberNumber },
@@ -557,7 +569,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
             if (error.code === 'P2002' && error.meta?.target?.includes('memberNumber')) {
               retries++;
               if (retries >= maxRetries) {
-                throw new Error('Failed to assign member number after multiple retries. Please try again.');
+                throw new Error(
+                  'Failed to assign member number after multiple retries. Please try again.'
+                );
               }
               // Wait before retrying (exponential backoff)
               await new Promise((resolve) => setTimeout(resolve, 100 * retries));
@@ -602,7 +616,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
 
         if (!existingShares) {
           const { getCurrentSharePrice } = await import('../services/accounting.js');
-          const unitPrice = await getCurrentSharePrice(tenantId, 100);
+          const unitPrice = await getCurrentSharePrice(tenantId!, 100);
 
           // Use transaction to ensure atomic certificate number generation
           existingShares = await prisma.$transaction(async (tx) => {
@@ -614,7 +628,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
             if (!stillMissing) {
               // Get the current highest certificate number in this transaction
               const latestCert = await tx.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -631,7 +645,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
 
               return await tx.shareAccount.create({
                 data: {
-                  cooperativeId: tenantId,
+                  cooperativeId: tenantId!,
                   memberId,
                   certificateNo: certNo,
                   unitPrice,
@@ -646,7 +660,10 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
           });
 
           if (existingShares) {
-            console.log(`[Member Approval] Share account created for member ${memberId}:`, existingShares.id);
+            console.log(
+              `[Member Approval] Share account created for member ${memberId}:`,
+              existingShares.id
+            );
           } else {
             // Account was created by another request, fetch it
             existingShares = await prisma.shareAccount.findUnique({
@@ -665,7 +682,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
       let advancePaymentPosted = false;
       try {
         const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
-        const initialSavingsAmount = kyc.initialSavingsAmount ? Number(kyc.initialSavingsAmount) : 0;
+        const initialSavingsAmount = kyc.initialSavingsAmount
+          ? Number(kyc.initialSavingsAmount)
+          : 0;
         const entryFeeAmount = kyc.initialOtherAmount ? Number(kyc.initialOtherAmount) : 0;
         const advanceAmount = initialShareAmount + initialSavingsAmount;
 
@@ -681,7 +700,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
           const tempMemberIdPattern = `TEMP-${memberId.substring(0, 8)}`;
           const existingEntryFee = await prisma.journalEntry.findFirst({
             where: {
-              cooperativeId: tenantId,
+              cooperativeId: tenantId!,
               OR: [
                 // Check by actual memberNumber (used during approval or if posted after member number is assigned)
                 {
@@ -690,7 +709,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
                     {
                       OR: [
                         { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
-                        { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
+                        {
+                          description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const },
+                        },
                         { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
                       ],
                     },
@@ -699,11 +720,15 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
                 // Check by tempMemberId pattern (used during KYC submission before member number is assigned)
                 {
                   AND: [
-                    { description: { contains: tempMemberIdPattern, mode: 'insensitive' as const } },
+                    {
+                      description: { contains: tempMemberIdPattern, mode: 'insensitive' as const },
+                    },
                     {
                       OR: [
                         { description: { contains: 'Entry fee', mode: 'insensitive' as const } },
-                        { description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const } },
+                        {
+                          description: { contains: 'Prabesh Shulka', mode: 'insensitive' as const },
+                        },
                         { description: { contains: 'प्रवेश शुल्क', mode: 'insensitive' as const } },
                       ],
                     },
@@ -714,24 +739,32 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
           });
 
           if (!existingEntryFee) {
-            console.log(`[Member Approval] Posting entry fee for member ${memberNumber}: ${entryFeeAmount}`);
-            await postEntryFee(tenantId, entryFeeAmount, memberId, memberNumber, new Date());
+            console.log(
+              `[Member Approval] Posting entry fee for member ${memberNumber}: ${entryFeeAmount}`
+            );
+            await postEntryFee(tenantId!, entryFeeAmount, memberId, memberNumber, new Date());
             console.log(`[Member Approval] Entry fee posted successfully`);
           } else {
-            console.log(`[Member Approval] Entry fee already posted for member ${memberNumber}, skipping`);
+            console.log(
+              `[Member Approval] Entry fee already posted for member ${memberNumber}, skipping`
+            );
           }
         }
 
         // Post advance payment if not already posted (for seeded members or members who didn't submit KYC)
         if (advanceAmount > 0) {
-          const memberName = member.fullName || member.institutionName || `${member.firstName} ${member.lastName}`.trim() || 'Unknown';
-          
+          const memberName =
+            member.fullName ||
+            member.institutionName ||
+            `${member.firstName} ${member.lastName}`.trim() ||
+            'Unknown';
+
           // Check if advance payment was already posted
           // The description format is: "Advance payment from applicant: ${memberName} (Member ID: ${memberId}) - Pending approval"
           // Use case-insensitive matching to catch all variations and check for both memberId and memberNumber patterns
           const existingAdvancePayment = await prisma.journalEntry.findFirst({
             where: {
-              cooperativeId: tenantId,
+              cooperativeId: tenantId!,
               OR: [
                 // Check by memberId with "Advance payment" keyword
                 {
@@ -746,7 +779,12 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
                       {
                         AND: [
                           { description: { contains: memberNumber, mode: 'insensitive' as const } },
-                          { description: { contains: 'Advance payment', mode: 'insensitive' as const } },
+                          {
+                            description: {
+                              contains: 'Advance payment',
+                              mode: 'insensitive' as const,
+                            },
+                          },
                         ],
                       },
                     ]
@@ -754,7 +792,12 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
                 // Check for exact pattern "Member ID: ${memberId}" which is in the description
                 {
                   AND: [
-                    { description: { contains: `Member ID: ${memberId}`, mode: 'insensitive' as const } },
+                    {
+                      description: {
+                        contains: `Member ID: ${memberId}`,
+                        mode: 'insensitive' as const,
+                      },
+                    },
                     { description: { contains: 'Advance payment', mode: 'insensitive' as const } },
                   ],
                 },
@@ -763,12 +806,16 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
           });
 
           if (!existingAdvancePayment) {
-            console.log(`[Member Approval] Posting advance payment for member ${memberNumber}: ${advanceAmount}`);
-            await postAdvancePayment(tenantId, advanceAmount, memberId, memberName, new Date());
+            console.log(
+              `[Member Approval] Posting advance payment for member ${memberNumber}: ${advanceAmount}`
+            );
+            await postAdvancePayment(tenantId!, advanceAmount, memberId, memberName, new Date());
             console.log(`[Member Approval] Advance payment posted successfully`);
             advancePaymentPosted = true;
           } else {
-            console.log(`[Member Approval] Advance payment already posted for member ${memberNumber}, skipping`);
+            console.log(
+              `[Member Approval] Advance payment already posted for member ${memberNumber}, skipping`
+            );
             advancePaymentPosted = true; // Already exists, so we can proceed with share issuance
           }
         } else {
@@ -790,7 +837,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
       if (advancePaymentPosted) {
         try {
           const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
-          const initialSavingsAmount = kyc.initialSavingsAmount ? Number(kyc.initialSavingsAmount) : 0;
+          const initialSavingsAmount = kyc.initialSavingsAmount
+            ? Number(kyc.initialSavingsAmount)
+            : 0;
           const advanceAmount = initialShareAmount + initialSavingsAmount;
 
           console.log(`[Member Approval] Processing shares for member ${memberId}:`, {
@@ -800,112 +849,129 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
           });
 
           if (advanceAmount > 0) {
-          // Issue shares if applicable (this will transfer share amount from advance)
-          // Check if shares have already been issued to prevent duplicate transactions
-          if (initialShareAmount > 0) {
-            // Re-fetch share account to get latest state (in case it was just created or updated)
-            const currentShareAccount = await prisma.shareAccount.findUnique({
-              where: { memberId },
-            });
-
-            // Check if shares have already been issued (account has shares > 0)
-            const hasSharesAlready = currentShareAccount 
-              ? (currentShareAccount.totalKitta > 0 || currentShareAccount.totalAmount > 0)
-              : false;
-
-            if (!hasSharesAlready) {
-              const sharePrice = await getCurrentSharePrice(tenantId, 100);
-              const shares = Math.floor(initialShareAmount / sharePrice);
-
-              console.log(`[Member Approval] Share calculation:`, {
-                sharePrice,
-                shares,
-                amount: initialShareAmount,
+            // Issue shares if applicable (this will transfer share amount from advance)
+            // Check if shares have already been issued to prevent duplicate transactions
+            if (initialShareAmount > 0) {
+              // Re-fetch share account to get latest state (in case it was just created or updated)
+              const currentShareAccount = await prisma.shareAccount.findUnique({
+                where: { memberId },
               });
 
-              if (shares > 0) {
-                const { ShareService } = await import('../services/share.service.js');
-                const shareTx = await ShareService.issueShares({
-                  cooperativeId: tenantId,
-                  memberId,
-                  kitta: shares,
-                  amount: initialShareAmount, // Use exact initialShareAmount to ensure accounting matches
-                  date: new Date(),
-                  paymentMode: 'CASH',
-                  remarks: 'Initial share purchase upon member approval (from advance payment)',
-                  userId: req.user!.userId,
-                  fromAdvancePayment: true, // Payment was already received as advance
+              // Check if shares have already been issued (account has shares > 0)
+              const hasSharesAlready = currentShareAccount
+                ? currentShareAccount.totalKitta > 0 || currentShareAccount.totalAmount > 0
+                : false;
+
+              if (!hasSharesAlready) {
+                const sharePrice = await getCurrentSharePrice(tenantId!, 100);
+                const shares = Math.floor(initialShareAmount / sharePrice);
+
+                console.log(`[Member Approval] Share calculation:`, {
+                  sharePrice,
+                  shares,
+                  amount: initialShareAmount,
                 });
-                console.log(`[Member Approval] Shares issued successfully:`, shareTx.id);
+
+                if (shares > 0) {
+                  const { ShareService } = await import('../services/share.service.js');
+                  const shareTx = await ShareService.issueShares({
+                    cooperativeId: tenantId!,
+                    memberId,
+                    kitta: shares,
+                    amount: initialShareAmount, // Use exact initialShareAmount to ensure accounting matches
+                    date: new Date(),
+                    paymentMode: 'CASH',
+                    remarks: 'Initial share purchase upon member approval (from advance payment)',
+                    userId: req.user!.userId,
+                    fromAdvancePayment: true, // Payment was already received as advance
+                  });
+                  console.log(`[Member Approval] Shares issued successfully:`, shareTx.id);
+                } else {
+                  console.warn(
+                    `[Member Approval] Share amount ${initialShareAmount} is less than share price ${sharePrice}, no shares issued`
+                  );
+                }
               } else {
-                console.warn(`[Member Approval] Share amount ${initialShareAmount} is less than share price ${sharePrice}, no shares issued`);
+                console.log(
+                  `[Member Approval] Shares already issued for member ${memberId}, skipping duplicate issuance`
+                );
               }
-            } else {
-              console.log(`[Member Approval] Shares already issued for member ${memberId}, skipping duplicate issuance`);
             }
-          }
 
-          // Handle initialSavingsAmount - treat as additional shares for now
-          // Note: This is a separate issuance, so we check if the total shares would exceed what's already issued
-          if (initialSavingsAmount > 0) {
-            // Re-fetch share account to get latest state after potential share issuance above
-            const currentShareAccount = await prisma.shareAccount.findUnique({
-              where: { memberId },
-            });
-
-            // For savings-to-shares conversion, we need to check if this specific amount was already converted
-            // Since we can't easily distinguish between initial shares and savings shares in the account,
-            // we'll check if the total amount matches what we expect (initialShareAmount + initialSavingsAmount)
-            // If it does, we skip to avoid duplicate issuance
-            const expectedTotalAmount = initialShareAmount + initialSavingsAmount;
-            const hasExpectedAmount = currentShareAccount 
-              ? (currentShareAccount.totalAmount >= expectedTotalAmount)
-              : false;
-
-            if (!hasExpectedAmount) {
-              const sharePrice = await getCurrentSharePrice(tenantId, 100);
-              const savingsShares = Math.floor(initialSavingsAmount / sharePrice);
-
-              console.log(`[Member Approval] Savings to shares calculation:`, {
-                sharePrice,
-                savingsShares,
-                amount: initialSavingsAmount,
+            // Handle initialSavingsAmount - treat as additional shares for now
+            // Note: This is a separate issuance, so we check if the total shares would exceed what's already issued
+            if (initialSavingsAmount > 0) {
+              // Re-fetch share account to get latest state after potential share issuance above
+              const currentShareAccount = await prisma.shareAccount.findUnique({
+                where: { memberId },
               });
 
-              if (savingsShares > 0) {
-                const { ShareService } = await import('../services/share.service.js');
-                const shareTx = await ShareService.issueShares({
-                  cooperativeId: tenantId,
-                  memberId,
-                  kitta: savingsShares,
-                  amount: initialSavingsAmount, // Use exact initialSavingsAmount to ensure accounting matches
-                  date: new Date(),
-                  paymentMode: 'CASH',
-                  remarks: 'Initial savings converted to shares upon member approval (from advance payment)',
-                  userId: req.user!.userId,
-                  fromAdvancePayment: true,
+              // For savings-to-shares conversion, we need to check if this specific amount was already converted
+              // Since we can't easily distinguish between initial shares and savings shares in the account,
+              // we'll check if the total amount matches what we expect (initialShareAmount + initialSavingsAmount)
+              // If it does, we skip to avoid duplicate issuance
+              const expectedTotalAmount = initialShareAmount + initialSavingsAmount;
+              const hasExpectedAmount = currentShareAccount
+                ? currentShareAccount.totalAmount >= expectedTotalAmount
+                : false;
+
+              if (!hasExpectedAmount) {
+                const sharePrice = await getCurrentSharePrice(tenantId!, 100);
+                const savingsShares = Math.floor(initialSavingsAmount / sharePrice);
+
+                console.log(`[Member Approval] Savings to shares calculation:`, {
+                  sharePrice,
+                  savingsShares,
+                  amount: initialSavingsAmount,
                 });
-                console.log(`[Member Approval] Savings shares issued successfully:`, shareTx.id);
+
+                if (savingsShares > 0) {
+                  const { ShareService } = await import('../services/share.service.js');
+                  const shareTx = await ShareService.issueShares({
+                    cooperativeId: tenantId!,
+                    memberId,
+                    kitta: savingsShares,
+                    amount: initialSavingsAmount, // Use exact initialSavingsAmount to ensure accounting matches
+                    date: new Date(),
+                    paymentMode: 'CASH',
+                    remarks:
+                      'Initial savings converted to shares upon member approval (from advance payment)',
+                    userId: req.user!.userId,
+                    fromAdvancePayment: true,
+                  });
+                  console.log(`[Member Approval] Savings shares issued successfully:`, shareTx.id);
+                } else {
+                  console.warn(
+                    `[Member Approval] Savings amount ${initialSavingsAmount} is less than share price ${sharePrice}, no shares issued`
+                  );
+                }
               } else {
-                console.warn(`[Member Approval] Savings amount ${initialSavingsAmount} is less than share price ${sharePrice}, no shares issued`);
+                console.log(
+                  `[Member Approval] Savings-to-shares conversion already completed for member ${memberId}, skipping duplicate issuance`
+                );
               }
-            } else {
-              console.log(`[Member Approval] Savings-to-shares conversion already completed for member ${memberId}, skipping duplicate issuance`);
             }
+          } else {
+            console.warn(
+              `[Member Approval] No advance payment amount (share: ${initialShareAmount}, savings: ${initialSavingsAmount}), no shares issued`
+            );
           }
-        } else {
-          console.warn(`[Member Approval] No advance payment amount (share: ${initialShareAmount}, savings: ${initialSavingsAmount}), no shares issued`);
-        }
         } catch (accountingError) {
-          console.error('[Member Approval] Error transferring advance payment during approval:', accountingError);
+          console.error(
+            '[Member Approval] Error transferring advance payment during approval:',
+            accountingError
+          );
           console.error('[Member Approval] Error details:', {
-            message: accountingError instanceof Error ? accountingError.message : String(accountingError),
+            message:
+              accountingError instanceof Error ? accountingError.message : String(accountingError),
             stack: accountingError instanceof Error ? accountingError.stack : undefined,
           });
           // Don't fail the approval if accounting posting fails, but log it
         }
       } else {
-        console.warn(`[Member Approval] Advance payment posting failed or was skipped, not issuing shares to prevent accounting imbalance`);
+        console.warn(
+          `[Member Approval] Advance payment posting failed or was skipped, not issuing shares to prevent accounting imbalance`
+        );
       }
     } else if (action === 'reject') {
       newStatus = 'rejected';
@@ -935,14 +1001,20 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
       // Refund advance payment if any
       try {
         const initialShareAmount = kyc.initialShareAmount ? Number(kyc.initialShareAmount) : 0;
-        const initialSavingsAmount = kyc.initialSavingsAmount ? Number(kyc.initialSavingsAmount) : 0;
+        const initialSavingsAmount = kyc.initialSavingsAmount
+          ? Number(kyc.initialSavingsAmount)
+          : 0;
         const entryFeeAmount = kyc.initialOtherAmount ? Number(kyc.initialOtherAmount) : 0;
         const totalAdvanceAmount = initialShareAmount + initialSavingsAmount + entryFeeAmount;
 
         if (totalAdvanceAmount > 0) {
-          const memberName = member.fullName || member.institutionName || `${member.firstName} ${member.lastName}`.trim() || 'Unknown';
+          const memberName =
+            member.fullName ||
+            member.institutionName ||
+            `${member.firstName} ${member.lastName}`.trim() ||
+            'Unknown';
           await refundAdvancePayment(
-            tenantId,
+            tenantId!,
             totalAdvanceAmount,
             memberId,
             memberName,
@@ -990,7 +1062,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
     await prisma.memberWorkflowHistory.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fromStatus: member.workflowStatus,
         toStatus: newStatus,
         action: workflowAction,
@@ -1014,12 +1086,13 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
         await prisma.memberWorkflowHistory.create({
           data: {
             memberId,
-            cooperativeId: tenantId,
+            cooperativeId: tenantId!,
             fromStatus: 'approved',
             toStatus: 'bod_pending',
             action: 'sent_to_agenda',
             performedBy: req.user!.userId,
-            remarks: 'Automatically added to pending agenda for BOD approval after manager approval',
+            remarks:
+              'Automatically added to pending agenda for BOD approval after manager approval',
           },
         });
 
@@ -1032,11 +1105,12 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ 
-      message: action === 'approve' && finalStatus === 'bod_pending' 
-        ? 'Member approved and automatically sent to BOD meeting agenda' 
-        : 'KYM reviewed successfully', 
-      workflowStatus: finalStatus 
+    res.json({
+      message:
+        action === 'approve' && finalStatus === 'bod_pending'
+          ? 'Member approved and automatically sent to BOD meeting agenda'
+          : 'KYM reviewed successfully',
+      workflowStatus: finalStatus,
     });
   } catch (error) {
     console.error('Review KYM error:', error);
@@ -1056,7 +1130,7 @@ router.post('/:memberId/send-to-bod', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1081,7 +1155,7 @@ router.post('/:memberId/send-to-bod', async (req: Request, res: Response) => {
     await prisma.memberWorkflowHistory.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fromStatus: member.workflowStatus,
         toStatus: 'bod_pending',
         action: 'sent_to_agenda',
@@ -1113,7 +1187,7 @@ router.post('/:memberId/bod-approve', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -1150,7 +1224,7 @@ router.post('/:memberId/bod-approve', async (req: Request, res: Response) => {
     await prisma.memberWorkflowHistory.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         fromStatus: member.workflowStatus,
         toStatus: 'active',
         action: 'bod_approved',
@@ -1180,7 +1254,7 @@ router.get('/pending-agenda', async (req: Request, res: Response) => {
     // Get all pending member approvals not assigned to any meeting
     const pendingMemberApprovals = await prisma.memberKYC.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         bodMeetingId: null, // Not assigned to any meeting
         member: {
           workflowStatus: 'bod_pending',
@@ -1244,7 +1318,7 @@ router.get('/:memberId/history', async (req: Request, res: Response) => {
     const member = await prisma.member.findFirst({
       where: {
         id: memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 

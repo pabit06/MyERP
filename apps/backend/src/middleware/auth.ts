@@ -29,6 +29,7 @@ export const authenticate = async (
         cooperativeId: true,
         roleId: true,
         isActive: true,
+        isSystemAdmin: true, // Add system admin flag
       },
     });
 
@@ -40,8 +41,12 @@ export const authenticate = async (
     // Attach user info to request
     req.user = {
       ...payload,
-      tenantId: user.cooperativeId, // Set tenantId for tenant scoping
+      tenantId: user.cooperativeId || null, // Can be null for system admin (deprecated, use currentCooperativeId)
+      isSystemAdmin: user.isSystemAdmin, // Add system admin flag
     };
+
+    // Set initial cooperative context from JWT (can be overridden by setCooperativeContext middleware)
+    req.currentCooperativeId = user.cooperativeId || null;
 
     next();
   } catch (error) {

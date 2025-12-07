@@ -67,10 +67,10 @@ export async function generateTtrXml(ttrId: string): Promise<string> {
     .up()
     .ele('Name')
     .ele('FirstName')
-    .txt(member.firstName)
+    .txt(member.firstName || '')
     .up()
     .ele('LastName')
-    .txt(member.lastName)
+    .txt(member.lastName || '')
     .up();
 
   if (member.middleName) {
@@ -95,16 +95,16 @@ export async function generateTtrXml(ttrId: string): Promise<string> {
     .up()
     .ele('Address')
     .ele('AddressLine')
-    .txt(kyc?.permanentAddress || '')
+    .txt(kyc?.permanentVillageTole || kyc?.permanentMunicipality || '')
     .up()
     .ele('City')
-    .txt(kyc?.city || '')
+    .txt(kyc?.permanentMunicipality || '')
     .up()
     .ele('State')
-    .txt(kyc?.state || '')
+    .txt(kyc?.permanentProvince || '')
     .up()
     .ele('Country')
-    .txt(kyc?.country || 'NPL')
+    .txt('NPL')
     .up()
     .up()
     .ele('Occupation')
@@ -224,10 +224,10 @@ export async function generateStrXml(caseId: string): Promise<string> {
     .up()
     .ele('Name')
     .ele('FirstName')
-    .txt(member.firstName)
+    .txt(member.firstName || '')
     .up()
     .ele('LastName')
-    .txt(member.lastName)
+    .txt(member.lastName || '')
     .up();
 
   if (member.middleName) {

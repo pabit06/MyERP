@@ -9,6 +9,9 @@ export * from './kyc-options';
 export * from './institution-kyc';
 export * from './api-responses';
 
+// Export Zod validation schemas (DTOs)
+export * from './zod-schemas';
+
 export interface Plan {
   id: string;
   name: string;

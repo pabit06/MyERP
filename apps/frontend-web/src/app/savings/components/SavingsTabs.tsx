@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface SavingsTabsProps {
-  activeTab: 'products' | 'accounts';
-  onTabChange: (tab: 'products' | 'accounts') => void;
+  activeTab: 'products' | 'accounts' | 'operations';
+  onTabChange: (tab: 'products' | 'accounts' | 'operations') => void;
 }
 
 const SavingsTabs: React.FC<SavingsTabsProps> = ({ activeTab, onTabChange }) => {
@@ -28,6 +28,16 @@ const SavingsTabs: React.FC<SavingsTabsProps> = ({ activeTab, onTabChange }) => 
           }`}
         >
           Products
+        </button>
+        <button
+          onClick={() => onTabChange('operations')}
+          className={`py-4 px-1 border-b-2 font-medium text-sm ${
+            activeTab === 'operations'
+              ? 'border-indigo-500 text-indigo-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          }`}
+        >
+          Operations
         </button>
       </nav>
     </div>

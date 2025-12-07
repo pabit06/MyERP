@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import ProtectedRoute from '../../../../components/ProtectedRoute';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { KymForm } from '../../../../components/KymForm';
+import { ProtectedRoute, Button } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
+import { KymForm } from '@/features/members';
 import { KymFormData } from '@myerp/shared-types';
-import { Button } from '@/components/ui/button';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export default function KymUpdatePage() {
   const router = useRouter();

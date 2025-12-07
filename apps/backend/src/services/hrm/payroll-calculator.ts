@@ -193,8 +193,9 @@ export async function calculateEmployeePayroll(
 
   const basicSalary = Number(employee.basicSalary);
 
-  // TODO: Get allowances from employee settings or department/designation defaults
-  // For now, using empty allowances
+  // Get allowances from employee settings or department/designation defaults
+  // TODO: Implement employee-specific allowances or department/designation defaults
+  // For now, using empty allowances - can be extended to fetch from employee settings
   const allowances: Record<string, number> = {};
   const totalAllowances = Object.values(allowances).reduce((sum, val) => sum + (val || 0), 0);
   const grossSalary = basicSalary + totalAllowances;

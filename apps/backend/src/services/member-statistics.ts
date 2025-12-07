@@ -62,10 +62,10 @@ export async function getMemberStatistics(
       },
     },
     include: {
-      shareLedger: {
+      shareAccount: {
         select: {
-          totalShares: true,
-          shareValue: true,
+          totalKitta: true,
+          unitPrice: true,
         },
       },
     },
@@ -81,7 +81,7 @@ export async function getMemberStatistics(
         : `${member.firstName || ''} ${member.middleName || ''} ${member.lastName || ''}`.trim() ||
           'Member';
     const shareAmount =
-      (member.shareLedger?.totalShares || 0) * Number(member.shareLedger?.shareValue || 0);
+      (member.shareAccount?.totalKitta || 0) * Number(member.shareAccount?.unitPrice || 0);
 
     return {
       id: member.id,
@@ -153,32 +153,30 @@ export async function getAMLStatistics(cooperativeId: string): Promise<{
   ttrCount: number;
   copomisStatus: string;
 }> {
-  // High-risk members (members with AML flags)
+  // High-risk members (members with AML flags of type HIGH_RISK)
   const highRiskMembers = await prisma.member.count({
     where: {
       cooperativeId,
       amlFlags: {
         some: {
-          riskLevel: {
-            in: ['HIGH', 'MEDIUM'],
-          },
+          type: 'HIGH_RISK',
         },
       },
     },
   });
 
-  // STR/TTR counts
-  const strCount = await prisma.amlTtrReport.count({
+  // STR/TTR counts - count AML flags of type STR and TTR
+  const strCount = await prisma.amlFlag.count({
     where: {
       cooperativeId,
-      reportType: 'STR',
+      type: 'STR',
     },
   });
 
-  const ttrCount = await prisma.amlTtrReport.count({
+  const ttrCount = await prisma.amlFlag.count({
     where: {
       cooperativeId,
-      reportType: 'TTR',
+      type: 'TTR',
     },
   });
 
@@ -198,7 +196,7 @@ export async function getAMLStatistics(cooperativeId: string): Promise<{
  */
 export async function getTop20Depositors(
   cooperativeId: string,
-  asOfDate: Date = new Date()
+  _asOfDate: Date = new Date()
 ): Promise<
   Array<{
     memberId: string;

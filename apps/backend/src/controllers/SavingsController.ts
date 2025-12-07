@@ -1,6 +1,7 @@
 import { BaseController, HookContext } from './BaseController.js';
 import { hooks } from '../lib/hooks.js';
 import { amlEvents, AML_EVENTS } from '../lib/events.js';
+import { SavingsService } from '../services/savings.service.js';
 
 /**
  * Savings Controller
@@ -34,6 +35,10 @@ export class SavingsController extends BaseController {
       description?: string;
       interestRate: number;
       minimumBalance?: number;
+      interestPostingFrequency?: string;
+      interestCalculationMethod?: string;
+      isTaxApplicable?: boolean;
+      taxRate?: number;
     },
     userId?: string
   ) {
@@ -63,6 +68,10 @@ export class SavingsController extends BaseController {
         description: data.description || null,
         interestRate: parseFloat(String(data.interestRate)),
         minimumBalance: data.minimumBalance ? parseFloat(String(data.minimumBalance)) : 0,
+        interestPostingFrequency: data.interestPostingFrequency || 'QUARTERLY',
+        interestCalculationMethod: data.interestCalculationMethod || 'DAILY_BALANCE',
+        isTaxApplicable: data.isTaxApplicable !== undefined ? data.isTaxApplicable : true,
+        taxRate: data.taxRate ? parseFloat(String(data.taxRate)) : 6.0,
         cooperativeId: data.cooperativeId,
       };
 
@@ -176,8 +185,14 @@ export class SavingsController extends BaseController {
       cooperativeId: string;
       memberId: string;
       productId: string;
-      accountNumber: string;
+      accountNumber?: string;
       initialDeposit?: number;
+      nominee?: {
+        name: string;
+        relation: string;
+        citizenship?: string;
+        photo?: string;
+      };
     },
     userId?: string
   ) {
@@ -185,7 +200,7 @@ export class SavingsController extends BaseController {
 
     return this.handleTransaction(async (tx) => {
       // Validate required fields
-      this.validateRequired(data, ['memberId', 'productId', 'accountNumber']);
+      this.validateRequired(data, ['memberId', 'productId']);
 
       // Verify member belongs to cooperative
       const member = await tx.member.findUnique({
@@ -205,27 +220,54 @@ export class SavingsController extends BaseController {
         throw new Error('Product not found');
       }
 
+      let accountNumber = data.accountNumber;
+
+      // Auto-generate account number if not provided
+      if (!accountNumber) {
+        const lastAccount = await tx.savingAccount.findFirst({
+          where: {
+            cooperativeId: data.cooperativeId,
+            productId: data.productId,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        let nextSequence = 1;
+        if (lastAccount) {
+          const parts = lastAccount.accountNumber.split('-');
+          const lastSequence = parseInt(parts[parts.length - 1]);
+          if (!isNaN(lastSequence)) {
+            nextSequence = lastSequence + 1;
+          }
+        }
+
+        accountNumber = `${product.code}-${String(nextSequence).padStart(5, '0')}`;
+      }
+
       // Check if account number already exists
       const existing = await tx.savingAccount.findUnique({
         where: {
           cooperativeId_accountNumber: {
             cooperativeId: data.cooperativeId,
-            accountNumber: data.accountNumber,
+            accountNumber,
           },
         },
       });
 
       if (existing) {
-        throw new Error('Account number already exists');
+        throw new Error(`Account number ${accountNumber} already exists`);
       }
 
       const accountData = {
-        accountNumber: data.accountNumber,
+        accountNumber,
         memberId: data.memberId,
         productId: data.productId,
         cooperativeId: data.cooperativeId,
         balance: data.initialDeposit ? parseFloat(String(data.initialDeposit)) : 0,
         status: 'active' as const,
+        nominee: data.nominee ? (data.nominee as any) : null,
       };
 
       const context = this.createHookContext(tx, data.cooperativeId, userId, undefined, {
@@ -276,6 +318,84 @@ export class SavingsController extends BaseController {
       }
 
       return account;
+    });
+  }
+
+  /**
+   * Deposit amount to saving account
+   */
+  async deposit(
+    data: {
+      accountId: string;
+      amount: number;
+      cooperativeId: string;
+      paymentMode?: 'CASH' | 'BANK' | 'SAVING';
+      cashAccountCode?: string;
+      bankAccountId?: string;
+      remarks?: string;
+      date?: Date;
+    },
+    userId?: string
+  ) {
+    await this.validateTenant(data.cooperativeId);
+
+    return SavingsService.deposit({
+      ...data,
+      userId,
+    });
+  }
+
+  /**
+   * Withdraw amount from saving account
+   */
+  async withdraw(
+    data: {
+      accountId: string;
+      amount: number;
+      cooperativeId: string;
+      paymentMode?: 'CASH' | 'BANK';
+      cashAccountCode?: string;
+      bankAccountId?: string;
+      remarks?: string;
+      date?: Date;
+    },
+    userId?: string
+  ) {
+    await this.validateTenant(data.cooperativeId);
+
+    return SavingsService.withdraw({
+      ...data,
+      userId,
+    });
+  }
+
+  /**
+   * Calculate daily interest for all active saving accounts
+   */
+  async calculateInterest(cooperativeId: string, asOfDate?: Date) {
+    await this.validateTenant(cooperativeId);
+
+    return SavingsService.calculateDailyInterest(cooperativeId, asOfDate);
+  }
+
+  /**
+   * Post interest to saving accounts
+   */
+  async postInterest(
+    data: {
+      cooperativeId: string;
+      productId?: string;
+      interestExpenseGLCode?: string;
+      tdsPayableGLCode?: string;
+      date?: Date;
+    },
+    userId?: string
+  ) {
+    await this.validateTenant(data.cooperativeId);
+
+    return SavingsService.postInterest({
+      ...data,
+      userId,
     });
   }
 }

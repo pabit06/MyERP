@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import {
   Building2,
@@ -14,8 +15,6 @@ import {
   CreditCard,
   TrendingUp,
 } from 'lucide-react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Stats {
   members?: number;
@@ -38,40 +37,31 @@ export default function DashboardPage() {
     try {
       // Fetch members count (using fast summary endpoint)
       try {
-        const membersRes = await fetch(`${API_URL}/members/summary`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const data = await apiClient.get<{ membersWithCapitalLedger?: number }>('/members/summary', {
+          skipErrorToast: true, // Don't show toast for optional stats
         });
-        if (membersRes.ok) {
-          const data = await membersRes.json();
-          // Show only members with capital ledger (share ledger) accounts
-          newStats.members = data.membersWithCapitalLedger || 0;
-        }
+        // Show only members with capital ledger (share ledger) accounts
+        newStats.members = data.membersWithCapitalLedger || 0;
       } catch (e) {
-        // Members endpoint might not exist yet
+        // Members endpoint might not exist yet - ignore
       }
 
       // Fetch savings accounts if CBS enabled
       if (hasModule('cbs')) {
         try {
-          const savingsRes = await fetch(`${API_URL}/savings/accounts`, {
-            headers: { Authorization: `Bearer ${token}` },
+          const data = await apiClient.get<{ accounts?: any[] }>('/savings/accounts', {
+            skipErrorToast: true,
           });
-          if (savingsRes.ok) {
-            const data = await savingsRes.json();
-            newStats.savingsAccounts = data.accounts?.length || 0;
-          }
+          newStats.savingsAccounts = data.accounts?.length || 0;
         } catch (e) {
           // Ignore errors
         }
 
         try {
-          const loansRes = await fetch(`${API_URL}/loans/applications`, {
-            headers: { Authorization: `Bearer ${token}` },
+          const data = await apiClient.get<{ applications?: any[] }>('/loans/applications', {
+            skipErrorToast: true,
           });
-          if (loansRes.ok) {
-            const data = await loansRes.json();
-            newStats.loans = data.applications?.length || 0;
-          }
+          newStats.loans = data.applications?.length || 0;
         } catch (e) {
           // Ignore errors
         }
@@ -80,19 +70,16 @@ export default function DashboardPage() {
       // Fetch employees if HRM enabled
       if (hasModule('hrm')) {
         try {
-          const employeesRes = await fetch(`${API_URL}/hrm/employees`, {
-            headers: { Authorization: `Bearer ${token}` },
+          const data = await apiClient.get<{ employees?: any[] }>('/hrm/employees', {
+            skipErrorToast: true,
           });
-          if (employeesRes.ok) {
-            const data = await employeesRes.json();
-            newStats.employees = data.employees?.length || 0;
-          }
+          newStats.employees = data.employees?.length || 0;
         } catch (e) {
           // Ignore errors
         }
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      // Error handling is done by API client
     } finally {
       setStats(newStats);
       setIsLoadingStats(false);

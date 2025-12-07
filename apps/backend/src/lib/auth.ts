@@ -1,20 +1,31 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { env } from '../config/index.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = env.JWT_SECRET as string;
+const JWT_EXPIRES_IN = env.JWT_EXPIRES_IN as string;
 
 export interface JWTPayload {
   userId: string;
   email: string;
-  cooperativeId: string;
+  cooperativeId: string | null; // Can be null for system admins
   roleId?: string;
 }
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
+  // Convert payload to plain object for jwt.sign
+  const tokenPayload: Record<string, string | null | undefined> = {
+    userId: payload.userId,
+    email: payload.email,
+    cooperativeId: payload.cooperativeId,
+  };
+  if (payload.roleId) {
+    tokenPayload.roleId = payload.roleId;
+  }
+  const options: SignOptions = {
+    expiresIn: JWT_EXPIRES_IN as string | number,
+  };
+  return jwt.sign(tokenPayload, JWT_SECRET, options);
 };
 
 export const verifyToken = (token: string): JWTPayload => {

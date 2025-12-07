@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import Link from 'next/link';
-import MemberGrowthChart from '../../components/charts/MemberGrowthChart';
-import StatusDistributionChart from '../../components/charts/StatusDistributionChart';
-import WorkflowBreakdownChart from '../../components/charts/WorkflowBreakdownChart';
-import DemographicChart from '../../components/charts/DemographicChart';
-import GeographicChart from '../../components/charts/GeographicChart';
-import TrendsChart from '../../components/charts/TrendsChart';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import {
+  MemberGrowthChart,
+  StatusDistributionChart,
+  WorkflowBreakdownChart,
+  DemographicChart,
+  GeographicChart,
+  TrendsChart,
+} from '@/features/dashboard';
 
 interface SummaryData {
   totalMembers: number;
@@ -35,15 +36,10 @@ export default function MemberDashboardPage() {
 
     const fetchSummary = async () => {
       try {
-        const response = await fetch(`${API_URL}/members/summary`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setSummary(data);
-        }
+        const data = await apiClient.get<SummaryData>('/members/summary');
+        setSummary(data);
       } catch (error) {
-        console.error('Error fetching summary:', error);
+        // Error handling is done by API client
       } finally {
         setIsLoadingSummary(false);
       }

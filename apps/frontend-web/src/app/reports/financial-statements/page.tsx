@@ -13,8 +13,7 @@ import {
   TrendingUp,
   X,
 } from 'lucide-react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
 
 type ReportType = 'balance-sheet' | 'profit-loss' | 'trial-balance';
 

@@ -78,7 +78,7 @@ const AccountList: React.FC<AccountListProps> = ({ accounts }) => {
                   {account.product?.name || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  ${Number(account.balance).toFixed(2)}
+                  NPR {Number(account.balance).toLocaleString('en-NP', { minimumFractionDigits: 2 })}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span

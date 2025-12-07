@@ -161,7 +161,7 @@ export const requireAnyRole = (roleNames: string[]) => {
 export const logSensitiveDataAccess = (endpoint: string) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (req.user) {
+      if (req.user && req.user.tenantId) {
         await prisma.sensitiveDataAccessLog.create({
           data: {
             userId: req.user.userId,

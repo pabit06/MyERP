@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import 'react-quill/dist/quill.snow.css';
 import { AuthProvider } from '../contexts/AuthContext';
-import Layout from '../components/Layout';
+import { Layout } from '@/features/components/shared';
 
 export const metadata: Metadata = {
   title: 'MyERP - Cooperative Management System',

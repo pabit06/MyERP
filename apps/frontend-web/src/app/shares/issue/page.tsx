@@ -1,14 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import ProtectedRoute from '../../../components/ProtectedRoute';
-import { useAuth } from '../../../contexts/AuthContext';
+import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import NepaliDatePicker from '../../../components/NepaliDatePicker';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Member {
   id: string;

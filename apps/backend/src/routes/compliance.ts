@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
@@ -10,6 +11,12 @@ import { updateMemberRisk } from '../services/aml/risk.js';
 import { saveUploadedFile, deleteFile } from '../lib/upload.js';
 import multer from 'multer';
 import * as fs from 'fs/promises';
+import { validate, validateAll, validateQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { paginationWithSearchSchema } from '../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
+import { createAmlCaseSchema, updateAmlCaseStatusSchema } from '@myerp/shared-types';
+import { idSchema } from '../validators/common.js';
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -38,31 +45,58 @@ router.use(isModuleEnabled('compliance'));
 
 /**
  * GET /api/compliance/audit-logs
- * Get audit logs (with optional filters)
+ * Get audit logs (with pagination and optional filters)
  */
-router.get('/audit-logs', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/audit-logs',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      action: z.string().optional(),
+      entityType: z.string().optional(),
+      entityId: z.string().optional(),
+      userId: z.string().optional(),
+      startDate: z.string().datetime().or(z.date()).optional(),
+      endDate: z.string().datetime().or(z.date()).optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { action, entityType, entityId, userId, startDate, endDate } = req.query;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+      action,
+      entityType,
+      entityId,
+      userId,
+      startDate,
+      endDate,
+      search,
+    } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (action) {
-      where.action = action as string;
+      where.action = action;
     }
 
     if (entityType) {
-      where.entityType = entityType as string;
+      where.entityType = entityType;
     }
 
     if (entityId) {
-      where.entityId = entityId as string;
+      where.entityId = entityId;
     }
 
     if (userId) {
-      where.userId = userId as string;
+      where.userId = userId;
     }
 
     if (startDate || endDate) {
@@ -75,39 +109,59 @@ router.get('/audit-logs', async (req: Request, res: Response) => {
       }
     }
 
-    const auditLogs = await prisma.auditLog.findMany({
-      where,
-      orderBy: {
-        timestamp: 'desc',
-      },
-      take: 1000, // Limit to prevent huge responses
-    });
+    if (search) {
+      where.OR = [
+        { action: { contains: search, mode: 'insensitive' as const } },
+        { entityType: { contains: search, mode: 'insensitive' as const } },
+        { entityId: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
 
-    res.json({ auditLogs, count: auditLogs.length });
-  } catch (error) {
-    console.error('Get audit logs error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    const [auditLogs, total] = await Promise.all([
+      prisma.auditLog.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit, sortBy, sortOrder }
+          ),
+          sortBy,
+          sortOrder,
+          'timestamp'
+        )
+      ),
+      prisma.auditLog.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(auditLogs, total, { page, limit, sortBy, sortOrder }));
+  })
+);
 
 /**
  * POST /api/compliance/audit-logs
  * Create an audit log entry
  * Note: This is typically called automatically by the system, but can be used manually
  */
-router.post('/audit-logs', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/audit-logs',
+  validate(
+    z.object({
+      action: z.string().min(1, 'Action is required'),
+      entityType: z.string().min(1, 'Entity type is required'),
+      entityId: z.string().optional(),
+      details: z.any().optional(),
+      ipAddress: z.string().optional(),
+      userAgent: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { action, entityType, entityId, details, ipAddress, userAgent } = req.body;
-
-    if (!action || !entityType) {
-      res.status(400).json({ error: 'Missing required fields: action, entityType' });
-      return;
-    }
+    const { action, entityType, entityId, details, ipAddress, userAgent } = req.validated!;
 
     const auditLog = await prisma.auditLog.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         action,
         entityType,
         entityId: entityId || null,
@@ -120,11 +174,8 @@ router.post('/audit-logs', async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ auditLog });
-  } catch (error) {
-    console.error('Create audit log error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 // ==================== AML Endpoints ====================
 
@@ -132,20 +183,23 @@ router.post('/audit-logs', async (req: Request, res: Response) => {
  * POST /api/compliance/log-attempt
  * Log a suspicious attempt that didn't result in a transaction
  */
-router.post('/log-attempt', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/log-attempt',
+  validate(
+    z.object({
+      memberId: z.string().min(1, 'Member ID is required'),
+      details: z.any(),
+      notes: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId, details, notes } = req.body;
-
-    if (!memberId || !details) {
-      res.status(400).json({ error: 'Missing required fields: memberId, details' });
-      return;
-    }
+    const { memberId, details, notes } = req.validated!;
 
     const amlFlag = await prisma.amlFlag.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         type: 'SUSPICIOUS_ATTEMPT',
         details,
         isAttempted: true,
@@ -157,7 +211,7 @@ router.post('/log-attempt', async (req: Request, res: Response) => {
     const existingCase = await prisma.amlCase.findFirst({
       where: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         type: 'SUSPICIOUS_ATTEMPT',
         status: 'open',
       },
@@ -167,7 +221,7 @@ router.post('/log-attempt', async (req: Request, res: Response) => {
       await prisma.amlCase.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           type: 'SUSPICIOUS_ATTEMPT',
           status: 'open',
           notes: notes || 'Suspicious attempt logged',
@@ -177,27 +231,34 @@ router.post('/log-attempt', async (req: Request, res: Response) => {
     }
 
     res.status(201).json({ amlFlag });
-  } catch (error) {
-    console.error('Log attempt error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/compliance/aml/ttr
- * Get TTR queue
+ * Get TTR queue (with pagination)
  */
-router.get('/aml/ttr', requireRole('ComplianceOfficer'), async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/aml/ttr',
+  requireRole('ComplianceOfficer'),
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      status: z.string().optional(),
+      startDate: z.string().datetime().or(z.date()).optional(),
+      endDate: z.string().datetime().or(z.date()).optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { status, startDate, endDate } = req.query;
+    const { page, limit, sortBy, sortOrder, status, startDate, endDate, search } =
+      req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (status) {
-      where.status = status as string;
+      where.status = status;
     }
 
     if (startDate || endDate) {
@@ -210,53 +271,88 @@ router.get('/aml/ttr', requireRole('ComplianceOfficer'), async (req: Request, re
       }
     }
 
-    const ttrReports = await prisma.amlTtrReport.findMany({
-      where,
-      include: {
-        member: {
-          include: {
-            kyc: true,
+    if (search) {
+      where.OR = [
+        { member: { memberNumber: { contains: search, mode: 'insensitive' as const } } },
+        { member: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { member: { lastName: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
+
+    const [ttrReports, total] = await Promise.all([
+      prisma.amlTtrReport.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                member: {
+                  include: {
+                    kyc: true,
+                  },
+                },
+              },
+            },
+            { page, limit, sortBy, sortOrder }
+          ),
+          sortBy,
+          sortOrder,
+          'forDate'
+        )
+      ),
+      prisma.amlTtrReport.count({ where }),
+    ]);
+
+    // Batch fetch SOF declarations for all TTRs to avoid N+1 queries
+    const memberIds = [...new Set(ttrReports.map((ttr) => ttr.memberId))];
+    const dateRanges = ttrReports.map((ttr) => ({
+      memberId: ttr.memberId,
+      startDate: ttr.forDate,
+      endDate: new Date(ttr.forDate),
+    }));
+
+    // Fetch all SOF declarations for these members in the date ranges
+    const allSofDeclarations = await prisma.sourceOfFundsDeclaration.findMany({
+      where: {
+        memberId: { in: memberIds },
+        cooperativeId: tenantId!,
+        OR: dateRanges.map((range) => ({
+          memberId: range.memberId,
+          createdAt: {
+            gte: range.startDate,
+            lt: new Date(range.endDate.getTime() + 24 * 60 * 60 * 1000), // Add 1 day
           },
-        },
+        })),
       },
       orderBy: {
-        forDate: 'desc',
+        createdAt: 'desc',
       },
     });
 
-    // Fetch SOF declarations for each TTR (by member and date range)
-    const reportsWithSof = await Promise.all(
-      ttrReports.map(async (ttr) => {
-        const nextDay = new Date(ttr.forDate);
-        nextDay.setDate(nextDay.getDate() + 1);
+    // Create a map of memberId + date -> SOF declaration
+    const sofMap = new Map<string, (typeof allSofDeclarations)[0]>();
+    for (const sof of allSofDeclarations) {
+      const key = `${sof.memberId}-${sof.createdAt.toISOString().split('T')[0]}`;
+      if (!sofMap.has(key)) {
+        sofMap.set(key, sof);
+      }
+    }
 
-        const sof = await prisma.sourceOfFundsDeclaration.findFirst({
-          where: {
-            memberId: ttr.memberId,
-            cooperativeId: tenantId,
-            createdAt: {
-              gte: ttr.forDate,
-              lt: nextDay,
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
+    // Map TTRs with their SOF declarations
+    const reportsWithSof = ttrReports.map((ttr) => {
+      const ttrDate = ttr.forDate.toISOString().split('T')[0];
+      const key = `${ttr.memberId}-${ttrDate}`;
+      const sof = sofMap.get(key) || null;
 
-        return {
-          ...ttr,
-          sourceOfFunds: sof || null,
-        };
-      })
-    );
+      return {
+        ...ttr,
+        sourceOfFunds: sof,
+      };
+    });
 
-    res.json({ ttrReports: reportsWithSof, count: reportsWithSof.length });
-  } catch (error) {
-    console.error('Get TTR reports error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    res.json(createPaginatedResponse(reportsWithSof, total, { page, limit, sortBy, sortOrder }));
+  })
+);
 
 /**
  * POST /api/compliance/aml/ttr/:id/generate-xml
@@ -348,82 +444,101 @@ router.put(
 
 /**
  * GET /api/compliance/aml/cases
- * Get AML cases (with sensitive data access logging)
+ * Get AML cases (with pagination and sensitive data access logging)
  */
 router.get(
   '/aml/cases',
   requireRole('ComplianceOfficer'),
   logSensitiveDataAccess('GET /api/compliance/aml/cases'),
-  async (req: Request, res: Response) => {
-    try {
-      const tenantId = req.user!.tenantId;
-      const { status, type } = req.query;
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      status: z.string().optional(),
+      type: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { page, limit, sortBy, sortOrder, status, type, search } = req.validatedQuery!;
 
-      const where: any = {
-        cooperativeId: tenantId,
-      };
+    const where: any = {
+      cooperativeId: tenantId!,
+    };
 
-      if (status) {
-        where.status = status as string;
-      }
-
-      if (type) {
-        where.type = type as string;
-      }
-
-      const cases = await prisma.amlCase.findMany({
-        where,
-        include: {
-          member: {
-            include: {
-              kyc: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
-
-      res.json({ cases, count: cases.length });
-    } catch (error) {
-      console.error('Get AML cases error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+    if (status) {
+      where.status = status;
     }
-  }
+
+    if (type) {
+      where.type = type;
+    }
+
+    if (search) {
+      where.OR = [
+        { member: { memberNumber: { contains: search, mode: 'insensitive' as const } } },
+        { member: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { member: { lastName: { contains: search, mode: 'insensitive' as const } } },
+        { notes: { contains: search, mode: 'insensitive' as const } },
+      ];
+    }
+
+    const [cases, total] = await Promise.all([
+      prisma.amlCase.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                member: {
+                  include: {
+                    kyc: true,
+                  },
+                },
+              },
+            },
+            { page, limit, sortBy, sortOrder }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.amlCase.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(cases, total, { page, limit, sortBy, sortOrder }));
+  })
 );
 
 /**
  * POST /api/compliance/aml/cases
  * Create AML case
  */
-router.post('/aml/cases', requireRole('ComplianceOfficer'), async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/aml/cases',
+  requireRole('ComplianceOfficer'),
+  validate(createAmlCaseSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId, type, notes } = req.body;
-
-    if (!memberId || !type) {
-      res.status(400).json({ error: 'Missing required fields: memberId, type' });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
       return;
     }
+    const { memberId, caseType, description } = req.validated!;
 
     const amlCase = await prisma.amlCase.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
-        type,
+        cooperativeId: tenantId!,
+        type: caseType,
         status: 'open',
-        notes: notes || null,
+        notes: description || null,
         isConfidential: true,
       },
     });
 
     res.status(201).json({ amlCase });
-  } catch (error) {
-    console.error('Create AML case error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * PUT /api/compliance/aml/cases/:id
@@ -432,27 +547,27 @@ router.post('/aml/cases', requireRole('ComplianceOfficer'), async (req: Request,
 router.put(
   '/aml/cases/:id',
   requireRole('ComplianceOfficer'),
-  async (req: Request, res: Response) => {
-    try {
-      const { id } = req.params;
-      const { status, notes } = req.body;
+  validateAll({
+    params: idSchema,
+    body: updateAmlCaseStatusSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.validatedParams!;
+    const { status, remarks } = req.validated!;
 
-      const updateData: any = {};
-      if (status) updateData.status = status;
-      if (notes !== undefined) updateData.notes = notes;
-      if (status === 'closed') updateData.closedAt = new Date();
+    const updateData: any = {
+      status,
+      notes: remarks,
+    };
+    if (status === 'CLOSED') updateData.closedAt = new Date();
 
-      const amlCase = await prisma.amlCase.update({
-        where: { id },
-        data: updateData,
-      });
+    const amlCase = await prisma.amlCase.update({
+      where: { id },
+      data: updateData,
+    });
 
-      res.json({ amlCase });
-    } catch (error) {
-      console.error('Update AML case error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  }
+    res.json({ amlCase });
+  })
 );
 
 /**
@@ -499,7 +614,7 @@ router.post(
       const whitelisted = await prisma.whitelistedMatch.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           sanctionListId,
           sanctionListType,
           reason,
@@ -525,7 +640,11 @@ router.post(
   async (req: Request, res: Response) => {
     try {
       const { memberId } = req.params;
-      const tenantId = req.user!.tenantId;
+      const tenantId = req.user!.tenantId || req.currentCooperativeId;
+      if (!tenantId) {
+        res.status(400).json({ error: 'Tenant ID is required' });
+        return;
+      }
 
       const { matches } = await screenMember(memberId, tenantId);
 
@@ -550,7 +669,7 @@ router.get(
       const { expired, pepOnly } = req.query;
 
       const where: any = {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         isActive: true,
       };
 
@@ -636,6 +755,10 @@ router.post(
       }
 
       const tenantId = req.user!.tenantId;
+      if (!tenantId) {
+        res.status(403).json({ error: 'Tenant context required' });
+        return;
+      }
 
       // Save file to disk
       const fileInfo = await saveUploadedFile(req.file, 'sof', tenantId);
@@ -657,17 +780,19 @@ router.post(
  * POST /api/compliance/aml/source-of-funds
  * Create or update source of funds declaration
  */
-router.post('/aml/source-of-funds', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/aml/source-of-funds',
+  validate(
+    z.object({
+      transactionId: z.string().min(1, 'Transaction ID is required'),
+      memberId: z.string().min(1, 'Member ID is required'),
+      declaredText: z.string().min(1, 'Declared text is required'),
+      attachmentPath: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { transactionId, memberId, declaredText, attachmentPath } = req.body;
-
-    if (!transactionId || !memberId || !declaredText) {
-      res
-        .status(400)
-        .json({ error: 'Missing required fields: transactionId, memberId, declaredText' });
-      return;
-    }
+    const { transactionId, memberId, declaredText, attachmentPath } = req.validated!;
 
     // Check if SOF already exists
     const existing = await prisma.sourceOfFundsDeclaration.findFirst({
@@ -701,7 +826,7 @@ router.post('/aml/source-of-funds', async (req: Request, res: Response) => {
         data: {
           transactionId,
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           declaredText,
           attachmentPath: attachmentPath || null,
         },
@@ -709,11 +834,8 @@ router.post('/aml/source-of-funds', async (req: Request, res: Response) => {
     }
 
     res.status(201).json({ sourceOfFunds: sof });
-  } catch (error) {
-    console.error('Create SOF declaration error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/compliance/aml/risk-report
@@ -735,7 +857,7 @@ router.get(
       // Filter members created during the report year
       const members = await prisma.member.findMany({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           isActive: true,
           createdAt: {
             gte: startDate, // Members created on or after January 1st of the report year

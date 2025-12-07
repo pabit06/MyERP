@@ -1,9 +1,17 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
 import { isModuleEnabled } from '../middleware/module.js';
 import { ShareService } from '../services/share.service.js';
+import { validate, validateParams, validateQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { csrfProtection } from '../middleware/csrf.js';
+import { createAuditLog, AuditAction } from '../lib/audit-log.js';
+import { issueSharesSchema, returnSharesSchema, issueBonusSharesSchema } from '@myerp/shared-types';
+import { paginationWithSearchSchema } from '../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 
 const router: Router = Router();
 
@@ -16,24 +24,29 @@ router.use(isModuleEnabled('cbs'));
  * GET /api/shares/dashboard
  * Get summary statistics for shares
  */
-router.get('/dashboard', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/dashboard',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
 
     const [totalAccounts, totalKitta, totalAmount, recentTransactions] = await Promise.all([
       prisma.shareAccount.count({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
       }),
       prisma.shareAccount.aggregate({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         _sum: { totalKitta: true },
       }),
       prisma.shareAccount.aggregate({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         _sum: { totalAmount: true },
       }),
       prisma.shareTransaction.findMany({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         take: 10,
         orderBy: { date: 'desc' },
         include: {
@@ -55,28 +68,41 @@ router.get('/dashboard', async (req: Request, res: Response) => {
       totalMembers: totalAccounts,
       recentTransactions,
     });
-  } catch (error) {
-    console.error('Get share dashboard error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/shares/accounts
  * Get all share accounts for the cooperative (replaces /ledgers)
  * Also creates share accounts for approved members who don't have them yet
+ * Supports pagination, search, and filtering
  */
-router.get('/accounts', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/accounts',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      memberId: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId } = req.query;
+    const { page, limit, sortBy, sortOrder, memberId, search } = req.validatedQuery!;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
-      where.memberId = memberId as string;
+      where.memberId = memberId;
+    }
+
+    if (search) {
+      where.OR = [
+        { certificateNo: { contains: search, mode: 'insensitive' as const } },
+        { member: { memberNumber: { contains: search, mode: 'insensitive' as const } } },
+        { member: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { member: { lastName: { contains: search, mode: 'insensitive' as const } } },
+      ];
     }
 
     // Find approved members who don't have share accounts yet
@@ -84,7 +110,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
     // Get all active members with member numbers
     const allActiveMembers = await prisma.member.findMany({
       where: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         workflowStatus: 'active',
         isActive: true,
         memberNumber: { not: null },
@@ -96,7 +122,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
 
     // Get all memberIds that already have share accounts
     const membersWithAccounts = await prisma.shareAccount.findMany({
-      where: { cooperativeId: tenantId },
+      where: { cooperativeId: tenantId! },
       select: { memberId: true },
     });
     const memberIdsWithAccounts = new Set(membersWithAccounts.map((acc) => acc.memberId));
@@ -109,11 +135,11 @@ router.get('/accounts', async (req: Request, res: Response) => {
     // Create share accounts for approved members who don't have them
     if (approvedMembersWithoutAccounts.length > 0) {
       const { getCurrentSharePrice } = await import('../services/accounting.js');
-      const unitPrice = await getCurrentSharePrice(tenantId, 100);
+      const unitPrice = await getCurrentSharePrice(tenantId!, 100);
 
       // Get the latest certificate number before the loop to ensure sequential numbering
       const latestCert = await prisma.shareAccount.findFirst({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         orderBy: { createdAt: 'desc' },
         select: { certificateNo: true },
       });
@@ -144,7 +170,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
               // Always get the current highest certificate number to keep nextCertNumber in sync
               // This ensures we don't reuse certificate numbers even if account creation is skipped
               const currentLatest = await tx.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -163,7 +189,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
 
                 await tx.shareAccount.create({
                   data: {
-                    cooperativeId: tenantId,
+                    cooperativeId: tenantId!,
                     memberId: member.id,
                     certificateNo: certNo,
                     unitPrice,
@@ -185,7 +211,7 @@ router.get('/accounts', async (req: Request, res: Response) => {
             // Query the latest to get the most up-to-date certificate number
             try {
               const latestCert = await prisma.shareAccount.findFirst({
-                where: { cooperativeId: tenantId },
+                where: { cooperativeId: tenantId! },
                 orderBy: { createdAt: 'desc' },
                 select: { certificateNo: true },
               });
@@ -204,51 +230,64 @@ router.get('/accounts', async (req: Request, res: Response) => {
       }
     }
 
-    const accounts = await prisma.shareAccount.findMany({
-      where,
-      include: {
-        member: {
-          select: {
-            id: true,
-            memberNumber: true,
-            firstName: true,
-            lastName: true,
-            fullName: true,
-          },
-        },
-        _count: {
-          select: {
-            transactions: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const [accounts, total] = await Promise.all([
+      prisma.shareAccount.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                member: {
+                  select: {
+                    id: true,
+                    memberNumber: true,
+                    firstName: true,
+                    lastName: true,
+                    fullName: true,
+                  },
+                },
+                _count: {
+                  select: {
+                    transactions: true,
+                  },
+                },
+              },
+            },
+            { page, limit, sortBy, sortOrder }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.shareAccount.count({ where }),
+    ]);
 
-    res.json({ accounts });
-  } catch (error) {
-    console.error('Get share accounts error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    res.json(createPaginatedResponse(accounts, total, { page, limit, sortBy, sortOrder }));
+  })
+);
 
 /**
  * GET /api/shares/accounts/:memberId
  * Get share account for a specific member
  */
-router.get('/accounts/:memberId', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/accounts/:memberId',
+  validateParams(z.object({ memberId: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId } = req.params;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId } = req.validatedParams!;
 
     // Verify member belongs to cooperative
     const member = await prisma.member.findUnique({
       where: { id: memberId },
     });
 
-    if (!member || member.cooperativeId !== tenantId) {
+    if (!member || member.cooperativeId !== tenantId!) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -276,14 +315,14 @@ router.get('/accounts/:memberId', async (req: Request, res: Response) => {
     // Create account if it doesn't exist
     if (!account) {
       const count = await prisma.shareAccount.count({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
       });
       const certNo = `CERT-${String(count + 1).padStart(6, '0')}`;
 
       account = await prisma.shareAccount.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           certificateNo: certNo,
           totalKitta: 0,
           unitPrice: 100,
@@ -299,33 +338,40 @@ router.get('/accounts/:memberId', async (req: Request, res: Response) => {
               fullName: true,
             },
           },
-          transactions: [],
+          transactions: {
+            orderBy: {
+              date: 'desc',
+            },
+          },
         },
       });
     }
 
     res.json({ account });
-  } catch (error) {
-    console.error('Get share account error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/shares/statements/:memberId
  * Get member's share statement
  */
-router.get('/statements/:memberId', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/statements/:memberId',
+  validateParams(z.object({ memberId: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { memberId } = req.params;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { memberId } = req.validatedParams!;
 
     // Verify member belongs to cooperative
     const member = await prisma.member.findUnique({
       where: { id: memberId },
     });
 
-    if (!member || member.cooperativeId !== tenantId) {
+    if (!member || member.cooperativeId !== tenantId!) {
       res.status(404).json({ error: 'Member not found' });
       return;
     }
@@ -353,14 +399,14 @@ router.get('/statements/:memberId', async (req: Request, res: Response) => {
     // Create account if it doesn't exist
     if (!account) {
       const count = await prisma.shareAccount.count({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
       });
       const certNo = `CERT-${String(count + 1).padStart(6, '0')}`;
 
-      account = await prisma.shareAccount.create({
+      const newAccount = await prisma.shareAccount.create({
         data: {
           memberId,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           certificateNo: certNo,
           totalKitta: 0,
           unitPrice: 100,
@@ -376,84 +422,110 @@ router.get('/statements/:memberId', async (req: Request, res: Response) => {
               fullName: true,
             },
           },
-          transactions: [],
+          transactions: {
+            orderBy: {
+              date: 'desc',
+            },
+          },
         },
       });
+      account = newAccount;
     }
 
     res.json({ statement: { account } });
-  } catch (error) {
-    console.error('Get share statement error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/shares/certificates
- * List all members with certificates ready to print
+ * List all members with certificates ready to print (with pagination)
  */
-router.get('/certificates', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/certificates',
+  validateQuery(paginationWithSearchSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { page, limit, sortBy, sortOrder, search } = req.validatedQuery!;
 
-    const accounts = await prisma.shareAccount.findMany({
-      where: {
-        cooperativeId: tenantId,
-        totalKitta: { gt: 0 }, // Only accounts with shares
-      },
-      include: {
-        member: {
-          select: {
-            id: true,
-            memberNumber: true,
-            firstName: true,
-            lastName: true,
-            fullName: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const where: any = {
+      cooperativeId: tenantId!,
+      totalKitta: { gt: 0 }, // Only accounts with shares
+    };
 
-    res.json({ certificates: accounts });
-  } catch (error) {
-    console.error('Get certificates error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+    if (search) {
+      where.OR = [
+        { certificateNo: { contains: search, mode: 'insensitive' as const } },
+        { member: { memberNumber: { contains: search, mode: 'insensitive' as const } } },
+        { member: { firstName: { contains: search, mode: 'insensitive' as const } } },
+        { member: { lastName: { contains: search, mode: 'insensitive' as const } } },
+      ];
+    }
+
+    const [accounts, total] = await Promise.all([
+      prisma.shareAccount.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                member: {
+                  select: {
+                    id: true,
+                    memberNumber: true,
+                    firstName: true,
+                    lastName: true,
+                    fullName: true,
+                  },
+                },
+              },
+            },
+            { page, limit, sortBy, sortOrder }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.shareAccount.count({ where }),
+    ]);
+
+    res.json(createPaginatedResponse(accounts, total, { page, limit, sortBy, sortOrder }));
+  })
+);
 
 /**
  * POST /api/shares/issue
  * Issue shares (purchase) with payment mode
  */
-router.post('/issue', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/issue',
+  validate(
+    issueSharesSchema.extend({
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const userId = req.user!.userId;
     const { memberId, kitta, date, paymentMode, bankAccountId, savingAccountId, remarks } =
-      req.body;
-
-    if (!memberId || !kitta || !date || !paymentMode) {
-      res.status(400).json({
-        error: 'Missing required fields: memberId, kitta, date, paymentMode',
-      });
-      return;
-    }
-
-    if (!['CASH', 'BANK', 'SAVING'].includes(paymentMode)) {
-      res.status(400).json({
-        error: 'Invalid payment mode. Must be: CASH, BANK, or SAVING',
-      });
-      return;
-    }
+      req.validated!;
 
     const transaction = await ShareService.issueShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
-      kitta: parseInt(kitta),
-      date: new Date(date),
+      kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      date: new Date(date as string),
       paymentMode,
       bankAccountId,
       savingAccountId,
@@ -465,146 +537,213 @@ router.post('/issue', async (req: Request, res: Response) => {
       message: 'Shares issued successfully',
       transaction,
     });
-  } catch (error: any) {
-    console.error('Issue shares error:', error);
-    res.status(400).json({ error: error.message || 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/shares/return
  * Return shares (surrender)
  */
-router.post('/return', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/return',
+  csrfProtection,
+  validate(
+    returnSharesSchema.extend({
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
-    const { memberId, kitta, date, paymentMode, bankAccountId, remarks } = req.body;
-
-    if (!memberId || !kitta || !date || !paymentMode) {
-      res.status(400).json({
-        error: 'Missing required fields: memberId, kitta, date, paymentMode',
-      });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-
-    if (!['CASH', 'BANK'].includes(paymentMode)) {
-      res.status(400).json({
-        error: 'Invalid payment mode. Must be: CASH or BANK',
-      });
-      return;
-    }
+    const userId = req.user!.userId;
+    const { memberId, kitta, date, paymentMode, bankAccountId, remarks } = req.validated!;
 
     const transaction = await ShareService.returnShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
-      kitta: parseInt(kitta),
-      date: new Date(date),
+      kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      date: new Date(date as string),
       paymentMode,
       bankAccountId,
       remarks,
       userId,
     });
 
+    // Audit log
+    const auditTenantId = tenantId!;
+    await createAuditLog({
+      action: AuditAction.TRANSACTION_CREATED,
+      userId,
+      tenantId: auditTenantId,
+      resourceType: 'ShareTransaction',
+      resourceId: transaction.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: {
+        action: 'return',
+        memberId,
+        kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+        amount: transaction.amount?.toString(),
+      },
+    });
+
     res.status(201).json({
       message: 'Shares returned successfully',
       transaction,
     });
-  } catch (error: any) {
-    console.error('Return shares error:', error);
-    res.status(400).json({ error: error.message || 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/shares/transfer
  * Transfer shares between members
  */
-router.post('/transfer', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/transfer',
+  csrfProtection,
+  validate(
+    z
+      .object({
+        fromMemberId: z.string().min(1),
+        toMemberId: z.string().min(1),
+        kitta: z.union([
+          z.number().int().positive(),
+          z.string().transform((val) => parseInt(val, 10)),
+        ]),
+        date: z.string().datetime().or(z.date()),
+        remarks: z.string().optional(),
+      })
+      .refine((data) => data.fromMemberId !== data.toMemberId, {
+        message: 'From and to member IDs must be different',
+        path: ['toMemberId'],
+      })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
-    const { fromMemberId, toMemberId, kitta, date, remarks } = req.body;
-
-    if (!fromMemberId || !toMemberId || !kitta || !date) {
-      res.status(400).json({
-        error: 'Missing required fields: fromMemberId, toMemberId, kitta, date',
-      });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-
-    if (fromMemberId === toMemberId) {
-      res.status(400).json({ error: 'Cannot transfer shares to the same member' });
-      return;
-    }
+    const userId = req.user!.userId;
+    const { fromMemberId, toMemberId, kitta, date, remarks } = req.validated!;
 
     const result = await ShareService.transferShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       fromMemberId,
       toMemberId,
-      kitta: parseInt(kitta),
-      date: new Date(date),
+      kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      date: new Date(date as string),
       remarks,
       userId,
+    });
+
+    // Audit log
+    const auditTenantId = tenantId!;
+    await createAuditLog({
+      action: AuditAction.TRANSACTION_CREATED,
+      userId,
+      tenantId: auditTenantId,
+      resourceType: 'ShareTransaction',
+      resourceId: result.fromTransaction?.id || result.toTransaction?.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: {
+        action: 'transfer',
+        fromMemberId,
+        toMemberId,
+        kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      },
     });
 
     res.status(201).json({
       message: 'Shares transferred successfully',
       ...result,
     });
-  } catch (error: any) {
-    console.error('Transfer shares error:', error);
-    res.status(400).json({ error: error.message || 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/shares/bonus
  * Issue bonus shares
  */
-router.post('/bonus', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/bonus',
+  csrfProtection,
+  validate(
+    issueBonusSharesSchema.extend({
+      kitta: z.union([
+        z.number().int().positive(),
+        z.string().transform((val) => parseInt(val, 10)),
+      ]),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const userId = req.user!.id;
-    const { memberId, kitta, date, remarks } = req.body;
-
-    if (!memberId || !kitta || !date) {
-      res.status(400).json({
-        error: 'Missing required fields: memberId, kitta, date',
-      });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
       return;
     }
+    const userId = req.user!.userId;
+    const { memberId, kitta, date, remarks } = req.validated!;
 
     const transaction = await ShareService.issueBonusShares({
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
       memberId,
-      kitta: parseInt(kitta),
-      date: new Date(date),
+      kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      date: new Date(date as string),
       remarks,
       userId,
+    });
+
+    // Audit log
+    const auditTenantId = tenantId!;
+    await createAuditLog({
+      action: AuditAction.TRANSACTION_CREATED,
+      userId,
+      tenantId: auditTenantId,
+      resourceType: 'ShareTransaction',
+      resourceId: transaction.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: {
+        action: 'bonus_issue',
+        memberId,
+        kitta: typeof kitta === 'number' ? kitta : parseInt(kitta, 10),
+      },
     });
 
     res.status(201).json({
       message: 'Bonus shares issued successfully',
       transaction,
     });
-  } catch (error: any) {
-    console.error('Issue bonus shares error:', error);
-    res.status(400).json({ error: error.message || 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/shares/transactions
  * Get all share transactions for the cooperative
  */
-router.get('/transactions', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/transactions',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { memberId, type } = req.query;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -640,24 +779,26 @@ router.get('/transactions', async (req: Request, res: Response) => {
     });
 
     res.json({ transactions });
-  } catch (error) {
-    console.error('Get share transactions error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 // Legacy endpoints for backward compatibility
 /**
  * GET /api/shares/ledgers
  * @deprecated Use /api/shares/accounts instead
  */
-router.get('/ledgers', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/ledgers',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { memberId } = req.query;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -700,10 +841,7 @@ router.get('/ledgers', async (req: Request, res: Response) => {
     }));
 
     res.json({ ledgers });
-  } catch (error) {
-    console.error('Get share ledgers error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 export default router;

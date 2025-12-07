@@ -32,7 +32,7 @@ function getTransactionDate(dayBookDate: Date): Date {
  * Helper function to create journal entry within a transaction
  */
 async function createJournalEntryInTx(
-  tx: Prisma.TransactionClient,
+  tx: any, // Using any to support extended Prisma client transaction
   cooperativeId: string,
   description: string,
   entries: Array<{ accountId: string; debit: number; credit: number }>,
@@ -71,12 +71,43 @@ async function createJournalEntryInTx(
     },
   });
 
+  // Batch fetch all accounts and latest balances to avoid N+1 queries
+  const accountIds = entries.map((entry) => entry.accountId);
+  const [accounts, latestLedgers] = await Promise.all([
+    tx.chartOfAccounts.findMany({
+      where: { id: { in: accountIds } },
+      select: { id: true, type: true },
+    }),
+    // Get latest ledger entry for each account
+    tx.ledger.findMany({
+      where: {
+        accountId: { in: accountIds },
+        cooperativeId,
+      },
+      select: {
+        accountId: true,
+        balance: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+  ]);
+
+  // Create maps for O(1) lookup
+  const accountMap = new Map(accounts.map((acc: any) => [acc.id, acc]));
+  const balanceMap = new Map<string, number>();
+  const seenAccounts = new Set<string>();
+  for (const ledger of latestLedgers) {
+    if (!seenAccounts.has(ledger.accountId)) {
+      balanceMap.set(ledger.accountId, Number(ledger.balance));
+      seenAccounts.add(ledger.accountId);
+    }
+  }
+
   // Create ledger entries with calculated balances
   const ledgerEntries = await Promise.all(
     entries.map(async (entry) => {
-      const account = await tx.chartOfAccounts.findUnique({
-        where: { id: entry.accountId },
-      });
+      const account = accountMap.get(entry.accountId) as { id: string; type: string } | undefined;
 
       if (!account) {
         throw new Error(`Account not found: ${entry.accountId}`);
@@ -84,17 +115,10 @@ async function createJournalEntryInTx(
 
       // Calculate new balance based on account type
       const isDebitNormal = account.type === 'asset' || account.type === 'expense';
-      const balanceChange = isDebitNormal
-        ? entry.debit - entry.credit
-        : entry.credit - entry.debit;
+      const balanceChange = isDebitNormal ? entry.debit - entry.credit : entry.credit - entry.debit;
 
-      // Get current balance from latest ledger entry for this account
-      const latestLedger = await tx.ledger.findFirst({
-        where: { accountId: entry.accountId },
-        orderBy: { createdAt: 'desc' },
-      });
-
-      const currentBalance = latestLedger ? Number(latestLedger.balance) : 0;
+      // Get current balance from map (O(1) lookup)
+      const currentBalance = balanceMap.get(entry.accountId) || 0;
       const newBalance = currentBalance + balanceChange;
 
       return tx.ledger.create({
@@ -129,11 +153,7 @@ export async function getActiveDay(cooperativeId: string) {
  * Start a new day (Day Begin)
  * Validates previous day is CLOSED and creates new DayBook entry
  */
-export async function startDay(
-  cooperativeId: string,
-  date: Date,
-  userId: string
-) {
+export async function startDay(cooperativeId: string, date: Date, userId: string) {
   // Validate previous day is CLOSED
   const previousDay = await prisma.dayBook.findFirst({
     where: {
@@ -246,7 +266,9 @@ export async function previewSettlement(
   });
 
   if (!tellerAccount) {
-    throw new Error(`Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`);
+    throw new Error(
+      `Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`
+    );
   }
 
   // Get current balance
@@ -432,7 +454,9 @@ export async function settleTeller(
     });
 
     if (!tellerAccount) {
-      throw new Error(`Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`);
+      throw new Error(
+        `Teller cash account not found for user ${tellerId}. Please ensure the teller is mapped to a cash account.`
+      );
     }
 
     // Get current balance
@@ -637,7 +661,7 @@ export async function unsettleTeller(
           isActive: true,
         },
       });
-      
+
       if (legacyAccounts.length > 0) {
         tellerAccount = legacyAccounts[0];
       }
@@ -799,7 +823,7 @@ export async function closeDay(cooperativeId: string, userId: string) {
       const currentState = await tx.dayBook.findUnique({
         where: { id: activeDay.id },
       });
-      
+
       if (currentState?.status === 'EOD_IN_PROGRESS') {
         throw new Error('Day End is already in progress by another process.');
       } else if (currentState?.status === 'CLOSED') {
@@ -906,9 +930,9 @@ export async function closeDay(cooperativeId: string, userId: string) {
  */
 export async function forceCloseDay(
   cooperativeId: string,
-  userId: string,
-  reason: string,
-  approverId: string
+  _userId: string,
+  _reason: string,
+  _approverId: string
 ) {
   return await prisma.$transaction(async (tx) => {
     const activeDay = await tx.dayBook.findFirst({
@@ -972,7 +996,7 @@ export async function forceCloseDay(
         // If balance is positive: Debit Suspense, Credit Teller (to bring teller to 0)
         // If balance is negative: Credit Suspense, Debit Teller (to bring teller to 0)
         const absBalance = Math.abs(balance);
-        
+
         if (balance > 0) {
           // Positive balance: Debit Suspense, Credit Teller
           await createJournalEntryInTx(
@@ -1081,9 +1105,9 @@ export async function forceCloseDay(
  */
 export async function reopenDay(
   cooperativeId: string,
-  userId: string,
-  reason: string,
-  approverId: string
+  _userId: string,
+  _reason: string,
+  _approverId: string
 ) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);

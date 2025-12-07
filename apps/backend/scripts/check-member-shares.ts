@@ -5,9 +5,9 @@ const prisma = new PrismaClient();
 async function checkMemberShares() {
   try {
     const memberId = 'cmiacj9eq0025kmqgi9fow2lv'; // MAHESH SHRESTHA
-    
+
     console.log('🔍 Checking shares for member...\n');
-    
+
     // Get member info
     const member = await prisma.member.findUnique({
       where: { id: memberId },
@@ -95,6 +95,7 @@ async function checkMemberShares() {
     }
 
     // Check share price
+    // @ts-expect-error - setting model may not exist in schema yet
     const sharePriceSetting = await prisma.setting.findFirst({
       where: {
         key: 'share_price',
@@ -119,4 +120,3 @@ checkMemberShares()
     console.error(error);
     process.exit(1);
   });
-

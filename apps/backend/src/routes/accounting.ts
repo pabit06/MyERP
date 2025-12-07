@@ -1,9 +1,18 @@
 import { Router, Request, Response } from 'express';
+import { z } from 'zod';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
 import { accountingController } from '../controllers/AccountingController.js';
 import { AccountingService } from '../services/accounting.js';
 import { prisma } from '../lib/prisma.js';
+import { validate, validateAll, validateParams, validateQuery } from '../middleware/validate.js';
+import { asyncHandler } from '../middleware/error-handler.js';
+import { csrfProtection } from '../middleware/csrf.js';
+import { createAuditLog, AuditAction } from '../lib/audit-log.js';
+import { paginationSchema } from '../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
+import { createChartOfAccountsSchema, updateChartOfAccountsSchema } from '@myerp/shared-types';
+import { idSchema } from '../validators/common.js';
 
 const router: Router = Router();
 
@@ -14,43 +23,98 @@ router.use(requireTenant);
  * POST /api/accounting/seed
  * Trigger the default NFRS Chart of Accounts seeding
  */
-router.post('/seed', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/seed',
+  csrfProtection,
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-
     if (!tenantId) {
-      return res.status(400).json({ error: 'Cooperative ID is required' });
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
     }
-
     const userId = req.user!.userId;
     const result = await accountingController.seedDefaultAccounts(tenantId, userId);
+
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId: userId || undefined,
+      tenantId,
+      resourceType: 'ChartOfAccounts',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'seed_default_accounts' },
+    });
+
     res.json(result);
-  } catch (error: any) {
-    console.error('Seeding error:', error);
-    res.status(500).json({ error: error.message || 'Failed to seed accounts' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/accounting/accounts
- * Fetch Chart of Accounts (optionally filtered by type)
+ * Fetch Chart of Accounts (with pagination, optionally filtered by type)
  */
-router.get('/accounts', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/accounts',
+  validateQuery(
+    paginationSchema.extend({
+      type: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { type } = req.query;
+    const { page, limit, sortBy, sortOrder, type } = req.validatedQuery!;
 
-    const accounts = await accountingController.getChartOfAccounts(
-      tenantId,
-      type as string | undefined
+    const where: any = {
+      cooperativeId: tenantId,
+      isActive: true,
+    };
+
+    if (type) {
+      where.type = type.toLowerCase();
+    }
+
+    const [accounts, total] = await Promise.all([
+      prisma.chartOfAccounts.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                parent: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    type: true,
+                  },
+                },
+                _count: {
+                  select: { ledgerEntries: true },
+                },
+              },
+            },
+            { page, limit, sortOrder: sortOrder || 'asc', sortBy: sortBy || 'code' }
+          ),
+          sortBy || 'code',
+          sortOrder || 'asc',
+          'code'
+        )
+      ),
+      prisma.chartOfAccounts.count({ where }),
+    ]);
+
+    res.json(
+      createPaginatedResponse(accounts, total, {
+        page,
+        limit,
+        sortOrder: sortOrder || 'asc',
+        sortBy: sortBy || 'code',
+      })
     );
-
-    res.json(accounts);
-  } catch (error) {
-    console.error('Get accounts error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/accounting/accounts
@@ -58,160 +122,215 @@ router.get('/accounts', async (req: Request, res: Response) => {
  * Supports new code structure: BB-GGGGG-SS-SSSSS
  * If code is not provided, it will be auto-generated
  */
-router.post('/accounts', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/accounts',
+  csrfProtection,
+  validate(
+    createChartOfAccountsSchema.extend({
+      code: z.string().min(1).optional(), // Code is optional, can be auto-generated
+      subType: z.string().optional(),
+      branch: z.string().optional(),
+      autoGenerateCode: z.boolean().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { code, name, type, parentId, isGroup, nfrsMap, subType, branch, autoGenerateCode } =
-      req.body;
-
-    if (!name || !type) {
-      return res.status(400).json({ error: 'Name and Type are required' });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
     }
-
     const userId = req.user!.userId;
+    const data = req.validated!;
+
     const account = await accountingController.createAccount(
       {
         cooperativeId: tenantId,
-        code,
-        name,
-        type,
-        parentId,
-        isGroup,
-        nfrsMap,
-        subType,
-        branch,
-        autoGenerateCode,
+        ...data,
       },
       userId
     );
 
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId: userId || undefined,
+      tenantId,
+      resourceType: 'ChartOfAccounts',
+      resourceId: account.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'created', accountCode: account.code, accountName: account.name },
+    });
+
     res.status(201).json(account);
-  } catch (error: any) {
-    console.error('Create account error:', error);
-    res.status(400).json({ error: error.message || 'Failed to create account' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/accounting/accounts/generate-code
  * Generate a new account code automatically
  */
-router.post('/accounts/generate-code', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/accounts/generate-code',
+  validate(
+    z.object({
+      type: z.enum(['asset', 'liability', 'equity', 'revenue', 'expense']),
+      subType: z.string().optional().default('00'),
+      branch: z.string().optional().default('00'),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { type, subType = '00', branch = '00' } = req.body;
-
-    if (!type) {
-      return res.status(400).json({ error: 'Type is required' });
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
     }
+    const { type, subType = '00', branch = '00' } = req.validated!;
 
     const code = await accountingController.generateAccountCode(tenantId, type, subType, branch);
     res.json({ code });
-  } catch (error: any) {
-    console.error('Generate code error:', error);
-    res.status(400).json({ error: error.message || 'Failed to generate account code' });
-  }
-});
+  })
+);
 
 /**
  * PUT /api/accounting/accounts/:id
  * Update an account
  */
-router.put('/accounts/:id', async (req: Request, res: Response) => {
-  try {
+router.put(
+  '/accounts/:id',
+  csrfProtection,
+  validateAll({
+    params: idSchema,
+    body: updateChartOfAccountsSchema,
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
-    const { name, isActive, code, type, parentId, isGroup, nfrsMap } = req.body;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
+    const data = req.validated!;
 
     const userId = req.user!.userId;
-    const account = await accountingController.updateAccount(
-      id,
-      tenantId,
-      {
-        name,
-        isActive,
-        code,
-        type,
-        parentId,
-        isGroup,
-        nfrsMap,
-      },
-      userId
-    );
+    const account = await accountingController.updateAccount(id, tenantId, data, userId);
+
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ChartOfAccounts',
+      resourceId: id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'updated', accountCode: account.code },
+    });
 
     res.json(account);
-  } catch (error: any) {
-    console.error('Update account error:', error);
-    res.status(400).json({ error: error.message || 'Failed to update account' });
-  }
-});
+  })
+);
 
 /**
  * DELETE /api/accounting/accounts/:id
  * Delete an account (only if unused)
  */
-router.delete('/accounts/:id', async (req: Request, res: Response) => {
-  try {
+router.delete(
+  '/accounts/:id',
+  csrfProtection,
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
 
     const userId = req.user!.userId;
     await accountingController.deleteAccount(id, tenantId, userId);
 
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ChartOfAccounts',
+      resourceId: id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'deleted' },
+    });
+
     res.json({ message: 'Account deleted successfully' });
-  } catch (error: any) {
-    console.error('Delete account error:', error);
-    res.status(400).json({ error: error.message || 'Failed to delete account' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/accounting/product-gl-map
  * Create or update Product GL Mapping
  * Maps loan/saving products to their corresponding GL accounts
  */
-router.post('/product-gl-map', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/product-gl-map',
+  csrfProtection,
+  validate(
+    z.object({
+      productType: z.enum(['loan', 'saving']),
+      productId: z.string().min(1, 'Product ID is required'),
+      mapping: z.record(z.any()),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { productType, productId, mapping } = req.body;
-
-    if (!productType || !productId || !mapping) {
-      return res.status(400).json({ error: 'productType, productId, and mapping are required' });
-    }
-
-    if (productType !== 'loan' && productType !== 'saving') {
-      return res.status(400).json({ error: 'productType must be "loan" or "saving"' });
-    }
+    const userId = req.user!.userId;
+    const { productType, productId, mapping } = req.validated!;
 
     const result = await accountingController.setProductGLMap(
-      tenantId,
+      tenantId!,
       productType,
       productId,
       mapping
     );
 
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.CONFIGURATION_CHANGED,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ProductGLMapping',
+      resourceId: productId,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'created_or_updated', productType },
+    });
+
     res.json(result);
-  } catch (error: any) {
-    console.error('Set product GL map error:', error);
-    res.status(400).json({ error: error.message || 'Failed to set product GL mapping' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/accounting/product-gl-map/:productType/:productId
  * Get Product GL Mapping
  */
-router.get('/product-gl-map/:productType/:productId', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/product-gl-map/:productType/:productId',
+  validateParams(
+    z.object({
+      productType: z.enum(['loan', 'saving']),
+      productId: z.string().min(1),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { productType, productId } = req.params;
-
-    if (productType !== 'loan' && productType !== 'saving') {
-      return res.status(400).json({ error: 'productType must be "loan" or "saving"' });
-    }
+    const { productType, productId } = req.validatedParams!;
 
     const mapping = await accountingController.getProductGLMap(
-      tenantId,
+      tenantId!,
       productType as 'loan' | 'saving',
       productId
     );
@@ -221,20 +340,31 @@ router.get('/product-gl-map/:productType/:productId', async (req: Request, res: 
     }
 
     res.json(mapping);
-  } catch (error: any) {
-    console.error('Get product GL map error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get product GL mapping' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/accounting/loan-repayment
  * Create loan repayment journal entry
  * Dr. Cash, Cr. Loan Principal, Cr. Interest Income, Cr. Penalty (optional)
  */
-router.post('/loan-repayment', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/loan-repayment',
+  csrfProtection,
+  validate(
+    z.object({
+      loanProductId: z.string().min(1, 'Loan product ID is required'),
+      memberLoanAccountCode: z.string().min(1, 'Member loan account code is required'),
+      principalAmount: z.number().nonnegative('Principal amount must be non-negative'),
+      interestAmount: z.number().nonnegative('Interest amount must be non-negative'),
+      penaltyAmount: z.number().nonnegative().optional().default(0),
+      cashAccountCode: z.string().optional().default('00-10100-01-00001'),
+      description: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
     const {
       loanProductId,
       memberLoanAccountCode,
@@ -243,76 +373,83 @@ router.post('/loan-repayment', async (req: Request, res: Response) => {
       penaltyAmount = 0,
       cashAccountCode = '00-10100-01-00001',
       description,
-    } = req.body;
+    } = req.validated!;
 
-    if (
-      !loanProductId ||
-      !memberLoanAccountCode ||
-      principalAmount === undefined ||
-      interestAmount === undefined
-    ) {
-      return res.status(400).json({
-        error:
-          'loanProductId, memberLoanAccountCode, principalAmount, and interestAmount are required',
-      });
-    }
-
-    const userId = req.user!.userId;
     const result = await accountingController.loanRepaymentEntry(
-      tenantId,
+      tenantId!,
       loanProductId,
       memberLoanAccountCode,
-      parseFloat(principalAmount),
-      parseFloat(interestAmount),
-      parseFloat(penaltyAmount || 0),
+      principalAmount,
+      interestAmount,
+      penaltyAmount,
       cashAccountCode,
       description,
       userId
     );
 
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.PAYMENT_PROCESSED,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'LoanRepayment',
+      resourceId: result.journalEntry?.id,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: {
+        loanProductId,
+        principalAmount: principalAmount.toString(),
+        interestAmount: interestAmount.toString(),
+        penaltyAmount: penaltyAmount.toString(),
+        journalEntryNumber: result.journalEntry?.entryNumber,
+      },
+    });
+
     res.status(201).json(result);
-  } catch (error: any) {
-    console.error('Loan repayment entry error:', error);
-    res.status(400).json({ error: error.message || 'Failed to create loan repayment entry' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/accounting/net-profit
  * Calculate Net Profit (Total Income - Total Expenses)
  * Query params: startDate (optional), endDate (optional)
  */
-router.get('/net-profit', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/net-profit',
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     const { startDate, endDate } = req.query;
 
     const start = startDate ? new Date(startDate as string) : undefined;
     const end = endDate ? new Date(endDate as string) : undefined;
 
-    const result = await accountingController.calculateNetProfit(tenantId, start, end);
+    const result = await accountingController.calculateNetProfit(tenantId!, start, end);
 
     res.json(result);
-  } catch (error: any) {
-    console.error('Calculate net profit error:', error);
-    res.status(500).json({ error: error.message || 'Failed to calculate net profit' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/accounting/accounts/:id/statement
  * Get ledger statement for a specific account
  */
-router.get('/accounts/:id/statement', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/accounts/:id/statement',
+  validateParams(idSchema),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { id } = req.validatedParams!;
     const { startDate, endDate } = req.query;
 
     const account = await prisma.chartOfAccounts.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         isActive: true,
       },
     });
@@ -367,7 +504,7 @@ router.get('/accounts/:id/statement', async (req: Request, res: Response) => {
       const openingLedger = await prisma.ledger.findFirst({
         where: {
           accountId: id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           createdAt: { lt: new Date(startDate as string) },
         },
         orderBy: { createdAt: 'desc' },
@@ -395,25 +532,24 @@ router.get('/accounts/:id/statement', async (req: Request, res: Response) => {
         balance: Number(entry.balance),
       })),
     });
-  } catch (error: any) {
-    console.error('Get ledger statement error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get ledger statement' });
-  }
-});
+  })
+);
 
 /**
  * GET /api/accounting/journal-entries/:entryNumber
  * Get journal entry details by entry number (e.g., JE-2025-000031)
  */
-router.get('/journal-entries/:entryNumber', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/journal-entries/:entryNumber',
+  validateParams(z.object({ entryNumber: z.string().min(1) })),
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { entryNumber } = req.params;
+    const { entryNumber } = req.validatedParams!;
 
     const journalEntry = await prisma.journalEntry.findFirst({
       where: {
         entryNumber,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
       include: {
         ledgers: {
@@ -439,10 +575,7 @@ router.get('/journal-entries/:entryNumber', async (req: Request, res: Response) 
     }
 
     // Calculate totals
-    const totalDebit = journalEntry.ledgers.reduce(
-      (sum, ledger) => sum + Number(ledger.debit),
-      0
-    );
+    const totalDebit = journalEntry.ledgers.reduce((sum, ledger) => sum + Number(ledger.debit), 0);
     const totalCredit = journalEntry.ledgers.reduce(
       (sum, ledger) => sum + Number(ledger.credit),
       0
@@ -473,31 +606,36 @@ router.get('/journal-entries/:entryNumber', async (req: Request, res: Response) 
         credit: totalCredit,
       },
     });
-  } catch (error: any) {
-    console.error('Get journal entry error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get journal entry' });
-  }
-});
+  })
+);
 
 /**
  * POST /api/accounting/migrate-old-accounts
  * Migrate old account codes to NFRS format
  * Consolidates balances from old accounts (1001, 3001, 4001) to NFRS accounts
  */
-router.post('/migrate-old-accounts', async (req: Request, res: Response) => {
-  try {
+router.post(
+  '/migrate-old-accounts',
+  csrfProtection,
+  asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
+    const userId = req.user!.userId;
+    const result = await AccountingService.migrateOldAccountsToNFRS(tenantId!);
 
-    if (!tenantId) {
-      return res.status(400).json({ error: 'Cooperative ID is required' });
-    }
+    // Audit log
+    await createAuditLog({
+      action: AuditAction.SYSTEM_BACKUP,
+      userId,
+      tenantId: tenantId!,
+      resourceType: 'ChartOfAccounts',
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+      success: true,
+      details: { action: 'migrate_old_accounts' },
+    });
 
-    const result = await AccountingService.migrateOldAccountsToNFRS(tenantId);
     res.json(result);
-  } catch (error: any) {
-    console.error('Migration error:', error);
-    res.status(500).json({ error: error.message || 'Failed to migrate accounts' });
-  }
-});
+  })
+);
 
 export default router;

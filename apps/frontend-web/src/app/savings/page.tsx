@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute';
+import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
@@ -12,6 +12,7 @@ import AccountList from './components/AccountList';
 import ProductList from './components/ProductList';
 import CreateAccountModal from './components/CreateAccountModal';
 import CreateProductModal from './components/CreateProductModal';
+import InterestOperations from './components/InterestOperations';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -44,7 +45,7 @@ interface SavingAccount {
 
 export default function SavingsPage() {
   const { token, hasModule } = useAuth();
-  const [activeTab, setActiveTab] = useState<'products' | 'accounts'>('accounts');
+  const [activeTab, setActiveTab] = useState<'products' | 'accounts' | 'operations'>('accounts');
   const [products, setProducts] = useState<SavingProduct[]>([]);
   const [accounts, setAccounts] = useState<SavingAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,7 +107,11 @@ export default function SavingsPage() {
           name: productData.name,
           description: productData.description,
           interestRate: productData.interestRate,
-          minBalance: productData.minBalance,
+          minimumBalance: productData.minimumBalance,
+          interestPostingFrequency: productData.interestPostingFrequency,
+          interestCalculationMethod: productData.interestCalculationMethod,
+          isTaxApplicable: productData.isTaxApplicable,
+          taxRate: productData.taxRate,
         }),
       });
 
@@ -158,6 +163,8 @@ export default function SavingsPage() {
     memberId: string;
     productId: string;
     accountNumber: string;
+    initialDeposit?: number;
+    nominee?: any;
   }) => {
     if (!token) return;
 
@@ -228,6 +235,8 @@ export default function SavingsPage() {
           </div>
         ) : activeTab === 'accounts' ? (
           <AccountList accounts={accounts} />
+        ) : activeTab === 'operations' ? (
+          <InterestOperations onRefresh={fetchData} />
         ) : (
           <ProductList products={products} />
         )}

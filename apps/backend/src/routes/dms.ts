@@ -36,7 +36,11 @@ const upload = multer({
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Allowed types: PDF, Word, Excel, PowerPoint, Images, Text, CSV.'));
+      cb(
+        new Error(
+          'Invalid file type. Allowed types: PDF, Word, Excel, PowerPoint, Images, Text, CSV.'
+        )
+      );
     }
   },
 });
@@ -53,10 +57,14 @@ router.use(isModuleEnabled('dms'));
 router.get('/member-documents', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const { memberId, documentType } = req.query;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (memberId) {
@@ -122,7 +130,7 @@ router.post('/member-documents', async (req: Request, res: Response) => {
     const document = await prisma.memberDocument.create({
       data: {
         memberId,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         documentType,
         fileName,
         filePath,
@@ -160,7 +168,7 @@ router.get('/official-documents', async (req: Request, res: Response) => {
     const { documentType, category, isPublic } = req.query;
 
     const where: any = {
-      cooperativeId: tenantId,
+      cooperativeId: tenantId!,
     };
 
     if (documentType) {
@@ -220,7 +228,7 @@ router.post('/official-documents', async (req: Request, res: Response) => {
 
     const document = await prisma.officialDocument.create({
       data: {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
         documentType,
         title,
         fileName,
@@ -256,7 +264,7 @@ router.delete('/member-documents/:id', async (req: Request, res: Response) => {
     const document = await prisma.memberDocument.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -293,7 +301,7 @@ router.delete('/official-documents/:id', async (req: Request, res: Response) => 
     const document = await prisma.officialDocument.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -322,135 +330,147 @@ router.delete('/official-documents/:id', async (req: Request, res: Response) => 
  * POST /api/dms/member-documents/upload
  * Upload a member document with file
  */
-router.post('/member-documents/upload', upload.single('file'), async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
-    }
+router.post(
+  '/member-documents/upload',
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
 
-    const { memberId, documentType, description } = req.body;
+      const { memberId, documentType, description } = req.body;
 
-    if (!memberId || !documentType) {
-      res.status(400).json({
-        error: 'Missing required fields: memberId, documentType',
+      if (!memberId || !documentType) {
+        res.status(400).json({
+          error: 'Missing required fields: memberId, documentType',
+        });
+        return;
+      }
+
+      // Verify member belongs to cooperative
+      const member = await prisma.member.findUnique({
+        where: { id: memberId },
       });
-      return;
-    }
 
-    // Verify member belongs to cooperative
-    const member = await prisma.member.findUnique({
-      where: { id: memberId },
-    });
+      if (!member || member.cooperativeId !== tenantId) {
+        res.status(404).json({ error: 'Member not found' });
+        return;
+      }
 
-    if (!member || member.cooperativeId !== tenantId) {
-      res.status(404).json({ error: 'Member not found' });
-      return;
-    }
+      // Save file
+      const fileInfo = await saveUploadedFile(req.file, 'member-documents', tenantId);
 
-    // Save file
-    const fileInfo = await saveUploadedFile(req.file, 'member-documents', tenantId);
-
-    // Create document record
-    const document = await prisma.memberDocument.create({
-      data: {
-        memberId,
-        cooperativeId: tenantId,
-        documentType,
-        fileName: fileInfo.fileName,
-        filePath: fileInfo.filePath,
-        fileSize: fileInfo.fileSize,
-        mimeType: fileInfo.mimeType,
-        description,
-        uploadedBy: req.user!.userId,
-      },
-      include: {
-        member: {
-          select: {
-            id: true,
-            memberNumber: true,
-            firstName: true,
-            lastName: true,
+      // Create document record
+      const document = await prisma.memberDocument.create({
+        data: {
+          memberId,
+          cooperativeId: tenantId!,
+          documentType,
+          fileName: fileInfo.fileName,
+          filePath: fileInfo.filePath,
+          fileSize: fileInfo.fileSize,
+          mimeType: fileInfo.mimeType,
+          description,
+          uploadedBy: req.user!.userId,
+        },
+        include: {
+          member: {
+            select: {
+              id: true,
+              memberNumber: true,
+              firstName: true,
+              lastName: true,
+            },
           },
         },
-      },
-    });
+      });
 
-    res.status(201).json({ document });
-  } catch (error: any) {
-    console.error('Upload member document error:', error);
-    if (error.message && error.message.includes('Invalid file type')) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
+      res.status(201).json({ document });
+    } catch (error: any) {
+      console.error('Upload member document error:', error);
+      if (error.message && error.message.includes('Invalid file type')) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
   }
-});
+);
 
 /**
  * POST /api/dms/official-documents/upload
  * Upload an official document with file
  */
-router.post('/official-documents/upload', upload.single('file'), async (req: Request, res: Response) => {
-  try {
-    const tenantId = req.user!.tenantId;
-    if (!req.file) {
-      res.status(400).json({ error: 'No file uploaded' });
-      return;
-    }
+router.post(
+  '/official-documents/upload',
+  upload.single('file'),
+  async (req: Request, res: Response) => {
+    try {
+      const tenantId = req.user!.tenantId;
+      if (!req.file) {
+        res.status(400).json({ error: 'No file uploaded' });
+        return;
+      }
 
-    const {
-      documentType,
-      title,
-      description,
-      category,
-      version,
-      isPublic,
-      effectiveDate,
-      expiryDate,
-    } = req.body;
-
-    if (!documentType || !title) {
-      res.status(400).json({
-        error: 'Missing required fields: documentType, title',
-      });
-      return;
-    }
-
-    // Save file
-    const fileInfo = await saveUploadedFile(req.file, 'official-documents', tenantId);
-
-    // Create document record
-    const document = await prisma.officialDocument.create({
-      data: {
-        cooperativeId: tenantId,
+      const {
         documentType,
         title,
-        fileName: fileInfo.fileName,
-        filePath: fileInfo.filePath,
-        fileSize: fileInfo.fileSize,
-        mimeType: fileInfo.mimeType,
         description,
         category,
-        version: version || '1.0',
-        isPublic: isPublic === 'true' || isPublic === true,
-        uploadedBy: req.user!.userId,
-        effectiveDate: effectiveDate ? new Date(effectiveDate) : null,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
-      },
-    });
+        version,
+        isPublic,
+        effectiveDate,
+        expiryDate,
+      } = req.body;
 
-    res.status(201).json({ document });
-  } catch (error: any) {
-    console.error('Upload official document error:', error);
-    if (error.message && error.message.includes('Invalid file type')) {
-      res.status(400).json({ error: error.message });
-    } else {
-      res.status(500).json({ error: 'Internal server error' });
+      if (!documentType || !title) {
+        res.status(400).json({
+          error: 'Missing required fields: documentType, title',
+        });
+        return;
+      }
+
+      // Save file
+      const fileInfo = await saveUploadedFile(
+        req.file,
+        'official-documents',
+        tenantId || req.currentCooperativeId!
+      );
+
+      // Create document record
+      const document = await prisma.officialDocument.create({
+        data: {
+          cooperativeId: tenantId!,
+          documentType,
+          title,
+          fileName: fileInfo.fileName,
+          filePath: fileInfo.filePath,
+          fileSize: fileInfo.fileSize,
+          mimeType: fileInfo.mimeType,
+          description,
+          category,
+          version: version || '1.0',
+          isPublic: isPublic === 'true' || isPublic === true,
+          uploadedBy: req.user!.userId,
+          effectiveDate: effectiveDate ? new Date(effectiveDate) : null,
+          expiryDate: expiryDate ? new Date(expiryDate) : null,
+        },
+      });
+
+      res.status(201).json({ document });
+    } catch (error: any) {
+      console.error('Upload official document error:', error);
+      if (error.message && error.message.includes('Invalid file type')) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Internal server error' });
+      }
     }
   }
-});
+);
 
 /**
  * GET /api/dms/documents/search
@@ -493,7 +513,7 @@ router.get('/documents/search', async (req: Request, res: Response) => {
     // Search member documents
     if (type === 'all' || type === 'member' || !type) {
       const memberWhere: any = {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       };
 
       if (memberId) {
@@ -577,7 +597,7 @@ router.get('/documents/search', async (req: Request, res: Response) => {
     // Search official documents
     if (type === 'all' || type === 'official' || !type) {
       const officialWhere: any = {
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       };
 
       if (documentType) {
@@ -722,7 +742,7 @@ router.post('/documents/bulk-delete', async (req: Request, res: Response) => {
       try {
         if (type === 'member') {
           const doc = await prisma.memberDocument.findFirst({
-            where: { id, cooperativeId: tenantId },
+            where: { id, cooperativeId: tenantId! },
           });
           if (doc) {
             if (doc.filePath) {
@@ -733,7 +753,7 @@ router.post('/documents/bulk-delete', async (req: Request, res: Response) => {
           }
         } else if (type === 'official') {
           const doc = await prisma.officialDocument.findFirst({
-            where: { id, cooperativeId: tenantId },
+            where: { id, cooperativeId: tenantId! },
           });
           if (doc) {
             if (doc.filePath) {
@@ -775,24 +795,24 @@ router.get('/documents/:id/download', async (req: Request, res: Response) => {
       document = await prisma.memberDocument.findFirst({
         where: {
           id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
     } else if (type === 'official') {
       document = await prisma.officialDocument.findFirst({
         where: {
           id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
     } else {
       // Try both
       document =
         (await prisma.memberDocument.findFirst({
-          where: { id, cooperativeId: tenantId },
+          where: { id, cooperativeId: tenantId! },
         })) ||
         (await prisma.officialDocument.findFirst({
-          where: { id, cooperativeId: tenantId },
+          where: { id, cooperativeId: tenantId! },
         }));
     }
 
@@ -801,7 +821,9 @@ router.get('/documents/:id/download', async (req: Request, res: Response) => {
       return;
     }
 
-    const cleanPath = document.filePath.startsWith('/') ? document.filePath.slice(1) : document.filePath;
+    const cleanPath = document.filePath.startsWith('/')
+      ? document.filePath.slice(1)
+      : document.filePath;
     const fullPath = path.join(process.cwd(), cleanPath);
 
     // Check if file exists
@@ -835,23 +857,23 @@ router.get('/documents/:id/preview', async (req: Request, res: Response) => {
       document = await prisma.memberDocument.findFirst({
         where: {
           id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
     } else if (type === 'official') {
       document = await prisma.officialDocument.findFirst({
         where: {
           id,
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
         },
       });
     } else {
       document =
         (await prisma.memberDocument.findFirst({
-          where: { id, cooperativeId: tenantId },
+          where: { id, cooperativeId: tenantId! },
         })) ||
         (await prisma.officialDocument.findFirst({
-          where: { id, cooperativeId: tenantId },
+          where: { id, cooperativeId: tenantId! },
         }));
     }
 
@@ -885,7 +907,7 @@ router.put('/member-documents/:id', async (req: Request, res: Response) => {
     const document = await prisma.memberDocument.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -941,7 +963,7 @@ router.put('/official-documents/:id', async (req: Request, res: Response) => {
     const document = await prisma.officialDocument.findFirst({
       where: {
         id,
-        cooperativeId: tenantId,
+        cooperativeId: tenantId!,
       },
     });
 
@@ -980,14 +1002,14 @@ router.get('/statistics', async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
 
     const [memberDocCount, officialDocCount, memberDocs, officialDocs] = await Promise.all([
-      prisma.memberDocument.count({ where: { cooperativeId: tenantId } }),
-      prisma.officialDocument.count({ where: { cooperativeId: tenantId } }),
+      prisma.memberDocument.count({ where: { cooperativeId: tenantId! } }),
+      prisma.officialDocument.count({ where: { cooperativeId: tenantId! } }),
       prisma.memberDocument.findMany({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         select: { fileSize: true, documentType: true },
       }),
       prisma.officialDocument.findMany({
-        where: { cooperativeId: tenantId },
+        where: { cooperativeId: tenantId! },
         select: { fileSize: true, documentType: true },
       }),
     ]);
@@ -1015,13 +1037,13 @@ router.get('/statistics', async (req: Request, res: Response) => {
     const [recentMemberDocs, recentOfficialDocs] = await Promise.all([
       prisma.memberDocument.count({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           uploadedAt: { gte: sevenDaysAgo },
         },
       }),
       prisma.officialDocument.count({
         where: {
-          cooperativeId: tenantId,
+          cooperativeId: tenantId!,
           uploadedAt: { gte: sevenDaysAgo },
         },
       }),

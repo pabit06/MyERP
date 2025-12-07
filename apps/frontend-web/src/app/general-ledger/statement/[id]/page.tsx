@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import ProtectedRoute from '../../../../components/ProtectedRoute';
-import { useAuth } from '../../../../contexts/AuthContext';
+import { ProtectedRoute } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import { ArrowLeft, FileText, Calendar, DollarSign, Download } from 'lucide-react';
 // @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';

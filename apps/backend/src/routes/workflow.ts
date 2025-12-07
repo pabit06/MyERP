@@ -15,6 +15,10 @@ router.use(requireTenant);
 router.post('/:workflowName/transition', async (req: Request, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
     const userId = req.user!.userId;
     const { workflowName } = req.params;
     const { entityId, entityType, toState, metadata } = req.body;

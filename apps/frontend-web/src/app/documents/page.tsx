@@ -2,17 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import ProtectedRoute from '../../components/ProtectedRoute';
-import { useAuth } from '../../contexts/AuthContext';
+import { ProtectedRoute } from '@/features/components/shared';
+import { useAuth } from '@/contexts/AuthContext';
+import { apiClient } from '@/lib/api';
 import { Toaster, toast } from 'react-hot-toast';
-import DocumentGrid from './components/DocumentGrid';
-import DocumentList from './components/DocumentList';
-import UploadModal from './components/UploadModal';
-import DocumentFilters from './components/DocumentFilters';
-import BulkActionsBar from './components/BulkActionsBar';
-import DocumentPreview from './components/DocumentPreview';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import {
+  DocumentGrid,
+  DocumentList,
+  UploadModal,
+  DocumentFilters,
+  BulkActionsBar,
+  DocumentPreview,
+} from '@/features/documents';
 
 interface Document {
   id: string;
@@ -101,16 +102,12 @@ export default function DocumentsPage() {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_URL}/dms/statistics`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const data = await apiClient.get<Statistics>('/dms/statistics', {
+        skipErrorToast: true,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        setStatistics(data);
-      }
+      setStatistics(data);
     } catch (err) {
-      console.error('Error fetching statistics:', err);
+      // Error handled by API client
     }
   };
 
@@ -119,27 +116,19 @@ export default function DocumentsPage() {
 
     setIsLoading(true);
     try {
-      const response = await fetch(
-        `${API_URL}/dms/documents/search?page=${pagination.page}&limit=${pagination.limit}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data.documents || []);
-        setFilteredDocuments(data.documents || []);
-        setPagination((prev) => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-        }));
-      } else {
-        throw new Error('Failed to fetch documents');
-      }
+      const data = await apiClient.get<{
+        documents: Document[];
+        pagination: { total: number };
+      }>(`/dms/documents/search?page=${pagination.page}&limit=${pagination.limit}`);
+      
+      setDocuments(data.documents || []);
+      setFilteredDocuments(data.documents || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: data.pagination?.total || 0,
+      }));
     } catch (err) {
       setError('Error loading documents');
-      toast.error('Could not fetch documents.');
     } finally {
       setIsLoading(false);
     }

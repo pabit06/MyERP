@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
-import { hooks } from './hooks.js';
+import { hooks, HookType } from './hooks.js';
 import { HookContext } from '../controllers/BaseController.js';
 import { hasAnyRole } from './permissions.js';
 
@@ -223,8 +223,8 @@ export class WorkflowEngine {
       );
     } else {
       // Create new transaction
-      return await prisma.$transaction(async (transactionClient: Prisma.TransactionClient) => {
-        return await this.executeTransition(
+      return await prisma.$transaction(async (transactionClient: any) => {
+        const result = await this.executeTransition(
           workflow,
           entity,
           currentState,
@@ -239,6 +239,7 @@ export class WorkflowEngine {
             tx: transactionClient,
           }
         );
+        return result;
       });
     }
   }
@@ -281,20 +282,26 @@ export class WorkflowEngine {
 
     // Execute before transition hook
     if (transition.hooks?.before) {
-      await hooks.execute(workflow.entityType, transition.hooks.before, entity, hookContext);
+      await hooks.execute(
+        workflow.entityType,
+        transition.hooks.before as HookType,
+        entity,
+        hookContext
+      );
     }
 
     // Execute generic before transition hook
     await hooks.execute(
       workflow.entityType,
-      'beforeTransition',
+      'beforeTransition' as HookType,
       { ...entity, toState },
       hookContext
     );
 
     // Update entity state
     const stateField = entityType === 'Member' ? 'workflowStatus' : 'status';
-    const updatedEntity = await transactionClient[this.getModelName(entityType)].update({
+    const modelName = this.getModelName(entityType);
+    const updatedEntity = await (transactionClient as any)[modelName].update({
       where: { id: entityId },
       data: { [stateField]: toState },
     });
@@ -331,11 +338,21 @@ export class WorkflowEngine {
 
     // Execute after transition hook
     if (transition.hooks?.after) {
-      await hooks.execute(workflow.entityType, transition.hooks.after, updatedEntity, hookContext);
+      await hooks.execute(
+        workflow.entityType,
+        transition.hooks.after as HookType,
+        updatedEntity,
+        hookContext
+      );
     }
 
     // Execute generic after transition hook
-    await hooks.execute(workflow.entityType, 'afterTransition', updatedEntity, hookContext);
+    await hooks.execute(
+      workflow.entityType,
+      'afterTransition' as HookType,
+      updatedEntity,
+      hookContext
+    );
 
     return {
       success: true,

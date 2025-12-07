@@ -11,7 +11,7 @@
  * Usage: tsx scripts/migrate-meetings.ts
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, MeetingStatus, MeetingWorkflowStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -57,27 +57,29 @@ async function migrateMeetings() {
           }
 
           // 2. Map status to new enum and set workflowStatus
-          let newStatus = meeting.status;
-          let workflowStatus = 'DRAFT';
+          let newStatus: MeetingStatus = meeting.status;
+          let workflowStatus: MeetingWorkflowStatus = MeetingWorkflowStatus.DRAFT;
 
-          // Map old status values to new enum
-          if (meeting.status === 'scheduled') {
-            newStatus = 'PLANNED';
-          } else if (meeting.status === 'ongoing') {
-            newStatus = 'SCHEDULED';
-          } else if (meeting.status === 'completed') {
-            newStatus = 'COMPLETED';
-            workflowStatus = 'MINUTED';
-          } else if (meeting.status === 'cancelled') {
-            newStatus = 'CANCELLED';
+          // Map old status values to new enum (handle legacy string values)
+          // Convert enum to string for comparison (handles both enum and legacy string values)
+          const statusStr = String(meeting.status as string | MeetingStatus).toLowerCase();
+          if (statusStr === 'scheduled' || statusStr === 'planned') {
+            newStatus = MeetingStatus.PLANNED;
+          } else if (statusStr === 'ongoing') {
+            newStatus = MeetingStatus.SCHEDULED;
+          } else if (statusStr === 'completed') {
+            newStatus = MeetingStatus.COMPLETED;
+            workflowStatus = MeetingWorkflowStatus.MINUTED;
+          } else if (statusStr === 'cancelled') {
+            newStatus = MeetingStatus.CANCELLED;
           }
 
           // Set workflowStatus based on minutesStatus
           if (meeting.minutesStatus === 'FINALIZED') {
-            workflowStatus = 'FINALIZED';
-            newStatus = 'COMPLETED';
-          } else if (newStatus === 'COMPLETED') {
-            workflowStatus = 'MINUTED';
+            workflowStatus = MeetingWorkflowStatus.FINALIZED;
+            newStatus = MeetingStatus.COMPLETED;
+          } else if (newStatus === MeetingStatus.COMPLETED) {
+            workflowStatus = MeetingWorkflowStatus.MINUTED;
           }
 
           // Update status and workflowStatus
@@ -85,8 +87,8 @@ async function migrateMeetings() {
             await prisma.meeting.update({
               where: { id: meeting.id },
               data: {
-                status: newStatus as any,
-                workflowStatus: workflowStatus as any,
+                status: newStatus,
+                workflowStatus: workflowStatus,
                 // Set date from scheduledDate if date is not set
                 date: meeting.date || meeting.scheduledDate || new Date(),
               },

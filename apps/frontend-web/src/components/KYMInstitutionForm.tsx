@@ -4,16 +4,19 @@ import React, { useState } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InstitutionKymFormSchema, InstitutionKymFormData } from '@myerp/shared-types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import NepaliDatePicker from '@/components/NepaliDatePicker';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
+  Button,
+  Input,
+  NepaliDatePicker,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
+} from '@/features/components/shared';
 
 interface KYMInstitutionFormProps {
   memberId?: string;

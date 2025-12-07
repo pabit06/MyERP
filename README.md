@@ -44,6 +44,26 @@ This project is a monorepo managed with **pnpm** workspaces.
 - **`packages/db-schema`**: Centralized Prisma database schema and migrations.
 - **`packages/shared-types`**: Shared TypeScript interfaces and types used across apps.
 
+## 📚 Documentation
+
+All project documentation is organized in the `docs/` directory:
+
+- **Setup & Configuration**: `docs/setup/` - Database setup, credentials, notification setup
+- **Implementation**: `docs/implementation/` - Implementation summaries and task tracking
+- **Migration**: `docs/migration/` - Migration guides and status
+- **RBAC**: `docs/rbac/` - Role-Based Access Control documentation
+- **Testing**: `docs/testing/` - Testing guides and setup
+- **Project Info**: `docs/project/` - Project stack, dependencies, commands
+- **Planning**: `docs/planning/` - Project plans and folder structure
+- **Reference**: `docs/reference/` - Reference materials and external documents
+
+**Quick Links:**
+- [Documentation Index](docs/README.md) - Complete documentation index
+- [Documentation Structure](docs/DOCUMENTATION_STRUCTURE.md) - Structure explanation
+- [Documentation Management](docs/DOCUMENTATION_MANAGEMENT.md) - How to manage docs
+
+**Note**: Keep the root directory clean - only `README.md` should be in the root. All other documentation belongs in `docs/`.
+
 ## 📂 Project Structure
 
 ```
@@ -131,15 +151,41 @@ pnpm dev
 
 ## 🧪 Testing
 
-The project uses **Vitest** for testing.
+The project uses **Vitest** for unit tests and **Playwright** for E2E tests.
 
 ```bash
-# Run tests for all packages
+# Run unit tests for all packages
 pnpm test
 
 # Run tests for backend only
 pnpm --filter backend test
+
+# Run E2E tests (backend)
+cd apps/backend
+pnpm test:e2e
+
+# Run E2E tests in UI mode
+pnpm test:e2e:ui
 ```
+
+## 🚀 CI/CD
+
+The project uses **GitHub Actions** for continuous integration and deployment.
+
+### Workflows
+
+- **CI**: Runs on every push/PR (lint, type-check, build, tests)
+- **CD**: Deploys on push to `main` branch
+- **Security Audit**: Weekly security vulnerability checks
+- **Dependency Updates**: Weekly dependency update monitoring
+
+See [CICD_SETUP.md](./docs/ci-cd/CICD_SETUP.md) for detailed setup instructions.
+
+### Quick Setup
+
+1. Configure GitHub secrets (see [.github/SECRETS_SETUP.md](.github/SECRETS_SETUP.md))
+2. Set up branch protection (see [.github/BRANCH_PROTECTION_SETUP.md](.github/BRANCH_PROTECTION_SETUP.md))
+3. Push a change to trigger workflows
 
 ## 📝 Documentation
 

@@ -12,6 +12,12 @@ import { ModuleName } from '@myerp/shared-types';
 export const isModuleEnabled = (moduleName: ModuleName) => {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      // System admins can access all modules
+      if (req.user?.isSystemAdmin) {
+        next();
+        return;
+      }
+
       if (!req.user?.tenantId) {
         res.status(403).json({ error: 'Tenant context required' });
         return;

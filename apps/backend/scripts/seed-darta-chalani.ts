@@ -5,25 +5,32 @@
 
 import dotenv from 'dotenv';
 import { prisma } from '@myerp/db-schema';
-import { 
-  DartaStatus, 
-  DocumentPriority, 
-  DartaCategory, 
-  ChalaniType, 
-  ChalaniStatus, 
-  ChalaniCategory, 
-  DartaMovementType, 
-  ChalaniActionType 
+import {
+  DartaStatus,
+  DocumentPriority,
+  DartaCategory,
+  ChalaniType,
+  ChalaniStatus,
+  ChalaniCategory,
+  DartaMovementType,
+  ChalaniActionType,
 } from '@prisma/client';
+import type { FiscalYearRange } from '../src/lib/nepali-fiscal-year.js';
+
 // Simple fiscal year calculation (avoiding NepaliDate import issues in scripts)
-function getFiscalYearForDate(date: Date): { bsYear: number; startDate: Date; endDate: Date; label: string } {
+function getFiscalYearForDate(date: Date): {
+  bsYear: number;
+  startDate: Date;
+  endDate: Date;
+  label: string;
+} {
   // Approximate: Fiscal year starts around mid-July (Shrawan 1)
   // For simplicity, we'll use current year as base
   const year = date.getFullYear();
   const month = date.getMonth(); // 0-11
-  
+
   // If month is before July (month 6), fiscal year started previous year
-  let fiscalYearStart: number;
+  let fiscalYearStart: Date;
   if (month < 6) {
     // Before July - fiscal year started in previous year
     fiscalYearStart = new Date(year - 1, 6, 15); // Approx July 15 of previous year
@@ -31,12 +38,12 @@ function getFiscalYearForDate(date: Date): { bsYear: number; startDate: Date; en
     // July or later - fiscal year started this year
     fiscalYearStart = new Date(year, 6, 15); // Approx July 15 of this year
   }
-  
+
   const fiscalYearEnd = new Date(fiscalYearStart.getFullYear() + 1, 6, 14); // Approx July 14 next year
-  
+
   // Approximate BS year (AD year + 57)
   const bsYear = fiscalYearStart.getFullYear() + 57;
-  
+
   return {
     bsYear,
     startDate: fiscalYearStart,
@@ -123,17 +130,24 @@ async function getNextSerialNo(
   fiscalYearStart: Date
 ): Promise<number> {
   // Count existing records in this fiscal year (using createdAt date range)
-  const count = await (type === 'darta'
-    ? prisma.darta
-    : prisma.patraChalani
-  ).count({
-    where: {
-      cooperativeId,
-      createdAt: {
-        gte: fiscalYearStart,
-      },
-    },
-  });
+  const count =
+    type === 'darta'
+      ? await prisma.darta.count({
+          where: {
+            cooperativeId,
+            createdAt: {
+              gte: fiscalYearStart,
+            },
+          },
+        })
+      : await prisma.patraChalani.count({
+          where: {
+            cooperativeId,
+            createdAt: {
+              gte: fiscalYearStart,
+            },
+          },
+        });
 
   return count + 1;
 }
@@ -167,7 +181,6 @@ function _randomDateInFiscalYear(fiscalYear: FiscalYearRange): Date {
   return new Date(randomTime);
 }
 
-
 async function seedDartaChalani(
   cooperativeId: string,
   dartaCount: number = 20,
@@ -197,8 +210,13 @@ async function seedDartaChalani(
     const fiscalYear = getFiscalYearForDate(receivedDate);
     // Use shortened format (2-digit/2-digit) to match frontend format (e.g., "081/082")
     const fiscalYearStr = `${String(fiscalYear.bsYear).slice(-2)}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
-    
-    const serialNo = await getNextSerialNo(cooperativeId, fiscalYearStr, 'darta', fiscalYear.startDate);
+
+    const serialNo = await getNextSerialNo(
+      cooperativeId,
+      fiscalYearStr,
+      'darta',
+      fiscalYear.startDate
+    );
     const dartaNumber = formatDartaNumber(fiscalYearStr, serialNo);
 
     const senderName = sample(senderOrganizations);
@@ -290,14 +308,19 @@ async function seedDartaChalani(
     const fiscalYear = getFiscalYearForDate(letterDate);
     // Use shortened format (2-digit/2-digit) to match frontend format (e.g., "081/082")
     const fiscalYearStr = `${String(fiscalYear.bsYear).slice(-2)}/${String(fiscalYear.bsYear + 1).slice(-2)}`;
-    
-    const serialNo = await getNextSerialNo(cooperativeId, fiscalYearStr, 'chalani', fiscalYear.startDate);
+
+    const serialNo = await getNextSerialNo(
+      cooperativeId,
+      fiscalYearStr,
+      'chalani',
+      fiscalYear.startDate
+    );
     const chalaniNumber = formatChalaniNumber(fiscalYearStr, serialNo);
 
     const receiverName = sample(receiverOrganizations);
     const subject = sample(chalaniSubjects);
     const type = sample([ChalaniType.OUTGOING, ChalaniType.INTERNAL]);
-    
+
     const category = sample([
       ChalaniCategory.OFFICIAL_CORRESPONDENCE,
       ChalaniCategory.MEMBER_COMMUNICATION,
@@ -324,9 +347,8 @@ async function seedDartaChalani(
     ]);
 
     // Sometimes link to a Darta (reply)
-    const replyToDarta = random(1, 100) > 70 && createdDartas.length > 0
-      ? sample(createdDartas)
-      : null;
+    const replyToDarta =
+      random(1, 100) > 70 && createdDartas.length > 0 ? sample(createdDartas) : null;
 
     // Create chalani with fields that exist in current schema
     const chalani = await prisma.patraChalani.create({
@@ -343,9 +365,10 @@ async function seedDartaChalani(
         senderName: 'भञ्ज्याङ बचत तथा ऋण सहकारी संस्था',
         senderAddress: 'काठमाडौँ, नेपाल',
         date: letterDate,
-        sentDate: status === ChalaniStatus.SENT || status === ChalaniStatus.COMPLETED 
-          ? new Date(letterDate.getTime() + random(0, 3) * 24 * 60 * 60 * 1000)
-          : null,
+        sentDate:
+          status === ChalaniStatus.SENT || status === ChalaniStatus.COMPLETED
+            ? new Date(letterDate.getTime() + random(0, 3) * 24 * 60 * 60 * 1000)
+            : null,
         transportMode: sample(['Email', 'Post Office', 'By Hand', 'Courier']),
         bodhartha: random(1, 100) > 60 ? 'बोधार्थ: प्रबन्ध समिति, लेखा विभाग' : null,
         status: status,
@@ -353,7 +376,8 @@ async function seedDartaChalani(
         category: category || null,
         patraNumber: random(1, 100) > 80 ? `PATRA-${random(1000, 9999)}` : null,
         replyToDartaId: replyToDarta?.id || null,
-        remarks: random(1, 100) > 50 ? 'Remarks: Important document, please handle with care.' : null,
+        remarks:
+          random(1, 100) > 50 ? 'Remarks: Important document, please handle with care.' : null,
         createdBy: user.id,
       },
     });
@@ -396,14 +420,16 @@ async function seedDartaChalani(
   console.log(`   ✅ Chalani: ${chalaniCount} records`);
   console.log(`   ✅ Movements: Created for all Darta`);
   console.log(`   ✅ Actions: Created for all Chalani`);
-  console.log(`   ✅ Linked: ${createdChalanis.filter(c => c.replyToDartaId).length} Chalani linked to Darta\n`);
+  console.log(
+    `   ✅ Linked: ${createdChalanis.filter((c) => c.replyToDartaId).length} Chalani linked to Darta\n`
+  );
 }
 
 // Main execution
 async function main() {
   try {
     const args = process.argv.slice(2);
-    let cooperativeIdentifier = args[0];
+    let cooperativeIdentifier: string | undefined = args[0];
     let dartaCount = 20;
     let chalaniCount = 15;
 
@@ -494,4 +520,3 @@ async function main() {
 }
 
 main();
-
