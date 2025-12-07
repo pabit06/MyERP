@@ -11,17 +11,31 @@ export class SavingsController extends BaseController {
   /**
    * Get all saving products
    */
-  async getProducts(cooperativeId: string) {
+  async getProducts(
+    cooperativeId: string,
+    params: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    } = {}
+  ) {
     await this.validateTenant(cooperativeId);
+    const { page, limit, sortBy, sortOrder } = params;
 
-    return this.prisma.savingProduct.findMany({
-      where: {
-        cooperativeId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const where = { cooperativeId };
+
+    const [products, total] = await Promise.all([
+      this.prisma.savingProduct.findMany({
+        where,
+        orderBy: sortBy ? { [sortBy]: sortOrder || 'desc' } : { createdAt: 'desc' },
+        skip: page && limit ? (page - 1) * limit : undefined,
+        take: limit,
+      }),
+      this.prisma.savingProduct.count({ where }),
+    ]);
+
+    return { products, total };
   }
 
   /**
@@ -99,53 +113,64 @@ export class SavingsController extends BaseController {
    */
   async getAccounts(
     cooperativeId: string,
-    filters?: {
+    params: {
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+      search?: string;
       memberId?: string;
       status?: string;
-    }
+    } = {}
   ) {
     await this.validateTenant(cooperativeId);
+    const { page, limit, sortBy, sortOrder, search, memberId, status } = params;
 
-    const where: {
-      cooperativeId: string;
-      memberId?: string;
-      status?: string;
-    } = {
+    const where: any = {
       cooperativeId,
     };
 
-    if (filters?.memberId) {
-      where.memberId = filters.memberId;
+    if (memberId) where.memberId = memberId;
+    if (status) where.status = status;
+
+    if (search) {
+      where.OR = [
+        { accountNumber: { contains: search, mode: 'insensitive' } },
+        { member: { memberNumber: { contains: search, mode: 'insensitive' } } },
+        { member: { firstName: { contains: search, mode: 'insensitive' } } },
+        { member: { lastName: { contains: search, mode: 'insensitive' } } },
+      ];
     }
 
-    if (filters?.status) {
-      where.status = filters.status;
-    }
+    const [accounts, total] = await Promise.all([
+      this.prisma.savingAccount.findMany({
+        where,
+        include: {
+          member: {
+            select: {
+              id: true,
+              memberNumber: true,
+              firstName: true,
+              lastName: true,
+            },
+          },
+          product: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+              interestRate: true,
+            },
+          },
+        },
+        orderBy: sortBy ? { [sortBy]: sortOrder || 'desc' } : { createdAt: 'desc' },
+        skip: page && limit ? (page - 1) * limit : undefined,
+        take: limit,
+      }),
+      this.prisma.savingAccount.count({ where }),
+    ]);
 
-    return this.prisma.savingAccount.findMany({
-      where,
-      include: {
-        member: {
-          select: {
-            id: true,
-            memberNumber: true,
-            firstName: true,
-            lastName: true,
-          },
-        },
-        product: {
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            interestRate: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    return { accounts, total };
   }
 
   /**

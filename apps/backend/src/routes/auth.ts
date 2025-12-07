@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { validateRequest } from '../middleware/validate-request.js';
+import { validate } from '../middleware/validate.js';
 import { loginSchema, memberLoginSchema } from '../validators/auth.js';
 import { authController } from '../controllers/AuthController.js';
 
@@ -17,7 +17,7 @@ const router = Router();
  */
 router.post(
   '/login',
-  validateRequest(loginSchema),
+  validate(loginSchema),
   asyncHandler((req, res) => authController.login(req, res))
 );
 
@@ -31,7 +31,7 @@ router.post(
  */
 router.post(
   '/member-login',
-  validateRequest(memberLoginSchema),
+  validate(memberLoginSchema),
   asyncHandler((req, res) => authController.memberLogin(req, res))
 );
 

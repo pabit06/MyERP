@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MyERPLogo from './MyERPLogo';
 import NepaliCalendar from './NepaliCalendar';
-import { Calendar, X } from 'lucide-react';
+import { Calendar, X, Bell, Search, ChevronDown, User, Settings, LogOut, CreditCard } from 'lucide-react';
 import { adToBs, formatBsDate } from '../lib/nepali-date';
 
 const pageTitles: Record<string, string> = {
@@ -142,126 +142,105 @@ export default function Header() {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
-      <div className="px-6 py-4">
+    <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30 transition-all duration-200">
+      <div className="px-6 py-3">
         <div className="flex items-center justify-between">
           {/* Breadcrumbs and Title */}
-          <div className="flex-1">
-            <div className="flex items-center space-x-4 mb-1">
-              <MyERPLogo size="md" showText={false} />
-              {cooperative?.name && (
-                <div className="flex items-center space-x-2">
-                  <span className="text-gray-400">|</span>
-                  {cooperative.logoUrl && (
-                    <img
-                      src={cooperative.logoUrl}
-                      alt={cooperative.name}
-                      className="h-6 w-6 rounded object-cover"
-                    />
-                  )}
-                  <span className="text-sm font-medium text-indigo-600">{cooperative.name}</span>
-                </div>
-              )}
+          <div className="flex-1 min-w-0">
+            {/* Mobile Logo for context if sidebar hidden or minimal view */}
+            <div className="flex items-center space-x-3 mb-1 md:hidden">
+              <MyERPLogo size="sm" showText={false} />
             </div>
+
             {breadcrumbs.length > 0 && (
-              <nav className="flex items-center space-x-1 text-sm text-gray-500 mb-1">
+              <nav className="flex items-center space-x-1 text-xs text-gray-500 mb-1">
                 {breadcrumbs.map((crumb, index) => (
                   <div key={index} className="flex items-center space-x-1">
-                    {index > 0 && <span className="text-gray-400">/</span>}
+                    {index > 0 && <span className="text-gray-300">/</span>}
                     {crumb.href ? (
-                      <Link href={crumb.href} className="hover:text-gray-700 transition-colors">
+                      <Link href={crumb.href} className="hover:text-indigo-600 transition-colors">
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="text-gray-900 font-medium">{crumb.label}</span>
+                      <span className="text-gray-700 font-medium">{crumb.label}</span>
                     )}
                   </div>
                 ))}
               </nav>
             )}
-            <div className="flex items-center justify-between">
-              <h1 className="text-2xl font-bold text-gray-900">{getPageTitle()}</h1>
-              {currentDate.ad && (
-                <div className="text-right">
-                  <div className="flex items-center gap-2">
-                    <div>
-                      <div className="text-sm font-medium text-gray-700">{currentDate.ad}</div>
-                      <div className="text-xs text-gray-500">{currentDate.bs}</div>
-                    </div>
-                    {dayStatus?.status === 'OPEN' && (
-                      <span className="px-2 py-0.5 text-[10px] bg-green-100 text-green-700 rounded font-medium">
-                        Day Open
-                      </span>
-                    )}
-                    {!dayStatus && (
-                      <span className="px-2 py-0.5 text-[10px] bg-yellow-100 text-yellow-700 rounded font-medium">
-                        No Day
-                      </span>
-                    )}
-                  </div>
-                </div>
-              )}
+
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">{getPageTitle()}</h1>
+              {/* Search Bar (Optional/Placeholder for future) */}
+              <div className="hidden lg:flex items-center relative group">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 group-focus-within:text-indigo-500 transition-colors" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  className="pl-9 pr-4 py-1.5 bg-gray-50 border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-indigo-100 transition-all focus:bg-white"
+                />
+              </div>
             </div>
           </div>
 
           {/* Right Side Actions */}
-          <div className="flex items-center space-x-4">
-            {/* Notifications (placeholder) */}
-            <button className="relative p-2 text-gray-400 hover:text-gray-500 transition-colors">
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                />
-              </svg>
-              <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white"></span>
+          <div className="flex items-center space-x-2 md:space-x-4">
+
+            {/* Day Status Indicator (Prominent) */}
+            {currentDate.ad && (
+              <div className="hidden md:flex flex-col items-end mr-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-700">{currentDate.ad}</span>
+                  {dayStatus?.status === 'OPEN' ? (
+                    <span className="flex h-2 w-2 relative">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                  ) : (
+                    <span className="h-2 w-2 rounded-full bg-yellow-400"></span>
+                  )}
+                </div>
+                <span className="text-xs text-gray-500 font-medium">{currentDate.bs}</span>
+              </div>
+            )}
+
+            {/* Notifications */}
+            <button className="relative p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all duration-200">
+              <Bell className="h-5 w-5" />
+              <span className="absolute top-1.5 right-1.5 block h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
             </button>
 
             {/* Calendar Box */}
             <div className="relative">
               <button
                 onClick={() => setShowUtilities(!showUtilities)}
-                className="relative p-2 text-gray-400 hover:text-gray-500 transition-colors"
+                className={`relative p-2 rounded-full transition-all duration-200 ${showUtilities ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}
                 title="Calendar"
               >
-                <Calendar className="h-6 w-6" />
+                <Calendar className="h-5 w-5" />
               </button>
 
               {/* Calendar Dropdown */}
               {showUtilities && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowUtilities(false)} />
-                  <div className="absolute right-0 mt-2 w-80 rounded-lg shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20">
-                    <div className="p-3">
-                      {/* Header */}
-                      <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-semibold text-gray-900">Calendar</h3>
-                        <button
-                          onClick={() => setShowUtilities(false)}
-                          className="text-gray-400 hover:text-gray-500 transition-colors"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-
-                      {/* Calendar Section */}
-                      <div className="border-t border-gray-200 pt-2">
-                        <NepaliCalendar
-                          selectedDate={selectedDate}
-                          onDateSelect={(adDate, bsDate) => {
-                            setSelectedDate(adDate);
-                            console.log('Selected AD Date:', adDate);
-                            console.log('Selected BS Date:', bsDate);
-                          }}
-                        />
-                        {selectedDate && (
-                          <div className="mt-2 p-1.5 bg-gray-50 rounded text-[10px] text-gray-600">
-                            Selected: {selectedDate}
-                          </div>
-                        )}
-                      </div>
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex justify-between items-center">
+                      <h3 className="text-sm font-semibold text-indigo-900">Nepali Calendar</h3>
+                      <button
+                        onClick={() => setShowUtilities(false)}
+                        className="text-indigo-400 hover:text-indigo-600 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <NepaliCalendar
+                        selectedDate={selectedDate}
+                        onDateSelect={(adDate) => {
+                          setSelectedDate(adDate);
+                        }}
+                      />
                     </div>
                   </div>
                 </>
@@ -269,75 +248,80 @@ export default function Header() {
             </div>
 
             {/* User Menu */}
-            <div className="relative">
+            <div className="relative pl-2 border-l border-gray-200">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-50 transition-all duration-200 ring-offset-2 focus:ring-2 focus:ring-indigo-500"
               >
-                <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
-                  <span className="text-indigo-600 font-semibold text-sm">
+                <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md text-white">
+                  <span className="font-bold text-sm">
                     {user?.firstName?.[0]}
                     {user?.lastName?.[0]}
                   </span>
                 </div>
                 <div className="hidden md:block text-left">
-                  <p className="text-sm font-medium text-gray-900">
-                    {user?.firstName} {user?.lastName}
+                  <p className="text-sm font-semibold text-gray-900 leading-none">
+                    {user?.firstName}
                   </p>
-                  <p className="text-xs text-gray-500 truncate max-w-[150px]">
+                  <p className="text-[10px] text-gray-500 font-medium truncate max-w-[100px] mt-1">
                     {cooperative?.name}
                   </p>
                 </div>
-                <svg
-                  className="h-5 w-5 text-gray-400 hidden md:block"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 9l-7 7-7-7"
-                  />
-                </svg>
+                <ChevronDown className="h-4 w-4 text-gray-400 hidden md:block" />
               </button>
 
               {/* Dropdown Menu */}
               {showUserMenu && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
-                  <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-20">
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl shadow-xl bg-white ring-1 ring-black ring-opacity-5 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-4 bg-gray-50 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900 w-full truncate">
+                        {user?.firstName} {user?.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500 w-full truncate">{user?.email}</p>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded textxs font-medium bg-indigo-100 text-indigo-800 mt-2">
+                        {user?.role?.name || 'User'}
+                      </span>
+                    </div>
+
                     <div className="py-1">
-                      <div className="px-4 py-3 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user?.firstName} {user?.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-                        <p className="text-xs text-gray-400 mt-1">{cooperative?.name}</p>
-                      </div>
-                      <Link
-                        href="/subscription"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => setShowUserMenu(false)}
-                      >
-                        💳 Subscription
-                      </Link>
                       <Link
                         href="/profile"
-                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
                         onClick={() => setShowUserMenu(false)}
                       >
-                        ⚙️ Settings
+                        <User className="mr-3 h-4 w-4 text-gray-400 group-hover:text-indigo-500" />
+                        My Profile
                       </Link>
+                      <Link
+                        href="/subscription"
+                        className="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <CreditCard className="mr-3 h-4 w-4 text-gray-400 group-hover:text-indigo-500" />
+                        Subscription Plan
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 hover:text-indigo-600 transition-colors"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        <Settings className="mr-3 h-4 w-4 text-gray-400 group-hover:text-indigo-500" />
+                        Settings
+                      </Link>
+                    </div>
+
+                    <div className="border-t border-gray-100 py-1">
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
                           logout();
                         }}
-                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                        className="group flex w-full items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >
-                        🚪 Logout
+                        <LogOut className="mr-3 h-4 w-4 text-red-400 group-hover:text-red-500" />
+                        Sign Out
                       </button>
                     </div>
                   </div>

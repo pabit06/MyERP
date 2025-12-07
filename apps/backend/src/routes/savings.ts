@@ -14,8 +14,8 @@ import {
   savingAccountTransactionSchema,
 } from '@myerp/shared-types';
 import { idSchema, paginationSchema, paginationWithSearchSchema } from '../validators/common.js';
-import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
-import { prisma } from '../lib/prisma.js';
+import { createPaginatedResponse } from '../lib/pagination.js';
+// import { prisma } from '../lib/prisma.js'; // removed
 
 const router = Router();
 
@@ -63,26 +63,12 @@ router.get(
     }
     const { page, limit, sortBy, sortOrder } = req.validatedQuery!;
 
-    const where = {
-      cooperativeId: tenantId!,
-    };
-
-    const [products, total] = await Promise.all([
-      prisma.savingProduct.findMany(
-        applySorting(
-          applyPagination(
-            {
-              where,
-            },
-            { page, limit, sortOrder: sortOrder || 'desc' }
-          ),
-          sortBy,
-          sortOrder,
-          'createdAt'
-        )
-      ),
-      prisma.savingProduct.count({ where }),
-    ]);
+    const { products, total } = await savingsController.getProducts(tenantId, {
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    });
 
     res.json(
       createPaginatedResponse(products, total, { page, limit, sortOrder: sortOrder || 'desc' })
@@ -181,60 +167,15 @@ router.get(
     const tenantId = req.user!.tenantId;
     const { page, limit, sortBy, sortOrder, memberId, status, search } = req.validatedQuery!;
 
-    const where: any = {
-      cooperativeId: tenantId!,
-    };
-
-    if (memberId) {
-      where.memberId = memberId;
-    }
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (search) {
-      where.OR = [
-        { accountNumber: { contains: search, mode: 'insensitive' as const } },
-        { member: { memberNumber: { contains: search, mode: 'insensitive' as const } } },
-        { member: { firstName: { contains: search, mode: 'insensitive' as const } } },
-        { member: { lastName: { contains: search, mode: 'insensitive' as const } } },
-      ];
-    }
-
-    const [accounts, total] = await Promise.all([
-      prisma.savingAccount.findMany(
-        applySorting(
-          applyPagination(
-            {
-              where,
-              include: {
-                member: {
-                  select: {
-                    id: true,
-                    memberNumber: true,
-                    firstName: true,
-                    lastName: true,
-                  },
-                },
-                product: {
-                  select: {
-                    id: true,
-                    name: true,
-                    code: true,
-                  },
-                },
-              },
-            },
-            { page, limit, sortOrder: sortOrder || 'desc' }
-          ),
-          sortBy,
-          sortOrder,
-          'createdAt'
-        )
-      ),
-      prisma.savingAccount.count({ where }),
-    ]);
+    const { accounts, total } = await savingsController.getAccounts(tenantId!, {
+      page,
+      limit,
+      sortBy,
+      sortOrder: sortOrder as 'asc' | 'desc',
+      search,
+      memberId,
+      status,
+    });
 
     res.json(
       createPaginatedResponse(accounts, total, { page, limit, sortOrder: sortOrder || 'desc' })

@@ -6,8 +6,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import MyERPLogo from './MyERPLogo';
 import { cn } from '../lib/utils';
-
-// Import Professional Icons
 import {
   LayoutDashboard,
   Users,
@@ -38,18 +36,16 @@ import {
   ArrowDown,
   Award,
   Activity,
+  LogOut
 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import type { ComponentType } from 'react';
 
-// Type for Lucide icons
 type LucideIcon = ComponentType<LucideProps>;
 
-// Pages where sidebar should be hidden
 const HIDE_SIDEBAR_PAGES = ['/login', '/register', '/forgot-password'];
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
-// Type Definitions
 interface NavItem {
   label: string;
   href: string;
@@ -57,28 +53,22 @@ interface NavItem {
   icon: LucideIcon;
   group?: string;
   submenu?: NavItem[];
-  // Removed 'badge' from here as it's dynamic
   role?: string;
 }
 
 export default function Sidebar() {
-  const { isAuthenticated, hasModule, user, token, isLoading } = useAuth();
+  const { isAuthenticated, hasModule, user, token, isLoading, logout } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
-
-  // State for all dynamic badges
   const [badges, setBadges] = useState<{ [key: string]: number }>({
     kyc: 0,
     loans: 0,
   });
 
-  // 1. Define Navigation Configuration
   const navigationItems: NavItem[] = useMemo(
     () => [
       { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, group: 'main' },
-
-      // --- CBS Module ---
       {
         label: 'Members',
         href: '/members',
@@ -139,8 +129,6 @@ export default function Sidebar() {
           { label: 'Audit Report', href: '/reports/audit', icon: ShieldAlert },
         ],
       },
-
-      // --- Operations ---
       {
         label: 'Documents',
         href: '/documents',
@@ -150,7 +138,7 @@ export default function Sidebar() {
         submenu: [
           { label: 'All Documents', href: '/documents', icon: FileText },
           {
-            label: 'Darta / Chalani (दर्ता / चलानी)',
+            label: 'Darta / Chalani',
             href: '/documents/darta-chalani',
             icon: FileText,
           },
@@ -163,8 +151,6 @@ export default function Sidebar() {
         icon: Package,
         group: 'operations',
       },
-
-      // --- HRM ---
       {
         label: 'HR Management',
         href: '/hrm',
@@ -180,8 +166,6 @@ export default function Sidebar() {
           { label: 'Settings', href: '/hrm/settings', icon: Settings },
         ],
       },
-
-      // --- Governance ---
       {
         label: 'Committees',
         href: '/governance/committees',
@@ -210,8 +194,6 @@ export default function Sidebar() {
         icon: Vote,
         group: 'governance',
       },
-
-      // --- Compliance ---
       {
         label: 'Compliance',
         href: '/compliance',
@@ -263,13 +245,11 @@ export default function Sidebar() {
     governance: 'Governance',
   };
 
-  // 2. Fetch Badges (Centralized Logic) - Live updates
   useEffect(() => {
     if (!token || !isAuthenticated) return;
 
     const fetchBadges = async () => {
       try {
-        // You can create a combined endpoint later like /api/dashboard/badges
         const response = await fetch(`${API_URL}/members/summary`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -282,25 +262,19 @@ export default function Sidebar() {
       }
     };
 
-    // Initial fetch
     fetchBadges();
+    const interval = setInterval(fetchBadges, 15000);
 
-    // Poll every 15 seconds for live updates
-    const interval = setInterval(fetchBadges, 15000); // 15 seconds
-
-    // Refresh when tab becomes visible (user switches back to tab)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         fetchBadges();
       }
     };
 
-    // Refresh when window regains focus
     const handleFocus = () => {
       fetchBadges();
     };
 
-    // Listen for custom event to refresh badges immediately (e.g., after member approval)
     const handleBadgeRefresh = () => {
       fetchBadges();
     };
@@ -317,17 +291,13 @@ export default function Sidebar() {
     };
   }, [token, isAuthenticated]);
 
-  // 3. Map badges to Routes (Scalable way)
   const getBadgeCount = (href: string): number => {
     const badgeMap: Record<string, number> = {
       '/members/kyc-approvals': badges.kyc,
-      // Future badges:
-      // '/loans/pending': badges.loans,
     };
     return badgeMap[href] || 0;
   };
 
-  // 4. Auto-expand logic
   useEffect(() => {
     navigationItems.forEach((item) => {
       if (item.submenu) {
@@ -348,11 +318,9 @@ export default function Sidebar() {
     });
   };
 
-  // Prevent flashing while checking auth
   if (isLoading) return null;
   if (!isAuthenticated || HIDE_SIDEBAR_PAGES.includes(pathname || '')) return null;
 
-  // 5. Filter Logic (Modules & Roles)
   const filteredGroups = navigationItems
     .filter((item) => {
       if (item.module && !hasModule(item.module)) return false;
@@ -385,7 +353,6 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* Mobile Trigger */}
       <button
         onClick={() => setIsMobileMenuOpen(true)}
         className="md:hidden fixed top-3 left-3 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200 text-gray-600 hover:text-indigo-600 transition-colors"
@@ -393,7 +360,6 @@ export default function Sidebar() {
         <Menu className="w-6 h-6" />
       </button>
 
-      {/* Mobile Overlay */}
       {isMobileMenuOpen && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm transition-opacity"
@@ -401,30 +367,28 @@ export default function Sidebar() {
         />
       )}
 
-      {/* Sidebar Container */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-screen w-72 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out shadow-xl md:shadow-none',
+          'fixed top-0 left-0 z-50 h-screen w-72 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out shadow-2xl md:shadow-none',
           isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         )}
       >
-        {/* Header / Logo */}
-        <div className="h-24 flex items-center px-6 border-b border-gray-100">
-          <MyERPLogo size="2xl" />
+        {/* Dark Sidebar Background */}
+        <div className="h-20 flex items-center px-6 border-b border-white/10 bg-slate-950">
+          <MyERPLogo size="2xl" variant="dark" />
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden ml-auto text-gray-400 hover:text-gray-600"
+            className="md:hidden ml-auto text-gray-400 hover:text-white"
           >
             <ChevronRight className="w-6 h-6 rotate-180" />
           </button>
         </div>
 
-        {/* Scrollable Navigation */}
-        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8 scrollbar-thin scrollbar-thumb-gray-200">
+        <nav className="flex-1 overflow-y-auto py-6 px-4 space-y-8 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
           {Object.entries(filteredGroups).map(([group, items]) => (
             <div key={group}>
               {groupLabels[group] && (
-                <h3 className="px-3 text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 font-sans">
+                <h3 className="px-3 text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 font-sans">
                   {groupLabels[group]}
                 </h3>
               )}
@@ -436,7 +400,6 @@ export default function Sidebar() {
                     pathname={pathname}
                     isExpanded={expandedMenus.has(item.href)}
                     onToggle={() => toggleSubmenu(item.href)}
-                    // Pass the generic badge getter
                     getBadge={getBadgeCount}
                     closeMobile={() => setIsMobileMenuOpen(false)}
                   />
@@ -445,12 +408,29 @@ export default function Sidebar() {
             </div>
           ))}
         </nav>
+
+        {/* User Footer Section */}
+        <div className="p-4 border-t border-white/10 bg-slate-950">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg">
+              <span className="font-bold text-sm">
+                {user?.firstName?.[0]}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.firstName} {user?.lastName}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.email}</p>
+            </div>
+            <button onClick={logout} className="p-2 text-slate-400 hover:text-white transition-colors">
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
       </aside>
     </>
   );
 }
 
-// Extracted Sidebar Item Component
 function SidebarItem({
   item,
   pathname,
@@ -469,15 +449,13 @@ function SidebarItem({
   const Icon = item.icon;
   const hasSubmenu = item.submenu && item.submenu.length > 0;
   const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
-
-  // Get dynamic badge count
   const badgeCount = getBadge(item.href);
 
   const baseLinkClasses = cn(
-    'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 relative',
+    'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 relative',
     isActive
-      ? 'bg-indigo-50 text-indigo-700 shadow-sm ring-1 ring-indigo-200'
-      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+      : 'text-slate-400 hover:bg-white/5 hover:text-white'
   );
 
   return (
@@ -488,14 +466,14 @@ function SidebarItem({
             <Icon
               className={cn(
                 'w-5 h-5',
-                isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
+                isActive ? 'text-white' : 'text-slate-500 group-hover:text-white transition-colors'
               )}
             />
             <span>{item.label}</span>
           </div>
           <ChevronDown
             className={cn(
-              'w-4 h-4 text-gray-400 transition-transform duration-200',
+              'w-4 h-4 text-slate-500 transition-transform duration-200',
               isExpanded ? 'rotate-180' : ''
             )}
           />
@@ -506,14 +484,13 @@ function SidebarItem({
             <Icon
               className={cn(
                 'w-5 h-5',
-                isActive ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-600'
+                isActive ? 'text-white' : 'text-slate-500 group-hover:text-white transition-colors'
               )}
             />
             <span>{item.label}</span>
           </div>
-          {/* Dynamic Badge */}
           {badgeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-slate-900">
               {badgeCount}
             </span>
           )}
@@ -524,18 +501,20 @@ function SidebarItem({
       {hasSubmenu && (
         <div
           className={cn(
-            'grid transition-all duration-200 ease-in-out overflow-hidden',
+            'grid transition-all duration-300 ease-in-out overflow-hidden',
             isExpanded ? 'grid-rows-[1fr] opacity-100 mt-1' : 'grid-rows-[0fr] opacity-0'
           )}
         >
-          <div className="min-h-0 pl-4 border-l-2 border-gray-100 ml-5 space-y-1">
+          <div className="min-h-0 pl-11 space-y-1 relative">
+            {/* Guide Line */}
+            <div className="absolute left-6 top-0 bottom-0 w-px bg-white/10"></div>
             {item.submenu!.map((subItem) => (
               <SidebarItem
                 key={subItem.href}
                 item={subItem}
                 pathname={pathname}
                 isExpanded={false}
-                onToggle={() => {}}
+                onToggle={() => { }}
                 getBadge={getBadge}
                 closeMobile={closeMobile}
               />
