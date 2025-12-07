@@ -10,7 +10,6 @@ import {
   Filter,
   Search,
   FileText,
-  User,
   Activity,
   Clock,
 } from 'lucide-react';
@@ -54,8 +53,6 @@ export default function AuditReportPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const fetchAuditReport = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     try {
       const params = new URLSearchParams();
@@ -65,18 +62,11 @@ export default function AuditReportPage() {
       if (filters.endDate) params.append('endDate', filters.endDate);
       if (filters.limit) params.append('limit', filters.limit);
 
-      const response = await fetch(`${API_URL}/reports/audit?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAuditLogs(data.auditLogs || []);
-        setSummary(data.summary || null);
-      } else {
-        console.error('Failed to fetch audit report');
-        setAuditLogs([]);
-        setSummary(null);
-      }
+      const data = await apiClient.get<{ auditLogs: any[]; summary: any }>(
+        `/reports/audit?${params.toString()}`
+      );
+      setAuditLogs(data.auditLogs || []);
+      setSummary(data.summary || null);
     } catch (error) {
       console.error('Error fetching audit report:', error);
       setAuditLogs([]);

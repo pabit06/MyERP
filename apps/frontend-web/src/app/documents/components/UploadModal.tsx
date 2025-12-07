@@ -35,7 +35,9 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
   const [effectiveDate, setEffectiveDate] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
 
-  const [members, setMembers] = useState<Array<{ id: string; memberNumber: string; firstName: string; lastName: string }>>([]);
+  const [members, setMembers] = useState<
+    Array<{ id: string; memberNumber: string; firstName: string; lastName: string }>
+  >([]);
 
   // Fetch members when switching to member upload
   useEffect(() => {
@@ -172,10 +174,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Upload Document</h2>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
+            <button onClick={handleClose} className="text-gray-400 hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -190,9 +189,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Document Type Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Document Type
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
               <div className="flex gap-4">
                 <label className="flex items-center">
                   <input
@@ -219,9 +216,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
             {/* File Upload Area */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                File *
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">File *</label>
               <div
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
@@ -275,9 +270,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             {uploadType === 'member' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Member *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Member *</label>
                   <select
                     value={memberId}
                     onChange={(e) => setMemberId(e.target.value)}
@@ -325,9 +318,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
             {uploadType === 'official' && (
               <>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Title *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
                   <input
                     type="text"
                     value={title}
@@ -353,9 +344,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Category
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                     <input
                       type="text"
                       value={category}
@@ -365,9 +354,7 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Version
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Version</label>
                     <input
                       type="text"
                       value={version}
@@ -452,4 +439,3 @@ export default function UploadModal({ isOpen, onClose, onSuccess }: UploadModalP
     </div>
   );
 }
-

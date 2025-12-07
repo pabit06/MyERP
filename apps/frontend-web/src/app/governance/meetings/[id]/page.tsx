@@ -23,6 +23,7 @@ interface Meeting {
   baseAllowance?: number;
   totalExpense?: number;
   minutesFileUrl?: string;
+  managerReports?: any[];
   committee?: {
     id: string;
     name: string;
@@ -78,7 +79,7 @@ interface PendingAgendaItem {
 export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'agenda' | 'attendance' | 'minutes'>('agenda');
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,17 +125,16 @@ export default function MeetingDetailPage() {
 
   // Report attachment
   const [availableReports, setAvailableReports] = useState<any[]>([]);
-  const [loadingReports, setLoadingReports] = useState(false);
   const [attachedReports, setAttachedReports] = useState<any[]>([]);
   const [selectedReportId, setSelectedReportId] = useState('');
   const [attachingReport, setAttachingReport] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && token && params.id) {
+    if (!authLoading && isAuthenticated && params.id) {
       fetchMeetingDetails();
       fetchAvailableReports();
     }
-  }, [authLoading, isAuthenticated, token, params.id]);
+  }, [authLoading, isAuthenticated, params.id]);
 
   useEffect(() => {
     if (meeting?.agendas) {
@@ -153,18 +153,15 @@ export default function MeetingDetailPage() {
   }, [meeting]);
 
   const fetchMeetingDetails = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const data = await apiClient.get<{
+        meeting: Meeting;
+        pendingAgendaItems: PendingAgendaItem[];
+        unassignedPendingAgendaItems: PendingAgendaItem[];
+      }>(`/governance/meetings/${params.id}`);
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
       setMeeting(data.meeting);
       setPendingAgendaItems(data.pendingAgendaItems || []);
       setUnassignedPendingAgendaItems(data.unassignedPendingAgendaItems || []);
@@ -183,45 +180,24 @@ export default function MeetingDetailPage() {
   };
 
   const fetchAvailableReports = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     try {
-      setLoadingReports(true);
-      const response = await fetch(
-        `${API_URL}/governance/meetings/${params.id}/available-reports`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const data = await apiClient.get<{ reports: any[] }>(
+        `/governance/meetings/${params.id}/available-reports`
       );
-
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableReports(data.reports || []);
-      }
+      setAvailableReports(data.reports || []);
     } catch (error) {
       console.error('Error fetching available reports:', error);
-    } finally {
-      setLoadingReports(false);
     }
   };
 
   const handleAttachReport = async () => {
-    if (!token || !params.id || !selectedReportId) return;
+    if (!params.id || !selectedReportId) return;
     setAttachingReport(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/attach-report`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reportId: selectedReportId }),
+      await apiClient.put(`/governance/meetings/${params.id}/attach-report`, {
+        reportId: selectedReportId,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to attach report');
-      }
-
       await fetchMeetingDetails();
       await fetchAvailableReports();
       setSelectedReportId('');
@@ -234,22 +210,10 @@ export default function MeetingDetailPage() {
   };
 
   const handleSchedule = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setScheduling(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/schedule`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to schedule meeting');
-      }
-
+      await apiClient.post(`/governance/meetings/${params.id}/schedule`);
       await fetchMeetingDetails();
       alert('Meeting scheduled successfully! Notifications sent to attendees.');
     } catch (error: any) {
@@ -260,26 +224,13 @@ export default function MeetingDetailPage() {
   };
 
   const handleStartMeeting = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setStartingMeeting(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: 'COMPLETED',
-          workflowStatus: 'MINUTED',
-        }),
+      await apiClient.put(`/governance/meetings/${params.id}`, {
+        status: 'COMPLETED',
+        workflowStatus: 'MINUTED',
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start meeting');
-      }
-
       await fetchMeetingDetails();
     } catch (error: any) {
       alert(error.message || 'Error starting meeting');
@@ -289,25 +240,12 @@ export default function MeetingDetailPage() {
   };
 
   const handleAddAgenda = async () => {
-    if (!token || !params.id || !newAgendaTitle.trim()) return;
+    if (!params.id || !newAgendaTitle.trim()) return;
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/agenda`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: newAgendaTitle,
-          description: newAgendaDescription || undefined,
-        }),
+      await apiClient.post(`/governance/meetings/${params.id}/agenda`, {
+        title: newAgendaTitle,
+        description: newAgendaDescription || undefined,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add agenda');
-      }
-
       setNewAgendaTitle('');
       setNewAgendaDescription('');
       await fetchMeetingDetails();
@@ -317,28 +255,12 @@ export default function MeetingDetailPage() {
   };
 
   const handleUpdateAgenda = async (agendaId: string) => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     try {
-      const response = await fetch(
-        `${API_URL}/governance/meetings/${params.id}/agenda/${agendaId}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            title: editingAgendaTitle,
-            description: editingAgendaDescription,
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update agenda');
-      }
-
+      await apiClient.put(`/governance/meetings/${params.id}/agenda/${agendaId}`, {
+        title: editingAgendaTitle,
+        description: editingAgendaDescription,
+      });
       setEditingAgendaId(null);
       setEditingAgendaTitle('');
       setEditingAgendaDescription('');
@@ -349,24 +271,10 @@ export default function MeetingDetailPage() {
   };
 
   const handleDeleteAgenda = async (agendaId: string) => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     if (!confirm('Are you sure you want to delete this agenda item?')) return;
     try {
-      const response = await fetch(
-        `${API_URL}/governance/meetings/${params.id}/agenda/${agendaId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete agenda');
-      }
-
+      await apiClient.delete(`/governance/meetings/${params.id}/agenda/${agendaId}`);
       await fetchMeetingDetails();
     } catch (error: any) {
       alert(error.message || 'Error deleting agenda');
@@ -391,29 +299,16 @@ export default function MeetingDetailPage() {
   };
 
   const handleSaveAttendance = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setSavingAttendance(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/attendance`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          attendees: attendees.map((att) => ({
-            id: att.id,
-            isPresent: att.isPresent,
-            allowance: att.allowance,
-          })),
-        }),
+      await apiClient.put(`/governance/meetings/${params.id}/attendance`, {
+        attendees: attendees.map((att) => ({
+          id: att.id,
+          isPresent: att.isPresent,
+          allowance: att.allowance,
+        })),
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save attendance');
-      }
-
       await fetchMeetingDetails();
       alert('Attendance saved successfully!');
     } catch (error: any) {
@@ -424,27 +319,14 @@ export default function MeetingDetailPage() {
   };
 
   const handleAddInvitee = async () => {
-    if (!token || !params.id || !newInviteeName.trim()) return;
+    if (!params.id || !newInviteeName.trim()) return;
     setAddingInvitee(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/attendees`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: newInviteeName,
-          role: newInviteeRole,
-          allowance: Number(newInviteeAllowance) || 0,
-        }),
+      await apiClient.post(`/governance/meetings/${params.id}/attendees`, {
+        name: newInviteeName,
+        role: newInviteeRole,
+        allowance: Number(newInviteeAllowance) || 0,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add invitee');
-      }
-
       setNewInviteeName('');
       setNewInviteeRole('Invitee');
       setNewInviteeAllowance('');
@@ -457,7 +339,7 @@ export default function MeetingDetailPage() {
   };
 
   const handleSaveMinutes = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setSavingMinutes(true);
     try {
       const agendas = Object.entries(agendaDecisions).map(([id, data]) => ({
@@ -466,20 +348,7 @@ export default function MeetingDetailPage() {
         decisionStatus: data.decisionStatus,
       }));
 
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/minutes`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ agendas }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save minutes');
-      }
-
+      await apiClient.put(`/governance/meetings/${params.id}/minutes`, { agendas });
       await fetchMeetingDetails();
       alert('Minutes saved successfully!');
     } catch (error: any) {
@@ -490,28 +359,13 @@ export default function MeetingDetailPage() {
   };
 
   const handleUploadFile = async () => {
-    if (!token || !params.id || !selectedFile) return;
+    if (!params.id || !selectedFile) return;
     setUploadingFile(true);
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch(
-        `${API_URL}/governance/meetings/${params.id}/upload-minutes-file`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to upload file');
-      }
-
+      await apiClient.upload(`/governance/meetings/${params.id}/upload-minutes-file`, formData);
       await fetchMeetingDetails();
       setSelectedFile(null);
       alert('File uploaded successfully!');
@@ -523,7 +377,7 @@ export default function MeetingDetailPage() {
   };
 
   const handleFinalize = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     if (
       !confirm(
         'Are you sure you want to finalize this meeting? Once finalized, no changes can be made and accounting entries will be created.'
@@ -533,19 +387,7 @@ export default function MeetingDetailPage() {
     }
     setFinalizing(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}/finalize`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to finalize meeting');
-      }
-
+      await apiClient.post(`/governance/meetings/${params.id}/finalize`);
       await fetchMeetingDetails();
       alert('Meeting finalized successfully! Accounting entries have been created.');
     } catch (error: any) {
@@ -556,7 +398,7 @@ export default function MeetingDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     if (
       !confirm(
         'Are you sure you want to delete this meeting? Pending agenda items will be moved back to the pending list.'
@@ -566,18 +408,7 @@ export default function MeetingDetailPage() {
     }
     setDeleting(true);
     try {
-      const response = await fetch(`${API_URL}/governance/meetings/${params.id}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete meeting');
-      }
-
+      await apiClient.delete(`/governance/meetings/${params.id}`);
       alert(
         'Meeting deleted successfully. Pending agenda items have been moved back to the pending list.'
       );
@@ -841,30 +672,18 @@ export default function MeetingDetailPage() {
                           </div>
                           <button
                             onClick={async () => {
-                              if (!token || !params.id) return;
+                              if (!params.id) return;
                               try {
-                                const response = await fetch(
-                                  `${API_URL}/governance/meetings/${params.id}`,
-                                  {
-                                    method: 'PUT',
-                                    headers: {
-                                      Authorization: `Bearer ${token}`,
-                                      'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                      assignPendingAgendaItems: [item.memberId],
-                                    }),
-                                  }
+                                await apiClient.put(`/governance/meetings/${params.id}`, {
+                                  assignPendingAgendaItems: [item.memberId],
+                                });
+                                await fetchMeetingDetails();
+                                alert('Agenda item assigned successfully!');
+                              } catch (err: any) {
+                                const errorData = err.details || {};
+                                alert(
+                                  errorData.error || err.message || 'Failed to assign agenda item'
                                 );
-                                if (response.ok) {
-                                  await fetchMeetingDetails();
-                                  alert('Agenda item assigned successfully!');
-                                } else {
-                                  const errorData = await response.json();
-                                  alert(errorData.error || 'Failed to assign agenda item');
-                                }
-                              } catch (error: any) {
-                                alert(error.message || 'Error assigning agenda item');
                               }
                             }}
                             className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 text-sm"
@@ -1404,7 +1223,7 @@ export default function MeetingDetailPage() {
                   {meeting.minutesFileUrl && (
                     <div className="mt-2">
                       <a
-                        href={`${API_URL.replace('/api', '')}${meeting.minutesFileUrl.startsWith('/') ? meeting.minutesFileUrl : '/' + meeting.minutesFileUrl}`}
+                        href={`${(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api').replace('/api', '')}${meeting.minutesFileUrl.startsWith('/') ? meeting.minutesFileUrl : '/' + meeting.minutesFileUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-indigo-600 hover:text-indigo-800 text-sm underline"
@@ -1497,38 +1316,23 @@ export default function MeetingDetailPage() {
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={async () => {
-                    if (!token || !selectedMember || !params.id) return;
+                    if (!selectedMember || !params.id) return;
                     try {
-                      const response = await fetch(
-                        `${API_URL}/governance/meetings/${params.id}/approve-member`,
-                        {
-                          method: 'POST',
-                          headers: {
-                            Authorization: `Bearer ${token}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({
-                            memberId: selectedMember.memberId,
-                            approvalDate: approvalDate || new Date().toISOString(),
-                            decisionNumber: decisionNumber || undefined,
-                            remarks: remarks || undefined,
-                          }),
-                        }
-                      );
-                      if (response.ok) {
-                        await fetchMeetingDetails();
-                        setShowApproveModal(false);
-                        setSelectedMember(null);
-                        setApprovalDate('');
-                        setDecisionNumber('');
-                        setRemarks('');
-                        // Trigger badge refresh event for immediate sidebar update
-                        window.dispatchEvent(new Event('refreshBadges'));
-                        alert('Member approved successfully!');
-                      } else {
-                        const errorData = await response.json();
-                        alert(errorData.error || 'Failed to approve member');
-                      }
+                      await apiClient.post(`/governance/meetings/${params.id}/approve-member`, {
+                        memberId: selectedMember.memberId,
+                        approvalDate: approvalDate || new Date().toISOString(),
+                        decisionNumber: decisionNumber || undefined,
+                        remarks: remarks || undefined,
+                      });
+                      await fetchMeetingDetails();
+                      setShowApproveModal(false);
+                      setSelectedMember(null);
+                      setApprovalDate('');
+                      setDecisionNumber('');
+                      setRemarks('');
+                      // Trigger badge refresh event for immediate sidebar update
+                      window.dispatchEvent(new Event('refreshBadges'));
+                      alert('Member approved successfully!');
                     } catch (error: any) {
                       alert(error.message || 'Error approving member');
                     }

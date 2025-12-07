@@ -23,8 +23,7 @@ interface ManagerReport {
 }
 
 export default function ReportsPage() {
-  const router = useRouter();
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasModule, isAuthenticated, isLoading: authLoading, token } = useAuth();
   const [reports, setReports] = useState<ManagerReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +87,6 @@ export default function ReportsPage() {
   }, [searchTerm]);
 
   const fetchReports = async () => {
-    if (!token) return;
-
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -102,15 +99,9 @@ export default function ReportsPage() {
       if (monthFilter) params.append('month', monthFilter);
       if (statusFilter) params.append('status', statusFilter);
 
-      const response = await fetch(`${API_URL}/governance/reports?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch reports');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ reports: ManagerReport[]; pagination: any }>(
+        `/governance/reports?${params.toString()}`
+      );
       setReports(data.reports || []);
       setPagination(data.pagination || pagination);
       setError(null);
@@ -123,19 +114,10 @@ export default function ReportsPage() {
   };
 
   const handleDelete = async (reportId: string) => {
-    if (!token) return;
     if (!confirm('Are you sure you want to delete this report?')) return;
 
     try {
-      const response = await fetch(`${API_URL}/governance/reports/${reportId}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete report');
-      }
-
+      await apiClient.delete(`/governance/reports/${reportId}`);
       await fetchReports();
     } catch (error: any) {
       alert(error.message || 'Failed to delete report');

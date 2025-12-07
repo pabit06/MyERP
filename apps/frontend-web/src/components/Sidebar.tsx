@@ -149,7 +149,11 @@ export default function Sidebar() {
         group: 'operations',
         submenu: [
           { label: 'All Documents', href: '/documents', icon: FileText },
-          { label: 'Darta / Chalani (दर्ता / चलानी)', href: '/documents/darta-chalani', icon: FileText },
+          {
+            label: 'Darta / Chalani (दर्ता / चलानी)',
+            href: '/documents/darta-chalani',
+            icon: FileText,
+          },
         ],
       },
       {

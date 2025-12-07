@@ -1,6 +1,6 @@
 /**
  * Centralized API Client
- * 
+ *
  * Provides a single source of truth for all API calls with:
  * - Automatic token management
  * - Consistent error handling
@@ -18,7 +18,7 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public code?: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -27,18 +27,21 @@ export class ApiError extends Error {
 
 /**
  * API Response wrapper
+ * @deprecated Use types from @myerp/shared-types instead
  */
 export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
-  [key: string]: any; // Allow additional properties from backend
+  code?: string;
+  details?: unknown;
+  [key: string]: unknown; // Allow additional properties from backend
 }
 
 /**
  * Request options extending native Fetch API options
  */
-interface RequestOptions extends RequestInit {
+export interface RequestOptions extends RequestInit {
   skipAuth?: boolean; // Skip adding auth token
   skipErrorToast?: boolean; // Skip showing error toast
 }
@@ -101,16 +104,14 @@ class ApiClient {
   /**
    * Core request method
    */
-  private async request<T>(
-    endpoint: string,
-    options: RequestOptions = {}
-  ): Promise<T> {
+  private async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
     const { skipAuth = false, skipErrorToast = false, ...fetchOptions } = options;
+    // skipAuth is used in the condition below
 
     // Build headers
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...fetchOptions.headers,
+      ...(fetchOptions.headers as Record<string, string>),
     };
 
     // Add auth token if not skipped
@@ -139,7 +140,7 @@ class ApiClient {
       // Parse response
       let data: ApiResponse<T>;
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
         data = await response.json();
       } else {
@@ -155,13 +156,9 @@ class ApiClient {
 
       // Handle error responses
       if (!response.ok) {
-        const errorMessage = data.error || data.message || `Request failed with status ${response.status}`;
-        const error = new ApiError(
-          errorMessage,
-          response.status,
-          data.code || 'API_ERROR',
-          data
-        );
+        const errorMessage =
+          data.error || data.message || `Request failed with status ${response.status}`;
+        const error = new ApiError(errorMessage, response.status, data.code || 'API_ERROR', data);
 
         // Show error toast unless skipped
         if (!skipErrorToast && response.status >= 400) {
@@ -221,7 +218,7 @@ class ApiClient {
   /**
    * POST request
    */
-  async post<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
+  async post<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
       method: 'POST',
@@ -232,7 +229,7 @@ class ApiClient {
   /**
    * PUT request
    */
-  async put<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
+  async put<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PUT',
@@ -243,7 +240,7 @@ class ApiClient {
   /**
    * PATCH request
    */
-  async patch<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
+  async patch<T>(endpoint: string, data?: unknown, options?: RequestOptions): Promise<T> {
     return this.request<T>(endpoint, {
       ...options,
       method: 'PATCH',
@@ -264,13 +261,9 @@ class ApiClient {
   /**
    * Upload file (multipart/form-data)
    */
-  async upload<T>(
-    endpoint: string,
-    formData: FormData,
-    options?: RequestOptions
-  ): Promise<T> {
+  async upload<T>(endpoint: string, formData: FormData, options?: RequestOptions): Promise<T> {
     const token = this.getToken();
-    const headers: HeadersInit = {};
+    const headers: Record<string, string> = {};
 
     if (token && !options?.skipAuth) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -278,7 +271,10 @@ class ApiClient {
 
     // Don't set Content-Type for FormData (browser will set it with boundary)
     const { skipAuth, skipErrorToast, ...fetchOptions } = options || {};
-    delete fetchOptions.headers?.['Content-Type'];
+    const fetchHeaders = fetchOptions.headers as Record<string, string> | undefined;
+    if (fetchHeaders && 'Content-Type' in fetchHeaders) {
+      delete fetchHeaders['Content-Type'];
+    }
 
     const url = endpoint.startsWith('http') ? endpoint : `${this.baseURL}${endpoint}`;
 
@@ -301,7 +297,8 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMessage = data.error || data.message || `Upload failed with status ${response.status}`;
+        const errorMessage =
+          data.error || data.message || `Upload failed with status ${response.status}`;
         const error = new ApiError(errorMessage, response.status, data.code);
         if (!skipErrorToast) {
           toast.error(errorMessage);
@@ -328,4 +325,3 @@ export const apiClient = new ApiClient();
 
 // Export default for convenience
 export default apiClient;
-

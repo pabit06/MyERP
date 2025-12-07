@@ -5,18 +5,17 @@ import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { toast } from 'react-hot-toast';
-import { 
-  Calendar, 
-  Clock, 
-  DollarSign, 
-  FileText, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Calendar,
+  DollarSign,
+  FileText,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   Play,
   Square,
   RefreshCw,
-  Download
+  Download,
 } from 'lucide-react';
 import { formatBsDate, adToBs, bsToAd } from '@/lib/nepali-date';
 
@@ -43,37 +42,27 @@ interface DayBookStatus {
 }
 
 export default function DayBookPage() {
-  const { token, hasModule } = useAuth();
+  const { hasModule } = useAuth();
   const [dayStatus, setDayStatus] = useState<DayBookStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [showDayBeginModal, setShowDayBeginModal] = useState(false);
   const [showDayEndModal, setShowDayEndModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [dayHistory, setDayHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    if (token && hasModule('cbs')) {
+    if (hasModule('cbs')) {
       fetchDayStatus();
-      fetchDayHistory();
     }
-  }, [token, hasModule]);
+  }, [hasModule]);
 
   const fetchDayStatus = async () => {
     try {
-      const response = await fetch(`${API_URL}/cbs/day-book/status`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const data = await apiClient.get<DayBookStatus>('/cbs/day-book/status', {
+        skipErrorToast: true,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.status !== 'NO_DAY_OPEN') {
-          setDayStatus(data);
-        } else {
-          setDayStatus(null);
-        }
+      if (data.status !== 'NO_DAY_OPEN') {
+        setDayStatus(data);
       } else {
         setDayStatus(null);
       }
@@ -85,18 +74,9 @@ export default function DayBookPage() {
     }
   };
 
-  const fetchDayHistory = async () => {
-    try {
-      // This would need a new API endpoint for day history
-      // For now, we'll just show current status
-    } catch (error) {
-      console.error('Error fetching day history:', error);
-    }
-  };
-
   const handleDayBegin = async (bsDate?: string) => {
     let dateToUse = selectedDate;
-    
+
     // If BS date is provided, convert it to AD
     if (bsDate) {
       try {
@@ -115,27 +95,11 @@ export default function DayBookPage() {
 
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/cbs/day-book/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          date: dateToUse,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Day started successfully!');
-        setShowDayBeginModal(false);
-        setSelectedDate('');
-        fetchDayStatus();
-      } else {
-        toast.error(data.error || 'Failed to start day');
-      }
+      await apiClient.post('/cbs/day-book/start', { date: dateToUse });
+      toast.success('Day started successfully!');
+      setShowDayBeginModal(false);
+      setSelectedDate('');
+      fetchDayStatus();
     } catch (error: any) {
       toast.error(error.message || 'Failed to start day');
     } finally {
@@ -157,23 +121,10 @@ export default function DayBookPage() {
 
     setActionLoading(true);
     try {
-      const response = await fetch(`${API_URL}/cbs/day-book/close`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        toast.success('Day closed successfully!');
-        setShowDayEndModal(false);
-        fetchDayStatus();
-      } else {
-        toast.error(data.error || 'Failed to close day');
-      }
+      await apiClient.post('/cbs/day-book/close');
+      toast.success('Day closed successfully!');
+      setShowDayEndModal(false);
+      fetchDayStatus();
     } catch (error: any) {
       toast.error(error.message || 'Failed to close day');
     } finally {
@@ -185,11 +136,13 @@ export default function DayBookPage() {
     if (!dayStatus?.date) return;
 
     try {
+      const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const response = await fetch(
-        `${API_URL}/cbs/day-book/reports/eod?format=${format}&day=${dayStatus.date}`,
+        `${baseURL}/cbs/day-book/reports/eod?format=${format}&day=${dayStatus.date}`,
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         }
       );
@@ -241,7 +194,6 @@ export default function DayBookPage() {
   }
 
   const systemDate = dayStatus?.date ? new Date(dayStatus.date) : new Date();
-  const systemDateStr = systemDate.toISOString().split('T')[0];
   const systemDateBS = formatBsDate(adToBs(systemDate));
 
   return (
@@ -433,7 +385,7 @@ export default function DayBookPage() {
                 </p>
                 <p className="text-sm text-gray-600">{systemDateBS}</p>
               </div>
-              
+
               {/* Quick Date Set */}
               {!dayStatus && (
                 <div className="pt-4 border-t">
@@ -465,7 +417,9 @@ export default function DayBookPage() {
         {showDayBeginModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Start New Day (Day Begin)</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Start New Day (Day Begin)
+              </h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -480,7 +434,8 @@ export default function DayBookPage() {
                 </div>
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Make sure the previous day is closed before starting a new day.
+                    <strong>Note:</strong> Make sure the previous day is closed before starting a
+                    new day.
                   </p>
                 </div>
                 <div className="flex gap-3">
@@ -494,7 +449,7 @@ export default function DayBookPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={handleDayBegin}
+                    onClick={() => handleDayBegin()}
                     disabled={actionLoading || !selectedDate}
                     className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -514,8 +469,8 @@ export default function DayBookPage() {
               <div className="space-y-4">
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-sm text-red-800">
-                    <strong>Warning:</strong> Closing the day will finalize all transactions for today.
-                    Make sure all tellers have settled before closing.
+                    <strong>Warning:</strong> Closing the day will finalize all transactions for
+                    today. Make sure all tellers have settled before closing.
                   </p>
                 </div>
                 {dayStatus && (
@@ -557,4 +512,3 @@ export default function DayBookPage() {
     </ProtectedRoute>
   );
 }
-

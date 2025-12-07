@@ -280,15 +280,20 @@ export default function StatementPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {tx.kitta > 0 ? '+' : ''}
                                 {tx.kitta}
-                                <span className="text-xs text-gray-500 ml-2">({runningBalance})</span>
+                                <span className="text-xs text-gray-500 ml-2">
+                                  ({runningBalance})
+                                </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                रु. {tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                                रु.{' '}
+                                {tx.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                 {tx.paymentMode}
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-500">{tx.remarks || '-'}</td>
+                              <td className="px-6 py-4 text-sm text-gray-500">
+                                {tx.remarks || '-'}
+                              </td>
                             </tr>
                           );
                         })}

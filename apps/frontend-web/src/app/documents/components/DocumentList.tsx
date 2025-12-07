@@ -4,12 +4,14 @@ interface Document {
   id: string;
   docType: 'member' | 'official';
   fileName: string;
+  filePath: string;
   fileSize?: number | null;
   mimeType?: string | null;
   documentType: string;
   description?: string | null;
   uploadedAt: string;
   member?: {
+    id: string;
     memberNumber: string;
     firstName: string;
     lastName: string;
@@ -122,10 +124,7 @@ export default function DocumentList({
               const isSelected = selectedDocuments.has(document.id);
 
               return (
-                <tr
-                  key={document.id}
-                  className={isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}
-                >
+                <tr key={document.id} className={isSelected ? 'bg-indigo-50' : 'hover:bg-gray-50'}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
@@ -138,11 +137,17 @@ export default function DocumentList({
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">{getFileIcon(document.mimeType)}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm font-medium text-gray-900 truncate" title={displayName}>
+                        <div
+                          className="text-sm font-medium text-gray-900 truncate"
+                          title={displayName}
+                        >
                           {displayName}
                         </div>
                         {document.description && (
-                          <div className="text-sm text-gray-500 truncate" title={document.description}>
+                          <div
+                            className="text-sm text-gray-500 truncate"
+                            title={document.description}
+                          >
                             {document.description}
                           </div>
                         )}
@@ -196,4 +201,3 @@ export default function DocumentList({
     </div>
   );
 }
-

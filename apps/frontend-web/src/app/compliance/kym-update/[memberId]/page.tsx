@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ProtectedRoute, Button } from '@/features/components/shared';
-import { useAuth } from '@/contexts/AuthContext';
+import { ProtectedRoute } from '@/features/components/shared';
 import { apiClient } from '@/lib/api';
 import { KymForm } from '@/features/members';
 import { KymFormData } from '@myerp/shared-types';
@@ -12,20 +11,15 @@ export default function KymUpdatePage() {
   const router = useRouter();
   const params = useParams();
   const memberId = params.memberId as string;
-  const { token } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [defaultValues, setDefaultValues] = useState<Partial<KymFormData> | null>(null);
 
   useEffect(() => {
     const fetchKymData = async () => {
-      if (!token || !memberId) return;
+      if (!memberId) return;
       try {
-        const response = await fetch(`${API_URL}/members/${memberId}/kym`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) throw new Error('Failed to fetch KYM data');
-        const data = await response.json();
+        const data = await apiClient.get<KymFormData>(`/members/${memberId}/kym`);
         setDefaultValues(data);
       } catch (err: any) {
         setError(err.message);
@@ -34,27 +28,14 @@ export default function KymUpdatePage() {
       }
     };
     fetchKymData();
-  }, [memberId, token]);
+  }, [memberId]);
 
   const handleKymSubmit = async (data: KymFormData) => {
-    if (!token || !memberId) return;
+    if (!memberId) return;
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/members/${memberId}/kym`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update KYM');
-      }
-
+      await apiClient.put(`/members/${memberId}/kym`, data);
       router.push(`/members/${memberId}`);
     } catch (err: any) {
       setError(err.message || 'Error updating KYM');

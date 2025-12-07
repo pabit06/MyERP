@@ -47,7 +47,7 @@ export default function AllMembersPage() {
       const url = new URL(`${API_URL}/members`);
       if (searchTerm) url.searchParams.append('search', searchTerm);
       url.searchParams.append('hasMemberNumber', 'true');
-      
+
       const response = await fetch(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -229,14 +229,14 @@ export default function AllMembersPage() {
                             : member.workflowStatus === 'application'
                               ? 'bg-gray-100 text-gray-800'
                               : member.workflowStatus === 'under_review'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : member.workflowStatus === 'approved'
-                                    ? 'bg-green-100 text-green-800'
-                                    : member.workflowStatus === 'bod_pending'
-                                      ? 'bg-purple-100 text-purple-800'
-                                      : member.workflowStatus === 'rejected'
-                                        ? 'bg-red-100 text-red-800'
-                                        : 'bg-gray-100 text-gray-800'
+                                ? 'bg-yellow-100 text-yellow-800'
+                                : member.workflowStatus === 'approved'
+                                  ? 'bg-green-100 text-green-800'
+                                  : member.workflowStatus === 'bod_pending'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : member.workflowStatus === 'rejected'
+                                      ? 'bg-red-100 text-red-800'
+                                      : 'bg-gray-100 text-gray-800'
                         }`}
                       >
                         {member.workflowStatus?.replace(/_/g, ' ').toUpperCase() || 'PENDING'}

@@ -930,8 +930,8 @@ export async function closeDay(cooperativeId: string, userId: string) {
  */
 export async function forceCloseDay(
   cooperativeId: string,
-  _userId: string,
-  _reason: string,
+  userId: string,
+  reason: string,
   _approverId: string
 ) {
   return await prisma.$transaction(async (tx) => {

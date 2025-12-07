@@ -53,7 +53,7 @@ export function sanitizeText(text: string): string {
   }
   // Remove HTML tags
   const withoutTags = text.replace(/<[^>]*>/g, '');
-  // Encode special characters
+  // Encode special characters - must handle ampersand FIRST to avoid double encoding
   return withoutTags
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

@@ -23,6 +23,10 @@ import {
   EODReportOptions,
 } from '../../services/cbs/eod-report.service.js';
 import { prisma } from '../../lib/prisma.js';
+import { paginationWithSearchSchema } from '../../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../../lib/pagination.js';
+import { validateQuery } from '../../middleware/validate.js';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -364,10 +368,18 @@ router.post('/reopen', requireRole('Manager'), async (req: Request, res: Respons
  * GET /api/cbs/day-book/settlements
  * Get settlement history with reconciliation flags
  */
-router.get('/settlements', async (req: Request, res: Response) => {
-  try {
+router.get(
+  '/settlements',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      day: z.string().optional(),
+      tellerId: z.string().optional(),
+      status: z.string().optional(),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
     const cooperativeId = req.user!.tenantId;
-    const { day, tellerId, status } = req.query;
+    const { page, limit, sortBy, sortOrder, day, tellerId, status } = req.validatedQuery!;
 
     const where: any = {
       cooperativeId: cooperativeId!, // Direct query using cooperativeId for better performance
@@ -389,52 +401,61 @@ router.get('/settlements', async (req: Request, res: Response) => {
       where.status = status;
     }
 
-    const settlements = await prisma.tellerSettlement.findMany({
-      where,
-      include: {
-        dayBook: {
-          select: {
-            id: true,
-            date: true,
-            status: true,
-          },
-        },
-        teller: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        executedByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        approvalByUser: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        executedAt: 'desc',
-      },
-    });
+    const [settlements, total] = await Promise.all([
+      prisma.tellerSettlement.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+              include: {
+                dayBook: {
+                  select: {
+                    id: true,
+                    date: true,
+                    status: true,
+                  },
+                },
+                teller: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+                executedByUser: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+                approvalByUser: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+            { page, limit, sortOrder: sortOrder || 'desc' }
+          ),
+          sortBy,
+          sortOrder,
+          'executedAt'
+        )
+      ),
+      prisma.tellerSettlement.count({ where }),
+    ]);
 
-    res.json({ settlements });
-  } catch (error: any) {
-    console.error('Get settlements error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get settlements' });
-  }
-});
+    res.json(
+      createPaginatedResponse(settlements, total, { page, limit, sortOrder: sortOrder || 'desc' })
+    );
+  })
+);
 
 /**
  * GET /api/cbs/day-book/reports/eod

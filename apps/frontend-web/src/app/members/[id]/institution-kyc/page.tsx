@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
-import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { KYMInstitutionForm } from '@/features/members';
 import { InstitutionKymFormData } from '@myerp/shared-types';
@@ -12,39 +11,25 @@ export default function InstitutionKycPage() {
   const router = useRouter();
   const params = useParams();
   const memberId = params.id as string;
-  const { token } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [defaultValues, setDefaultValues] = useState<Partial<InstitutionKymFormData> | null>(null);
-  const [member, setMember] = useState<{ institutionName?: string } | null>(null);
 
   useEffect(() => {
     const fetchMemberData = async () => {
-      if (!token || !memberId) return;
+      if (!memberId) return;
       try {
         // Fetch member basic data
-        const memberResponse = await fetch(`${API_URL}/members/${memberId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!memberResponse.ok) throw new Error('Failed to fetch member data');
-        const memberData = await memberResponse.json();
-        setMember(memberData.member);
+        const memberData = await apiClient.get<{ member: { institutionName?: string } }>(
+          `/members/${memberId}`
+        );
 
         // Try to fetch existing KYM data if available
         try {
-          const kymResponse = await fetch(`${API_URL}/members/${memberId}/institution-kym`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (kymResponse.ok) {
-            const kymData = await kymResponse.json();
-            setDefaultValues(kymData);
-          } else {
-            // No KYM data yet, use member basic data as defaults
-            setDefaultValues({
-              name: memberData.member.institutionName || '',
-            });
-          }
+          const kymData = await apiClient.get<InstitutionKymFormData>(
+            `/members/${memberId}/institution-kym`
+          );
+          setDefaultValues(kymData);
         } catch {
           // No KYM data yet, use member basic data as defaults
           setDefaultValues({
@@ -58,27 +43,14 @@ export default function InstitutionKycPage() {
       }
     };
     fetchMemberData();
-  }, [memberId, token]);
+  }, [memberId]);
 
   const handleKymSubmit = async (data: InstitutionKymFormData) => {
-    if (!token || !memberId) return;
+    if (!memberId) return;
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/members/${memberId}/institution-kym`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit KYM');
-      }
-
+      await apiClient.put(`/members/${memberId}/institution-kym`, data);
       router.push(`/members/${memberId}`);
     } catch (err: any) {
       setError(err.message || 'Error submitting KYM');

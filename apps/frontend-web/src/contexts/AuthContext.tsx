@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { apiClient } from '../lib/api';
 
 interface User {
@@ -49,6 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setUser(null);
     setCooperative(null);
+    // Clear Sentry user context
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      Sentry.setUser(null);
+    }
   }, []);
 
   // Initialize API client with token getter and unauthorized handler
@@ -80,6 +85,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setUser(data.user);
       setCooperative(data.cooperative);
+
+      // Set Sentry user context
+      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+        Sentry.setUser({
+          id: data.user.id,
+          email: data.user.email,
+          username: `${data.user.firstName} ${data.user.lastName}`,
+          tenantId: data.cooperative.id,
+        });
+      }
     } catch (error) {
       // Token invalid, clear auth
       handleLogout();
@@ -101,6 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(authToken);
       setUser(data.user);
       setCooperative(data.cooperative);
+
+      // Set Sentry user context
+      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+        Sentry.setUser({
+          id: data.user.id,
+          email: data.user.email,
+          username: `${data.user.firstName} ${data.user.lastName}`,
+          tenantId: data.cooperative.id,
+        });
+      }
     } catch (error) {
       // Error is already handled by API client (toast shown)
       throw error;

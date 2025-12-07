@@ -34,7 +34,9 @@ export default function MemberWorkflow({
   const [showKYMForm, setShowKYMForm] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showBODModal, setShowBODModal] = useState(false);
-  const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'review' | 'complete_review'>('review');
+  const [reviewAction, setReviewAction] = useState<
+    'approve' | 'reject' | 'review' | 'complete_review'
+  >('review');
   const [remarks, setRemarks] = useState('');
   const [meetingId, setMeetingId] = useState('');
   const [meetings, setMeetings] = useState<any[]>([]);
@@ -120,7 +122,7 @@ export default function MemberWorkflow({
 
   const handleReview = async () => {
     if (!token) return;
-    
+
     // If complete_review, just mark as completed in frontend (no backend call)
     if (reviewAction === 'complete_review') {
       setReviewCompleted(true);
@@ -128,7 +130,7 @@ export default function MemberWorkflow({
       setRemarks('');
       return;
     }
-    
+
     try {
       const response = await fetch(`${API_URL}/member-workflow/${memberId}/review`, {
         method: 'POST',
@@ -204,10 +206,12 @@ export default function MemberWorkflow({
             const isActive = step.key === workflowStatus;
             const isCompleted = currentStepIndex > index;
             const isRejected = workflowStatus === 'rejected' && step.key === 'rejected';
-            
+
             // Find history item for this step to get date
-            const historyItem = history.find(h => h.toStatus === step.key);
-            let stepDate = historyItem ? new Date(historyItem.createdAt).toLocaleDateString() : null;
+            const historyItem = history.find((h) => h.toStatus === step.key);
+            let stepDate = historyItem
+              ? new Date(historyItem.createdAt).toLocaleDateString()
+              : null;
 
             // If step is 'application' and no history, use member creation date
             if (step.key === 'application' && !stepDate && createdAt) {
@@ -222,17 +226,24 @@ export default function MemberWorkflow({
                     Full Membership: Can perform transactions (Savings/Loan)
                   </div>
                 )}
-                
+
                 {/* Step Circle and Lines Container - Fixed height for alignment */}
-                <div className="relative flex items-center justify-center w-full mb-8" style={{ height: '2.5rem' }}>
+                <div
+                  className="relative flex items-center justify-center w-full mb-8"
+                  style={{ height: '2.5rem' }}
+                >
                   {/* Line Before */}
-                  <div 
+                  <div
                     className={`h-1 flex-1 absolute left-0 ${
-                      index === 0 ? 'invisible' : isCompleted || isActive ? 'bg-green-500' : 'bg-gray-200'
+                      index === 0
+                        ? 'invisible'
+                        : isCompleted || isActive
+                          ? 'bg-green-500'
+                          : 'bg-gray-200'
                     }`}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
                   />
-                  
+
                   {/* Step Circle */}
                   <div
                     className={`w-10 h-10 flex-shrink-0 rounded-full flex items-center justify-center font-semibold z-10 relative transition-all duration-300 ${
@@ -246,12 +257,32 @@ export default function MemberWorkflow({
                     }`}
                   >
                     {isCompleted ? (
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
                       </svg>
                     ) : isRejected ? (
-                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-6 h-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     ) : (
                       index + 1
@@ -261,26 +292,38 @@ export default function MemberWorkflow({
                   {/* Current Stage Badge */}
                   {isActive && (
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-max z-20 mt-2">
-                      <div className={`px-3 py-1 text-xs font-bold text-${step.color}-700 bg-${step.color}-50 rounded-full border border-${step.color}-200 shadow-sm flex items-center space-x-1`}>
-                        <span className={`w-2 h-2 rounded-full bg-${step.color}-500 animate-pulse`}></span>
+                      <div
+                        className={`px-3 py-1 text-xs font-bold text-${step.color}-700 bg-${step.color}-50 rounded-full border border-${step.color}-200 shadow-sm flex items-center space-x-1`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full bg-${step.color}-500 animate-pulse`}
+                        ></span>
                         <span>Current Stage</span>
                       </div>
-                      <div className={`mx-auto w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-${step.color}-50 absolute -top-1.5 left-1/2 transform -translate-x-1/2`}></div>
+                      <div
+                        className={`mx-auto w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[6px] border-b-${step.color}-50 absolute -top-1.5 left-1/2 transform -translate-x-1/2`}
+                      ></div>
                     </div>
                   )}
 
                   {/* Line After */}
-                  <div 
+                  <div
                     className={`h-1 flex-1 absolute right-0 ${
-                      index === WORKFLOW_STEPS.length - 1 ? 'invisible' : isCompleted ? 'bg-green-500' : 'bg-gray-200'
+                      index === WORKFLOW_STEPS.length - 1
+                        ? 'invisible'
+                        : isCompleted
+                          ? 'bg-green-500'
+                          : 'bg-gray-200'
                     }`}
                     style={{ top: '50%', transform: 'translateY(-50%)' }}
                   />
                 </div>
-                  
+
                 {/* Label and Date - Fixed height container */}
                 <div className="flex flex-col items-center w-full min-h-[3rem]">
-                  <p className={`text-xs text-center font-medium px-1 ${isActive ? 'text-gray-900 font-bold' : 'text-gray-500'}`}>
+                  <p
+                    className={`text-xs text-center font-medium px-1 ${isActive ? 'text-gray-900 font-bold' : 'text-gray-500'}`}
+                  >
                     {step.label}
                   </p>
                   <p className="text-[10px] text-gray-400 mt-1 min-h-[1rem]">
@@ -410,7 +453,7 @@ export default function MemberWorkflow({
         </div>
       )}
 
-{/* Workflow History Removed - Moved inside Status Card */}
+      {/* Workflow History Removed - Moved inside Status Card */}
 
       {/* KYM Form Modal - Simplified for now, can be expanded */}
       {showKYMForm && (

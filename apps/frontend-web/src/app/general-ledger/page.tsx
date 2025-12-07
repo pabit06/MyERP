@@ -111,7 +111,7 @@ export default function GeneralLedgerPage() {
         const rawTotal = accounts
           .filter((acc) => !acc.isGroup) // Only count ledger accounts to avoid double-counting
           .reduce((sum, acc) => sum + (acc.balance || 0), 0);
-        
+
         const total = accountType === 'liability' ? Math.abs(rawTotal) : rawTotal;
         const groupCount = accounts.filter((acc) => acc.isGroup).length;
         const ledgerCount = accounts.filter((acc) => !acc.isGroup).length;

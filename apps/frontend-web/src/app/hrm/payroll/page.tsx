@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '../../../contexts/AuthContext';
 import Link from 'next/link';
-import PayrollPreviewModal from '@/features/hrm/components/PayrollPreviewModal';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import PayrollPreviewModal from '@/components/PayrollPreviewModal';
+import { apiClient } from '@/lib/api';
 
 interface PayrollPreview {
   preview: Array<{
@@ -30,7 +28,6 @@ interface PayrollPreview {
 }
 
 export default function PayrollPage() {
-  const { token } = useAuth();
   const [runs, setRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fiscalYear, setFiscalYear] = useState('2082/83');
@@ -40,22 +37,15 @@ export default function PayrollPage() {
   const [previewLoading, setPreviewLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) return;
     fetchRuns();
-  }, [token, fiscalYear, monthBs]);
+  }, [fiscalYear, monthBs]);
 
   const fetchRuns = async () => {
     try {
-      const response = await fetch(
-        `${API_URL}/hrm/payroll/runs?fiscalYear=${fiscalYear}&monthBs=${monthBs}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+      const data = await apiClient.get<{ runs: any[] }>(
+        `/hrm/payroll/runs?fiscalYear=${fiscalYear}&monthBs=${monthBs}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        setRuns(data.runs || []);
-      }
+      setRuns(data.runs || []);
     } catch (error) {
       console.error('Error fetching payroll runs:', error);
     } finally {
@@ -67,25 +57,13 @@ export default function PayrollPage() {
     setPreviewLoading(true);
     setShowPreview(true);
     try {
-      const response = await fetch(`${API_URL}/hrm/payroll/runs/preview`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ fiscalYear, monthBs }),
+      const data = await apiClient.post<PayrollPreview>('/hrm/payroll/runs/preview', {
+        fiscalYear,
+        monthBs,
       });
-      if (response.ok) {
-        const data = await response.json();
-        setPreviewData(data);
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to load preview');
-        setShowPreview(false);
-      }
-    } catch (error) {
-      console.error('Error previewing payroll:', error);
-      alert('Failed to load preview');
+      setPreviewData(data);
+    } catch (error: any) {
+      alert(error.message || 'Failed to load preview');
       setShowPreview(false);
     } finally {
       setPreviewLoading(false);
@@ -94,17 +72,8 @@ export default function PayrollPage() {
 
   const handleCreateRun = async () => {
     try {
-      const response = await fetch(`${API_URL}/hrm/payroll/runs`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ fiscalYear, monthBs }),
-      });
-      if (response.ok) {
-        await fetchRuns();
-      }
+      await apiClient.post('/hrm/payroll/runs', { fiscalYear, monthBs });
+      await fetchRuns();
     } catch (error) {
       console.error('Error creating payroll run:', error);
     }
@@ -117,15 +86,8 @@ export default function PayrollPage() {
       return;
     }
     try {
-      const response = await fetch(`${API_URL}/hrm/payroll/runs/${runId}/finalize`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        await fetchRuns();
-      }
+      await apiClient.post(`/hrm/payroll/runs/${runId}/finalize`);
+      await fetchRuns();
     } catch (error) {
       console.error('Error finalizing payroll run:', error);
     }

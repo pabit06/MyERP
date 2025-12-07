@@ -59,9 +59,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Amount (NPR) *
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (NPR) *</label>
             <input
               type="number"
               step="0.01"
@@ -132,4 +130,3 @@ const TransactionModal: React.FC<TransactionModalProps> = ({
 };
 
 export default TransactionModal;
-

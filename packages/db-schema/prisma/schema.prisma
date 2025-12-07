@@ -19,83 +19,83 @@ model Cooperative {
   updatedAt DateTime @updatedAt
 
   // Relations
-  profile         CooperativeProfile?
-  subscription    Subscription?
-  users           User[]
-  members         Member[]
-  roles           Role[]
-  chartOfAccounts ChartOfAccounts[]
-  journalEntries  JournalEntry[]
-  transactions    Transaction[]
-  ledgers         Ledger[]
-  savingProducts  SavingProduct[]
-  savingAccounts  SavingAccount[]
-  loanProducts    LoanProduct[]
-  loanApplications LoanApplication[]
-  productGLMaps   ProductGLMap[]
-  emiSchedules    EMISchedule[]
-  shareAccounts    ShareAccount[]
-  shareTransactions ShareTransaction[]
-  memberDocuments MemberDocument[]
-  officialDocuments OfficialDocument[]
-  dartas          Darta[]
-  dartaDocuments  DartaDocument[]
-  dartaMovements  DartaMovement[]
-  dartaSerialCounters DartaSerialCounter[]
-  patraChalanis   PatraChalani[]
-  patraChalaniDocuments PatraChalaniDocument[]
-  patraChalaniActions PatraChalaniAction[]
-  chalaniSerialCounters ChalaniSerialCounter[]
-  employees       Employee[]
-  payrollLogs     PayrollLog[]
-  attendanceLogs  AttendanceLog[]
-  meetings        Meeting[]
-  meetingMinutes  MeetingMinute[]
-  committees      Committee[]
-  agms            AGM[]
-  inventoryCategories InventoryCategory[]
-  inventoryItems  InventoryItem[]
-  auditLogs       AuditLog[]
-  memberKYC       MemberKYC[]
-  institutionKYC  InstitutionKYC[]
-  memberWorkflowHistory MemberWorkflowHistory[]
-  amlFlags        AmlFlag[]
-  amlTtrReports   AmlTtrReport[]
+  profile                   CooperativeProfile?
+  subscription              Subscription?
+  users                     User[]
+  members                   Member[]
+  roles                     Role[]
+  chartOfAccounts           ChartOfAccounts[]
+  journalEntries            JournalEntry[]
+  transactions              Transaction[]
+  ledgers                   Ledger[]
+  savingProducts            SavingProduct[]
+  savingAccounts            SavingAccount[]
+  loanProducts              LoanProduct[]
+  loanApplications          LoanApplication[]
+  productGLMaps             ProductGLMap[]
+  emiSchedules              EMISchedule[]
+  shareAccounts             ShareAccount[]
+  shareTransactions         ShareTransaction[]
+  memberDocuments           MemberDocument[]
+  officialDocuments         OfficialDocument[]
+  dartas                    Darta[]
+  dartaDocuments            DartaDocument[]
+  dartaMovements            DartaMovement[]
+  dartaSerialCounters       DartaSerialCounter[]
+  patraChalanis             PatraChalani[]
+  patraChalaniDocuments     PatraChalaniDocument[]
+  patraChalaniActions       PatraChalaniAction[]
+  chalaniSerialCounters     ChalaniSerialCounter[]
+  employees                 Employee[]
+  payrollLogs               PayrollLog[]
+  attendanceLogs            AttendanceLog[]
+  meetings                  Meeting[]
+  meetingMinutes            MeetingMinute[]
+  committees                Committee[]
+  agms                      AGM[]
+  inventoryCategories       InventoryCategory[]
+  inventoryItems            InventoryItem[]
+  auditLogs                 AuditLog[]
+  memberKYC                 MemberKYC[]
+  institutionKYC            InstitutionKYC[]
+  memberWorkflowHistory     MemberWorkflowHistory[]
+  amlFlags                  AmlFlag[]
+  amlTtrReports             AmlTtrReport[]
   sourceOfFundsDeclarations SourceOfFundsDeclaration[]
-  amlCases        AmlCase[]
-  accountSignatories AccountSignatory[]
-  processedAmlEvents ProcessedAmlEvents[]
-  whitelistedMatches WhitelistedMatch[]
-  sensitiveDataAccessLogs SensitiveDataAccessLog[]
-  sanctionListUN  SanctionListUN[]
-  sanctionListHomeMinistry SanctionListHomeMinistry[]
-  trainingSessions TrainingSession[]
-  trainingAttendance TrainingAttendance[]
-  managerReports ManagerReport[]
-  departments Department[]
-  designations Designation[]
-  shifts Shift[]
-  leaveTypes LeaveType[]
-  payrollRuns PayrollRun[]
-  payrollSettings PayrollSettings?
-  attendances Attendance[]
-  leaveRequests LeaveRequest[]
-  payrolls Payroll[]
-  dayBooks DayBook[]
-  tellerSettlements TellerSettlement[]
-  notifications Notification[]
-  genericWorkflowHistory GenericWorkflowHistory[]
+  amlCases                  AmlCase[]
+  accountSignatories        AccountSignatory[]
+  processedAmlEvents        ProcessedAmlEvents[]
+  whitelistedMatches        WhitelistedMatch[]
+  sensitiveDataAccessLogs   SensitiveDataAccessLog[]
+  sanctionListUN            SanctionListUN[]
+  sanctionListHomeMinistry  SanctionListHomeMinistry[]
+  trainingSessions          TrainingSession[]
+  trainingAttendance        TrainingAttendance[]
+  managerReports            ManagerReport[]
+  departments               Department[]
+  designations              Designation[]
+  shifts                    Shift[]
+  leaveTypes                LeaveType[]
+  payrollRuns               PayrollRun[]
+  payrollSettings           PayrollSettings?
+  attendances               Attendance[]
+  leaveRequests             LeaveRequest[]
+  payrolls                  Payroll[]
+  dayBooks                  DayBook[]
+  tellerSettlements         TellerSettlement[]
+  notifications             Notification[]
+  genericWorkflowHistory    GenericWorkflowHistory[]
 
   @@map("cooperatives")
 }
 
 model Plan {
-  id            String   @id @default(cuid())
-  name          String
-  monthlyPrice  Decimal  @db.Decimal(10, 2)
-  enabledModules Json    // e.g., ["cbs", "dms", "hrm"]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  name           String
+  monthlyPrice   Decimal  @db.Decimal(10, 2)
+  enabledModules Json // e.g., ["cbs", "dms", "hrm"]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   subscriptions Subscription[]
@@ -104,14 +104,14 @@ model Plan {
 }
 
 model Subscription {
-  id            String   @id @default(cuid())
-  cooperativeId String   @unique
+  id            String    @id @default(cuid())
+  cooperativeId String    @unique
   planId        String
-  status        String   // "active", "cancelled", "expired"
-  startDate     DateTime @default(now())
+  status        String // "active", "cancelled", "expired"
+  startDate     DateTime  @default(now())
   endDate       DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -127,7 +127,7 @@ model User {
   passwordHash  String
   firstName     String
   lastName      String
-  cooperativeId String?  // Optional for system admins
+  cooperativeId String? // Optional for system admins
   roleId        String?
   isSystemAdmin Boolean  @default(false) // System admin flag
   isActive      Boolean  @default(true)
@@ -135,32 +135,36 @@ model User {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative? @relation(fields: [cooperativeId], references: [id], onDelete: Cascade) // Optional for system admins
-  role        Role?       @relation(fields: [roleId], references: [id])
-  workflowHistory WorkflowHistory[] @relation()
-  genericWorkflowHistory GenericWorkflowHistory[] @relation()
-  dayBooksBegin DayBook[] @relation("DayBeginBy")
-  dayBooksEnd DayBook[] @relation("DayEndBy")
-  tellerSettlements TellerSettlement[] @relation("TellerSettlements")
-  settlementsExecuted TellerSettlement[] @relation("SettlementExecutedBy")
-  settlementsApproved TellerSettlement[] @relation("SettlementApprovedBy")
-  mappedAccounts ChartOfAccounts[] @relation("UserAccountMapping")
-  notifications Notification[]
+  cooperative              Cooperative?             @relation(fields: [cooperativeId], references: [id], onDelete: Cascade) // Optional for system admins
+  role                     Role?                    @relation(fields: [roleId], references: [id])
+  workflowHistory          WorkflowHistory[]        @relation()
+  genericWorkflowHistory   GenericWorkflowHistory[] @relation()
+  dayBooksBegin            DayBook[]                @relation("DayBeginBy")
+  dayBooksEnd              DayBook[]                @relation("DayEndBy")
+  tellerSettlements        TellerSettlement[]       @relation("TellerSettlements")
+  settlementsExecuted      TellerSettlement[]       @relation("SettlementExecutedBy")
+  settlementsApproved      TellerSettlement[]       @relation("SettlementApprovedBy")
+  mappedAccounts           ChartOfAccounts[]        @relation("UserAccountMapping")
+  notifications            Notification[]
   // DMS Relations
-  createdDartas Darta[] @relation("DartaCreatedBy")
-  updatedDartas Darta[] @relation("DartaUpdatedBy")
-  closedDartas Darta[] @relation("DartaClosedBy")
-  dartaMovementsFrom DartaMovement[] @relation("DartaMovementFrom")
-  dartaMovementsTo DartaMovement[] @relation("DartaMovementTo")
-  dartaMovementsBy DartaMovement[] @relation("DartaMovementBy")
-  createdChalanis PatraChalani[] @relation("ChalaniCreatedBy")
-  updatedChalanis PatraChalani[] @relation("ChalaniUpdatedBy")
-  completedChalanis PatraChalani[] @relation("ChalaniCompletedBy")
-  chalaniActionsBy PatraChalaniAction[] @relation("ChalaniActionBy")
-  chalaniActionsTo PatraChalaniAction[] @relation("ChalaniActionTo")
-  uploadedDartaDocuments DartaDocument[] @relation("DartaDocumentUploadedBy")
-  uploadedChalaniDocuments PatraChalaniDocument[] @relation("ChalaniDocumentUploadedBy")
+  createdDartas            Darta[]                  @relation("DartaCreatedBy")
+  updatedDartas            Darta[]                  @relation("DartaUpdatedBy")
+  closedDartas             Darta[]                  @relation("DartaClosedBy")
+  dartaMovementsFrom       DartaMovement[]          @relation("DartaMovementFrom")
+  dartaMovementsTo         DartaMovement[]          @relation("DartaMovementTo")
+  dartaMovementsBy         DartaMovement[]          @relation("DartaMovementBy")
+  createdChalanis          PatraChalani[]           @relation("ChalaniCreatedBy")
+  updatedChalanis          PatraChalani[]           @relation("ChalaniUpdatedBy")
+  completedChalanis        PatraChalani[]           @relation("ChalaniCompletedBy")
+  chalaniActionsBy         PatraChalaniAction[]     @relation("ChalaniActionBy")
+  chalaniActionsTo         PatraChalaniAction[]     @relation("ChalaniActionTo")
+  uploadedDartaDocuments   DartaDocument[]          @relation("DartaDocumentUploadedBy")
+  uploadedChalaniDocuments PatraChalaniDocument[]   @relation("ChalaniDocumentUploadedBy")
 
+  @@index([cooperativeId])
+  @@index([roleId])
+  @@index([isActive])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -176,10 +180,10 @@ enum MemberType {
 }
 
 enum CommitteeType {
-  BOD           // Sanchalak Samiti
-  ACCOUNT       // Lekha Samiti
-  LOAN          // Rin Upasamiti
-  EDUCATION     // Shiksha Upasamiti
+  BOD // Sanchalak Samiti
+  ACCOUNT // Lekha Samiti
+  LOAN // Rin Upasamiti
+  EDUCATION // Shiksha Upasamiti
   OTHER
 }
 
@@ -191,17 +195,17 @@ enum AGMStatus {
 }
 
 enum MeetingStatus {
-  PLANNED     // Draft mode, setting up agenda
-  SCHEDULED   // Locked date, notifications sent
-  COMPLETED   // Meeting happened, attendance taken
-  CANCELLED   // Cancelled
+  PLANNED // Draft mode, setting up agenda
+  SCHEDULED // Locked date, notifications sent
+  COMPLETED // Meeting happened, attendance taken
+  CANCELLED // Cancelled
 }
 
 enum MeetingWorkflowStatus {
-  DRAFT       // Editable
-  LOCKED      // Cannot change date/time
-  MINUTED     // Decisions recorded
-  FINALIZED   // Accounting entry passed, Read-only
+  DRAFT // Editable
+  LOCKED // Cannot change date/time
+  MINUTED // Decisions recorded
+  FINALIZED // Accounting entry passed, Read-only
 }
 
 enum DecisionStatus {
@@ -222,10 +226,10 @@ enum PayrollScheme {
 }
 
 enum ShareTxType {
-  PURCHASE  // Issue/Buy
-  RETURN    // Surrender/Return
-  TRANSFER  // Member to Member
-  BONUS     // Dividend as Share
+  PURCHASE // Issue/Buy
+  RETURN // Surrender/Return
+  TRANSFER // Member to Member
+  BONUS // Dividend as Share
 }
 
 enum DayBookStatus {
@@ -326,51 +330,52 @@ enum StorageProvider {
 }
 
 model Member {
-  id            String   @id @default(cuid())
-  memberNumber  String?  // Auto-generated after approval, format: 000000, 000001, etc.
-  memberType    MemberType @default(INDIVIDUAL) // "INDIVIDUAL" for natural persons, "INSTITUTION" for legal entities
-  firstName     String?  // For individuals: first name. For institutions: null
-  middleName    String?  // Middle name in English (only for individuals)
-  lastName      String?  // For individuals: last name. For institutions: null
+  id              String     @id @default(cuid())
+  memberNumber    String? // Auto-generated after approval, format: 000000, 000001, etc.
+  memberType      MemberType @default(INDIVIDUAL) // "INDIVIDUAL" for natural persons, "INSTITUTION" for legal entities
+  firstName       String? // For individuals: first name. For institutions: null
+  middleName      String? // Middle name in English (only for individuals)
+  lastName        String? // For individuals: last name. For institutions: null
   institutionName String? // For institutions: institution name. For individuals: null
-  fullName      String?  // Auto-generated full name (firstName + middleName + lastName for individuals, institutionName for institutions, uppercase)
-  fullNameNepali String // Full name in Nepali (compulsory)
-  email         String?
-  phone         String?
-  cooperativeId String
-  isActive      Boolean  @default(true)
-  workflowStatus String  @default("application") // "application", "under_review", "approved", "bod_pending", "active", "rejected"
-  
+  fullName        String? // Auto-generated full name (firstName + middleName + lastName for individuals, institutionName for institutions, uppercase)
+  fullNameNepali  String // Full name in Nepali (compulsory)
+  email           String?
+  phone           String?
+  passwordHash    String? // Hashed password for member login (optional for backward compatibility)
+  cooperativeId   String
+  isActive        Boolean    @default(true)
+  workflowStatus  String     @default("application") // "application", "under_review", "approved", "bod_pending", "active", "rejected"
+
   // AML/KYM Fields
   pepStatus         Boolean      @default(false)
   beneficialOwner   Json?
-  grandfatherName   String?      // For 3-generation identification
-  familyDetails     Json?        // To support recursive PEP screening
+  grandfatherName   String? // For 3-generation identification
+  familyDetails     Json? // To support recursive PEP screening
   riskCategory      RiskCategory @default(LOW)
-  riskFactors       Json?        // Stores reasons, e.g., ["PEP_FAMILY", "OCCUPATION"]
+  riskFactors       Json? // Stores reasons, e.g., ["PEP_FAMILY", "OCCUPATION"]
   lastKymUpdate     DateTime?
-  nextKymReviewDate DateTime?    // Computed based on risk (1, 2, or 3 years)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  nextKymReviewDate DateTime? // Computed based on risk (1, 2, or 3 years)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative      @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  savingAccounts SavingAccount[]
-  loanApplications LoanApplication[]
-  shareAccount     ShareAccount?
-  shareTransactions ShareTransaction[]
-  documents       MemberDocument[]
-  kyc            MemberKYC?
-  institutionKyc InstitutionKYC?
-  memberWorkflowHistory MemberWorkflowHistory[] @relation("MemberWorkflowHistory")
-  workflowHistory WorkflowHistory[] @relation()
-  amlFlags       AmlFlag[]
-  amlTtrReports  AmlTtrReport[]
+  cooperative               Cooperative                @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  savingAccounts            SavingAccount[]
+  loanApplications          LoanApplication[]
+  shareAccount              ShareAccount?
+  shareTransactions         ShareTransaction[]
+  documents                 MemberDocument[]
+  kyc                       MemberKYC?
+  institutionKyc            InstitutionKYC?
+  memberWorkflowHistory     MemberWorkflowHistory[]    @relation("MemberWorkflowHistory")
+  workflowHistory           WorkflowHistory[]          @relation()
+  amlFlags                  AmlFlag[]
+  amlTtrReports             AmlTtrReport[]
   sourceOfFundsDeclarations SourceOfFundsDeclaration[]
-  amlCases       AmlCase[]
-  accountSignatories AccountSignatory[]
-  committeeMembers CommitteeMember[]
+  amlCases                  AmlCase[]
+  accountSignatories        AccountSignatory[]
+  committeeMembers          CommitteeMember[]
 
   @@unique([cooperativeId, memberNumber], name: "cooperativeId_memberNumber")
   @@index([cooperativeId, workflowStatus])
@@ -379,283 +384,288 @@ model Member {
   @@index([cooperativeId, riskCategory])
   @@index([cooperativeId, nextKymReviewDate])
   @@index([memberNumber])
+  @@index([cooperativeId, email])
+  @@index([cooperativeId, phone])
   @@map("members")
 }
 
 // Member KYM (Know Your Member) Information
 model MemberKYC {
-  id            String   @id @default(cuid())
-  memberId      String   @unique
+  id            String @id @default(cuid())
+  memberId      String @unique
   cooperativeId String
-  
+
   // Personal Information (Section a)
-  dateOfBirth   DateTime?
-  dateOfBirthBS String?  // Bikram Sambat date (YYYY-MM-DD format, e.g., "2081-01-15")
-  gender        String?  // "FEMALE", "MALE", "THIRD"
-  nationality   String?
-  citizenshipNumber String?
-  citizenshipIssuingOffice String?
+  dateOfBirth                DateTime?
+  dateOfBirthBS              String? // Bikram Sambat date (YYYY-MM-DD format, e.g., "2081-01-15")
+  gender                     String? // "FEMALE", "MALE", "THIRD"
+  nationality                String?
+  citizenshipNumber          String?
+  citizenshipIssuingOffice   String?
   citizenshipIssuingDistrict String?
-  
+
   // Family Details (Section b)
-  grandfatherName String?  // For 3-generation identification
+  grandfatherName String? // For 3-generation identification
   fatherName      String?
   motherName      String?
-  maritalStatus String?  // "MARRIED", "UNMARRIED", "SINGLE"
-  spouseName     String?
-  spouseSurname  String?
-  familyType     String?  // "JOINT_ONE_KITCHEN", "JOINT_SEPARATE_KITCHEN", "NUCLEAR"
-  
+  maritalStatus   String? // "MARRIED", "UNMARRIED", "SINGLE"
+  spouseName      String?
+  spouseSurname   String?
+  familyType      String? // "JOINT_ONE_KITCHEN", "JOINT_SEPARATE_KITCHEN", "NUCLEAR"
+
   // Address Information (Section d)
-  permanentProvince String?
+  permanentProvince     String?
   permanentMunicipality String?
-  permanentWard String?
-  permanentVillageTole String?
-  permanentHouseNo String?
-  temporaryProvince String?
+  permanentWard         String?
+  permanentVillageTole  String?
+  permanentHouseNo      String?
+  temporaryProvince     String?
   temporaryMunicipality String?
-  temporaryWard String?
-  temporaryVillageTole String?
-  temporaryHouseNo String?
-  residenceType String?  // "PERMANENT", "TEMPORARY"
-  residenceDuration String?  // Duration of stay in institution's working area per year
-  
+  temporaryWard         String?
+  temporaryVillageTole  String?
+  temporaryHouseNo      String?
+  residenceType         String? // "PERMANENT", "TEMPORARY"
+  residenceDuration     String? // Duration of stay in institution's working area per year
+
   // Contact Information
   contactNo      String?
   emailId        String?
   voterIdCardNo  String?
   pollingStation String?
   passportNo     String?
-  
+
   // Occupation Details (Section c)
-  occupation     String?  // Occupation value from OCCUPATION_OPTIONS
-  occupationSpecify String?  // Additional details for Business/Service/etc.
-  panNo          String?  // Permanent Account Number
-  spouseOccupation String?
+  occupation              String? // Occupation value from OCCUPATION_OPTIONS
+  occupationSpecify       String? // Additional details for Business/Service/etc.
+  panNo                   String? // Permanent Account Number
+  spouseOccupation        String?
   spouseOccupationSpecify String?
-  
+
   // PEP Details (Section c)
   isHighRankingPositionHolder Boolean @default(false)
-  pepName        String?
-  pepRelationship String?
-  pepPosition    String?
-  
+  pepName                     String?
+  pepRelationship             String?
+  pepPosition                 String?
+
   // Income Source Details (Section f)
-  annualFamilyIncome String?  // Income range from ANNUAL_INCOME_RANGES
-  
+  annualFamilyIncome String? // Income range from ANNUAL_INCOME_RANGES
+
   // Financial Transaction Details (Section g)
-  initialShareAmount Decimal? @db.Decimal(15, 2)
-  initialSavingsAmount Decimal? @db.Decimal(15, 2)
-  initialOtherAmount Decimal? @db.Decimal(15, 2)
-  initialOtherSpecify String?
+  initialShareAmount           Decimal? @db.Decimal(15, 2)
+  initialSavingsAmount         Decimal? @db.Decimal(15, 2)
+  initialOtherAmount           Decimal? @db.Decimal(15, 2)
+  initialOtherSpecify          String?
   estimatedTransactionsPerYear Int?
-  estimatedAnnualDeposit Decimal? @db.Decimal(15, 2)
-  estimatedLoanAmount Decimal? @db.Decimal(15, 2)
-  additionalRemarks String?
+  estimatedAnnualDeposit       Decimal? @db.Decimal(15, 2)
+  estimatedLoanAmount          Decimal? @db.Decimal(15, 2)
+  additionalRemarks            String?
 
   // Cooperative Membership (Section e)
-  membershipObjective String?
-  isMemberOfAnotherCooperative Boolean @default(false)
-  dualMembershipPurpose String?
-  isFamilyMemberOfAnotherCooperative Boolean @default(false)
-  familyDualMembershipPurpose String?
+  membershipObjective                    String?
+  isMemberOfAnotherCooperative           Boolean @default(false)
+  dualMembershipPurpose                  String?
+  isFamilyMemberOfAnotherCooperative     Boolean @default(false)
+  familyDualMembershipPurpose            String?
   isAnotherFamilyMemberInThisInstitution Boolean @default(false)
-  
+
   // Self-Declaration (Section h)
-  declarationChangeAgreement Boolean @default(false)
-  declarationTruthfulness Boolean @default(false)
-  declarationDate DateTime?
-  
+  declarationChangeAgreement Boolean   @default(false)
+  declarationTruthfulness    Boolean   @default(false)
+  declarationDate            DateTime?
+
   // Biometrics (Section h)
-  signaturePath String?
+  signaturePath        String?
   fingerprintRightPath String?
-  fingerprintLeftPath String?
-  
+  fingerprintLeftPath  String?
+
   // Attached Documents (Section i)
   citizenshipCopyPath String?
-  voterIdCopyPath String?
-  passportCopyPath String?
-  
+  voterIdCopyPath     String?
+  passportCopyPath    String?
+
   // Recommendation (Section j) - for new members
-  recommender1Name String?
+  recommender1Name         String?
   recommender1MembershipNo String?
-  recommender2Name String?
+  recommender2Name         String?
   recommender2MembershipNo String?
-  
+
   // KYM Status
-  isComplete     Boolean  @default(false)
-  completedAt    DateTime?
-  reviewedBy     String?  // User ID
-  reviewedAt     DateTime?
-  approvedBy     String?  // User ID
-  approvedAt     DateTime?
-  bodMeetingId   String?  // Meeting ID where approved
-  bodApprovedAt  DateTime?
-  remarks        String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isComplete    Boolean   @default(false)
+  completedAt   DateTime?
+  reviewedBy    String? // User ID
+  reviewedAt    DateTime?
+  approvedBy    String? // User ID
+  approvedAt    DateTime?
+  bodMeetingId  String? // Meeting ID where approved
+  bodApprovedAt DateTime?
+  remarks       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  bodMeeting  Meeting?    @relation(fields: [bodMeetingId], references: [id])
-  otherCooperativeMemberships OtherCooperativeMembership[]
+  member                             Member                              @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  cooperative                        Cooperative                         @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  bodMeeting                         Meeting?                            @relation(fields: [bodMeetingId], references: [id])
+  otherCooperativeMemberships        OtherCooperativeMembership[]
   familyMemberCooperativeMemberships FamilyMemberCooperativeMembership[]
-  familyMemberInThisInstitution FamilyMemberInThisInstitution[]
-  otherEarningFamilyMembers OtherEarningFamilyMember[]
-  incomeSourceDetails IncomeSourceDetail[]
+  familyMemberInThisInstitution      FamilyMemberInThisInstitution[]
+  otherEarningFamilyMembers          OtherEarningFamilyMember[]
+  incomeSourceDetails                IncomeSourceDetail[]
 
   @@map("member_kyc")
 }
 
 // Institution KYM (Know Your Member) Information (for Legal Entities)
 model InstitutionKYC {
-  id            String   @id @default(cuid())
-  memberId      String   @unique
+  id            String @id @default(cuid())
+  memberId      String @unique
   cooperativeId String
-  
+
   // Institution Details
-  name          String
-  registrationNo String
-  registrationDate DateTime?
+  name              String
+  registrationNo    String
+  registrationDate  DateTime?
   registeringOffice String?
-  renewalDate   DateTime?
+  renewalDate       DateTime?
   headOfficeAddress String?
-  mainObjective String?
-  natureOfBusiness String?
-  workingArea   String?
-  numberOfBranches Int?
-  branchLocations String?  // JSON array or comma-separated
-  
+  mainObjective     String?
+  natureOfBusiness  String?
+  workingArea       String?
+  numberOfBranches  Int?
+  branchLocations   String? // JSON array or comma-separated
+
   // Documents
-  bylawsConstitutionPath String?  // Path to bylaws/constitution document
-  officialLetterPath String?      // Path to official letter if no bylaws
-  financialStatementPath String?  // Path to financial statements
-  taxClearancePath String?        // Path to tax clearance certificate
-  taxFilingDetailsPath String?    // Path to tax filing details
-  
+  bylawsConstitutionPath String? // Path to bylaws/constitution document
+  officialLetterPath     String? // Path to official letter if no bylaws
+  financialStatementPath String? // Path to financial statements
+  taxClearancePath       String? // Path to tax clearance certificate
+  taxFilingDetailsPath   String? // Path to tax filing details
+
   // Financial Information
   estimatedAnnualTransaction Decimal? @db.Decimal(15, 2)
-  panVatRegistrationNo String?
-  
+  panVatRegistrationNo       String?
+
   // Financial Transaction Details (Application Payment)
   // These are required at application time, separate from KYC risk assessment
-  initialShareAmount Decimal? @db.Decimal(15, 2)
+  initialShareAmount   Decimal? @db.Decimal(15, 2)
   initialSavingsAmount Decimal? @db.Decimal(15, 2)
-  initialOtherAmount Decimal? @db.Decimal(15, 2)
-  initialOtherSpecify String?
-  
+  initialOtherAmount   Decimal? @db.Decimal(15, 2)
+  initialOtherSpecify  String?
+
   // Board of Directors, CEO, Account Operators
   // Stored as JSON array of objects with identification details per Schedule-1 and Schedule-3
-  boardOfDirectors Json?  // Array of { name, position, identificationDetails }
-  chiefExecutive Json?    // { name, identificationDetails }
-  accountOperators Json?  // Array of { name, identificationDetails }
-  
+  boardOfDirectors Json? // Array of { name, position, identificationDetails }
+  chiefExecutive   Json? // { name, identificationDetails }
+  accountOperators Json? // Array of { name, identificationDetails }
+
   // Board Decision
-  boardDecisionPath String?  // Path to board decision document
+  boardDecisionPath String? // Path to board decision document
   boardDecisionDate DateTime?
-  
+
   // Other Details
   otherDetails String?
-  
+
   // KYM Status
-  isComplete     Boolean  @default(false)
-  completedAt    DateTime?
-  reviewedBy     String?  // User ID
-  reviewedAt     DateTime?
-  approvedBy     String?  // User ID
-  approvedAt     DateTime?
-  bodMeetingId   String?  // Meeting ID where approved
-  bodApprovedAt  DateTime?
-  remarks        String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isComplete    Boolean   @default(false)
+  completedAt   DateTime?
+  reviewedBy    String? // User ID
+  reviewedAt    DateTime?
+  approvedBy    String? // User ID
+  approvedAt    DateTime?
+  bodMeetingId  String? // Meeting ID where approved
+  bodApprovedAt DateTime?
+  remarks       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   bodMeeting  Meeting?    @relation(fields: [bodMeetingId], references: [id])
 
+  @@index([cooperativeId])
+  @@index([registrationNo])
+  @@index([panVatRegistrationNo])
   @@map("institution_kyc")
 }
 
 // Related models for one-to-many relationships
 
 model OtherCooperativeMembership {
-  id            String   @id @default(cuid())
-  memberKycId   String
-  institutionName String
+  id                 String @id @default(cuid())
+  memberKycId        String
+  institutionName    String
   institutionAddress String
-  membershipNo  String
-  sn            Int      // Serial number in the form
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  membershipNo       String
+  sn                 Int // Serial number in the form
 
-  memberKyc     MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberKyc MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
 
   @@map("other_cooperative_memberships")
 }
 
 model FamilyMemberCooperativeMembership {
-  id            String   @id @default(cuid())
-  memberKycId   String
+  id                      String @id @default(cuid())
+  memberKycId             String
   nameSurnameRelationship String
-  institutionNameAddress String
-  membershipNo  String
-  sn            Int      // Serial number in the form
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  institutionNameAddress  String
+  membershipNo            String
+  sn                      Int // Serial number in the form
 
-  memberKyc     MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberKyc MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
 
   @@map("family_member_cooperative_memberships")
 }
 
 model FamilyMemberInThisInstitution {
-  id            String   @id @default(cuid())
-  memberKycId   String
-  nameSurname String
+  id           String @id @default(cuid())
+  memberKycId  String
+  nameSurname  String
   membershipNo String
-  sn            Int      // Serial number in the form
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  sn           Int // Serial number in the form
 
-  memberKyc     MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberKyc MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
 
   @@map("family_member_in_this_institution")
 }
 
 model OtherEarningFamilyMember {
-  id            String   @id @default(cuid())
-  memberKycId   String
-  relationship  String
-  occupation    String
+  id                String  @id @default(cuid())
+  memberKycId       String
+  relationship      String
+  occupation        String
   occupationSpecify String?
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
 
-  memberKyc     MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberKyc MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
 
   @@map("other_earning_family_members")
 }
 
 model IncomeSourceDetail {
-  id            String   @id @default(cuid())
-  memberKycId   String
-  source        String   // "FARMING", "BUSINESS", "DOMESTIC_EMPLOYMENT", "FOREIGN_EMPLOYMENT", "OTHER"
-  amount        Decimal  @db.Decimal(15, 2)
-  sn            Int      // Serial number in the form
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String  @id @default(cuid())
+  memberKycId String
+  source      String // "FARMING", "BUSINESS", "DOMESTIC_EMPLOYMENT", "FOREIGN_EMPLOYMENT", "OTHER"
+  amount      Decimal @db.Decimal(15, 2)
+  sn          Int // Serial number in the form
 
-  memberKyc     MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberKyc MemberKYC @relation(fields: [memberKycId], references: [id], onDelete: Cascade)
 
   @@map("income_source_details")
 }
@@ -667,8 +677,8 @@ model MemberWorkflowHistory {
   cooperativeId String
   fromStatus    String?
   toStatus      String
-  action        String   // "kyc_submitted", "kyc_reviewed", "kyc_approved", "sent_to_bod", "bod_approved", "activated", "rejected"
-  performedBy   String?  // User ID
+  action        String // "kyc_submitted", "kyc_reviewed", "kyc_approved", "sent_to_bod", "bod_approved", "activated", "rejected"
+  performedBy   String? // User ID
   remarks       String?
   createdAt     DateTime @default(now())
 
@@ -686,16 +696,17 @@ model MemberWorkflowHistory {
 
 // Workflow History - Next-Level Improvement for accurate analytics
 model WorkflowHistory {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   cooperativeId String
   memberId      String
-  member        Member    @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
   changedById   String? // ID of the staff member who made the change
-  changedBy     User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedBy     User?    @relation(fields: [changedById], references: [id], onDelete: SetNull)
   fromStatus    String? // e.g., 'application' (null for initial creation)
-  toStatus      String    // e.g., 'under_review'
-  changedAt     DateTime  @default(now())
+  toStatus      String // e.g., 'under_review'
+  changedAt     DateTime @default(now())
   remarks       String? // e.g., "Rejected: Mismatched signature"
+
   @@index([memberId])
   @@index([cooperativeId, toStatus])
   @@map("workflow_history")
@@ -705,7 +716,7 @@ model Role {
   id            String   @id @default(cuid())
   name          String
   cooperativeId String
-  permissions   Json     // Array of permission strings
+  permissions   Json // Array of permission strings
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -741,22 +752,22 @@ model ChartOfAccounts {
   id            String   @id @default(cuid())
   code          String
   name          String
-  type          String   // "asset", "liability", "equity", "revenue", "expense"
+  type          String // "asset", "liability", "equity", "revenue", "expense"
   cooperativeId String
   parentId      String?
   isActive      Boolean  @default(true)
   isGroup       Boolean  @default(false) // Distinguish between folder (cannot satisfy transaction) and ledger (can satisfy transaction)
-  nfrsMap       String?  // NFRS note references (e.g., '4.1', '4.12') for automatic report generation
+  nfrsMap       String? // NFRS note references (e.g., '4.1', '4.12') for automatic report generation
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  cooperative   Cooperative      @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  parent        ChartOfAccounts? @relation("AccountHierarchy", fields: [parentId], references: [id])
+  cooperative   Cooperative       @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  parent        ChartOfAccounts?  @relation("AccountHierarchy", fields: [parentId], references: [id])
   children      ChartOfAccounts[] @relation("AccountHierarchy")
   ledgerEntries Ledger[]
   mappedUserId  String?
-  mappedUser    User?   @relation("UserAccountMapping", fields: [mappedUserId], references: [id])
+  mappedUser    User?             @relation("UserAccountMapping", fields: [mappedUserId], references: [id])
 
   @@unique([cooperativeId, code])
   @@index([cooperativeId, type])
@@ -767,21 +778,21 @@ model ChartOfAccounts {
 }
 
 model Ledger {
-  id                  String   @id @default(cuid())
-  accountId           String
-  cooperativeId       String
-  debit               Decimal  @db.Decimal(15, 2) @default(0)
-  credit              Decimal  @db.Decimal(15, 2) @default(0)
-  balance             Decimal  @db.Decimal(15, 2) @default(0)
-  transactionId       String?
-  journalEntryId      String?
-  createdAt           DateTime @default(now())
+  id             String   @id @default(cuid())
+  accountId      String
+  cooperativeId  String
+  debit          Decimal  @default(0) @db.Decimal(15, 2)
+  credit         Decimal  @default(0) @db.Decimal(15, 2)
+  balance        Decimal  @default(0) @db.Decimal(15, 2)
+  transactionId  String?
+  journalEntryId String?
+  createdAt      DateTime @default(now())
 
   // Relations
-  cooperative  Cooperative      @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  account      ChartOfAccounts  @relation(fields: [accountId], references: [id])
-  transaction  Transaction?     @relation(fields: [transactionId], references: [id])
-  journalEntry JournalEntry?    @relation(fields: [journalEntryId], references: [id])
+  cooperative  Cooperative     @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  account      ChartOfAccounts @relation(fields: [accountId], references: [id])
+  transaction  Transaction?    @relation(fields: [transactionId], references: [id])
+  journalEntry JournalEntry?   @relation(fields: [journalEntryId], references: [id])
 
   @@index([cooperativeId, accountId])
   @@index([cooperativeId, createdAt])
@@ -812,14 +823,14 @@ model JournalEntry {
 }
 
 model Transaction {
-  id            String   @id @default(cuid())
+  id                String   @id @default(cuid())
   transactionNumber String
-  description   String
-  cooperativeId String
-  amount        Decimal  @db.Decimal(15, 2)
-  type          String   // "debit", "credit"
-  date          DateTime @default(now())
-  createdAt     DateTime @default(now())
+  description       String
+  cooperativeId     String
+  amount            Decimal  @db.Decimal(15, 2)
+  type              String // "debit", "credit"
+  date              DateTime @default(now())
+  createdAt         DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -836,23 +847,23 @@ model Transaction {
 // Phase 2: Financial Product Modules (CBS Part 2)
 // Savings Module
 model SavingProduct {
-  id            String   @id @default(cuid())
-  code          String
-  name          String
-  description   String?
-  interestRate  Decimal  @db.Decimal(5, 2) // Annual interest rate percentage
-  minimumBalance Decimal @db.Decimal(15, 2) @default(0)
-  interestPostingFrequency String @default("QUARTERLY") // "QUARTERLY", "ANNUALLY", etc.
-  interestCalculationMethod String @default("DAILY_BALANCE") // "DAILY_BALANCE"
-  isTaxApplicable Boolean @default(true)
-  taxRate       Decimal  @db.Decimal(5, 2) @default(6.0) // Standard TDS rate (6%)
-  cooperativeId String
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                        String   @id @default(cuid())
+  code                      String
+  name                      String
+  description               String?
+  interestRate              Decimal  @db.Decimal(5, 2) // Annual interest rate percentage
+  minimumBalance            Decimal  @default(0) @db.Decimal(15, 2)
+  interestPostingFrequency  String   @default("QUARTERLY") // "QUARTERLY", "ANNUALLY", etc.
+  interestCalculationMethod String   @default("DAILY_BALANCE") // "DAILY_BALANCE"
+  isTaxApplicable           Boolean  @default(true)
+  taxRate                   Decimal  @default(6.0) @db.Decimal(5, 2) // Standard TDS rate (6%)
+  cooperativeId             String
+  isActive                  Boolean  @default(true)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative    @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative     @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   accounts    SavingAccount[]
 
   @@unique([cooperativeId, code])
@@ -860,21 +871,21 @@ model SavingProduct {
 }
 
 model SavingAccount {
-  id              String   @id @default(cuid())
-  accountNumber   String
-  memberId        String
-  productId       String
-  cooperativeId   String
-  balance         Decimal  @db.Decimal(15, 2) @default(0)
-  interestAccrued Decimal  @db.Decimal(15, 2) @default(0)
-  status          String   // "active", "closed", "dormant"
-  openedDate      DateTime @default(now())
-  closedDate      DateTime?
+  id                         String    @id @default(cuid())
+  accountNumber              String
+  memberId                   String
+  productId                  String
+  cooperativeId              String
+  balance                    Decimal   @default(0) @db.Decimal(15, 2)
+  interestAccrued            Decimal   @default(0) @db.Decimal(15, 2)
+  status                     String // "active", "closed", "dormant"
+  openedDate                 DateTime  @default(now())
+  closedDate                 DateTime?
   lastInterestCalculatedDate DateTime?
-  lastInterestPostedDate DateTime?
-  nominee         Json?    // Stores name, relation, citizenship, photo
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  lastInterestPostedDate     DateTime?
+  nominee                    Json? // Stores name, relation, citizenship, photo
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative   @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -892,23 +903,23 @@ model SavingAccount {
 
 // Loans Module
 model LoanProduct {
-  id                String   @id @default(cuid())
-  code              String
-  name              String
-  description       String?
-  interestRate      Decimal  @db.Decimal(5, 2) // Annual interest rate percentage
-  maxLoanAmount     Decimal  @db.Decimal(15, 2)
-  minLoanAmount     Decimal  @db.Decimal(15, 2) @default(0)
-  maxTenureMonths   Int
-  minTenureMonths   Int      @default(1)
-  processingFee     Decimal  @db.Decimal(15, 2) @default(0)
-  cooperativeId     String
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id              String   @id @default(cuid())
+  code            String
+  name            String
+  description     String?
+  interestRate    Decimal  @db.Decimal(5, 2) // Annual interest rate percentage
+  maxLoanAmount   Decimal  @db.Decimal(15, 2)
+  minLoanAmount   Decimal  @default(0) @db.Decimal(15, 2)
+  maxTenureMonths Int
+  minTenureMonths Int      @default(1)
+  processingFee   Decimal  @default(0) @db.Decimal(15, 2)
+  cooperativeId   String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative      @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative  Cooperative       @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   applications LoanApplication[]
 
   @@unique([cooperativeId, code])
@@ -916,28 +927,28 @@ model LoanProduct {
 }
 
 model LoanApplication {
-  id              String   @id @default(cuid())
+  id                String    @id @default(cuid())
   applicationNumber String
-  memberId        String
-  productId       String
-  cooperativeId   String
-  loanAmount      Decimal  @db.Decimal(15, 2)
-  tenureMonths    Int
-  interestRate    Decimal  @db.Decimal(5, 2)
-  purpose         String?
-  status          String   // "pending", "approved", "rejected", "disbursed", "closed"
-  appliedDate     DateTime @default(now())
-  approvedDate    DateTime?
-  disbursedDate   DateTime?
-  closedDate      DateTime?
-  remarks         String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  memberId          String
+  productId         String
+  cooperativeId     String
+  loanAmount        Decimal   @db.Decimal(15, 2)
+  tenureMonths      Int
+  interestRate      Decimal   @db.Decimal(5, 2)
+  purpose           String?
+  status            String // "pending", "approved", "rejected", "disbursed", "closed"
+  appliedDate       DateTime  @default(now())
+  approvedDate      DateTime?
+  disbursedDate     DateTime?
+  closedDate        DateTime?
+  remarks           String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
-  cooperative Cooperative  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  member      Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  product     LoanProduct  @relation(fields: [productId], references: [id])
+  cooperative Cooperative   @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  member      Member        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  product     LoanProduct   @relation(fields: [productId], references: [id])
   emiSchedule EMISchedule[]
 
   @@unique([cooperativeId, applicationNumber])
@@ -951,19 +962,19 @@ model LoanApplication {
 }
 
 model EMISchedule {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   applicationId     String
   cooperativeId     String
   installmentNumber Int
   dueDate           DateTime
-  principalAmount   Decimal  @db.Decimal(15, 2)
-  interestAmount    Decimal  @db.Decimal(15, 2)
-  totalAmount       Decimal  @db.Decimal(15, 2)
-  paidAmount        Decimal  @db.Decimal(15, 2) @default(0)
+  principalAmount   Decimal   @db.Decimal(15, 2)
+  interestAmount    Decimal   @db.Decimal(15, 2)
+  totalAmount       Decimal   @db.Decimal(15, 2)
+  paidAmount        Decimal   @default(0) @db.Decimal(15, 2)
   paidDate          DateTime?
-  status            String   // "pending", "paid", "overdue", "partial"
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  status            String // "pending", "paid", "overdue", "partial"
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative     @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -981,23 +992,23 @@ model EMISchedule {
 // Product GL Mapping - Dynamic mapping of products to Chart of Accounts
 // Note: productId is a generic string reference (polymorphic). Use productType to determine which table it references.
 model ProductGLMap {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   cooperativeId String
-  productType   String   // "loan" or "saving"
-  productId     String   // ID of LoanProduct or SavingProduct (polymorphic - handled in application code)
-  
+  productType   String // "loan" or "saving"
+  productId     String // ID of LoanProduct or SavingProduct (polymorphic - handled in application code)
+
   // GL Account Mappings
   // For Loan Products:
-  principalGLCode String? // Principal Asset GL (e.g., "00-10400-01-00000")
+  principalGLCode      String? // Principal Asset GL (e.g., "00-10400-01-00000")
   interestIncomeGLCode String? // Interest Income GL (e.g., "00-40100-01-00001")
-  penaltyIncomeGLCode String? // Penalty/Fine Income GL (e.g., "00-40400-00-00002")
-  
+  penaltyIncomeGLCode  String? // Penalty/Fine Income GL (e.g., "00-40400-00-00002")
+
   // For Saving Products:
-  depositGLCode String? // Deposit Liability GL (e.g., "00-20100-01-00000")
+  depositGLCode         String? // Deposit Liability GL (e.g., "00-20100-01-00000")
   interestExpenseGLCode String? // Interest Expense GL (e.g., "00-50100-01-00001")
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1009,25 +1020,25 @@ model ProductGLMap {
 
 // Shares Module
 model ShareAccount {
-  id            String   @id @default(uuid())
+  id            String @id @default(uuid())
   cooperativeId String
-  
-  memberId      String   @unique
-  member        Member   @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  
-  // Balances
-  totalKitta    Int      @default(0)    // Total quantity
-  unitPrice     Float    @default(100)  // Face value (usually 100)
-  totalAmount   Float    @default(0)    // totalKitta * unitPrice
-  
-  // Certificate Info
-  certificateNo String?  // e.g., "CERT-000001"
-  issueDate     DateTime @default(now())
-  
-  transactions  ShareTransaction[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  memberId String @unique
+  member   Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  // Balances
+  totalKitta  Int   @default(0) // Total quantity
+  unitPrice   Float @default(100) // Face value (usually 100)
+  totalAmount Float @default(0) // totalKitta * unitPrice
+
+  // Certificate Info
+  certificateNo String? // e.g., "CERT-000001"
+  issueDate     DateTime @default(now())
+
+  transactions ShareTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1037,44 +1048,44 @@ model ShareAccount {
 }
 
 model ShareTransaction {
-  id            String      @id @default(uuid())
-  
-  accountId     String
-  account       ShareAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(uuid())
+
+  accountId String
+  account   ShareAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
   memberId      String
   cooperativeId String
-  
-  transactionNo String      // Auto-generated e.g. "TX-SHARE-2081-001"
+
+  transactionNo String // Auto-generated e.g. "TX-SHARE-2081-001"
   type          ShareTxType
   date          DateTime
-  
+
   // Transaction Details
-  kitta         Int         // Positive for Purchase/Bonus, Negative for Return
-  amount        Float       // Monetary value
-  
+  kitta  Int // Positive for Purchase/Bonus, Negative for Return
+  amount Float // Monetary value
+
   // Payment Details
-  paymentMode   String      // "CASH", "BANK", "SAVING", "ADJUSTMENT"
-  
+  paymentMode String // "CASH", "BANK", "SAVING", "ADJUSTMENT"
+
   // Links
-  journalId     String?     // Link to Accounting Journal Entry
-  
-  remarks       String?
-  createdBy     String      // User ID of staff
-  
-  createdAt     DateTime    @default(now())
+  journalId String? // Link to Accounting Journal Entry
+
+  remarks   String?
+  createdBy String // User ID of staff
+
+  createdAt DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@unique([cooperativeId, transactionNo])
   @@index([accountId])
   @@index([cooperativeId, memberId])
   @@index([cooperativeId, date])
   @@index([cooperativeId, type])
   @@index([memberId])
   @@index([transactionNo])
-  @@unique([cooperativeId, transactionNo])
   @@map("share_transactions")
 }
 
@@ -1084,13 +1095,13 @@ model MemberDocument {
   id            String   @id @default(cuid())
   memberId      String
   cooperativeId String
-  documentType  String   // "id", "photo", "contract", "other"
+  documentType  String // "id", "photo", "contract", "other"
   fileName      String
   filePath      String
-  fileSize      Int?     // Size in bytes
+  fileSize      Int? // Size in bytes
   mimeType      String?
   description   String?
-  uploadedBy    String?  // User ID who uploaded
+  uploadedBy    String? // User ID who uploaded
   uploadedAt    DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1106,24 +1117,24 @@ model MemberDocument {
 }
 
 model OfficialDocument {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   cooperativeId String
-  documentType  String   // "policy", "regulation", "report", "certificate", "other"
+  documentType  String // "policy", "regulation", "report", "certificate", "other"
   title         String
   fileName      String
   filePath      String
-  fileSize      Int?     // Size in bytes
+  fileSize      Int? // Size in bytes
   mimeType      String?
   description   String?
   category      String?
-  version       String?  @default("1.0")
-  isPublic      Boolean  @default(false)
-  uploadedBy    String?  // User ID who uploaded
-  uploadedAt    DateTime @default(now())
+  version       String?   @default("1.0")
+  isPublic      Boolean   @default(false)
+  uploadedBy    String? // User ID who uploaded
+  uploadedAt    DateTime  @default(now())
   effectiveDate DateTime?
   expiryDate    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1158,11 +1169,11 @@ model OfficialDocument {
 model DartaSerialCounter {
   id            String   @id @default(cuid())
   cooperativeId String
-  fiscalYear    String   // e.g., "2081/82"
+  fiscalYear    String // e.g., "2081/82"
   lastSerialNo  Int      @default(0)
   updatedAt     DateTime @updatedAt
 
-  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
 
   @@unique([cooperativeId, fiscalYear])
   @@index([cooperativeId, fiscalYear])
@@ -1172,11 +1183,11 @@ model DartaSerialCounter {
 model ChalaniSerialCounter {
   id            String   @id @default(cuid())
   cooperativeId String
-  fiscalYear    String   // e.g., "2081/82"
+  fiscalYear    String // e.g., "2081/82"
   lastSerialNo  Int      @default(0)
   updatedAt     DateTime @updatedAt
 
-  cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
 
   @@unique([cooperativeId, fiscalYear])
   @@index([cooperativeId, fiscalYear])
@@ -1185,61 +1196,61 @@ model ChalaniSerialCounter {
 
 // Darta (File/Record Management System)
 model Darta {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   cooperativeId String
-  
+
   // Smart Numbering (Atomic via Counter Table)
-  fiscalYear    String   // e.g., "2081/82" (Use for resets)
-  serialNo      Int      // e.g., 1 (Resets every fiscal year, generated atomically)
-  dartaNumber   String   @unique // Auto-generated formatted (e.g., "D-081/82-001")
+  fiscalYear  String // e.g., "2081/82" (Use for resets)
+  serialNo    Int // e.g., 1 (Resets every fiscal year, generated atomically)
+  dartaNumber String @unique // Auto-generated formatted (e.g., "D-081/82-001")
 
   // Document Details
-  title         String
-  description   String?  @db.Text
-  subject       String?  // Subject matter (विषय)
-  category      DartaCategory?
-  status        DartaStatus @default(ACTIVE)
-  priority      DocumentPriority @default(NORMAL)
-  remarks       String?  @db.Text
-  
+  title       String
+  description String?          @db.Text
+  subject     String? // Subject matter (विषय)
+  category    DartaCategory?
+  status      DartaStatus      @default(ACTIVE)
+  priority    DocumentPriority @default(NORMAL)
+  remarks     String?          @db.Text
+
   // Source Info (पत्र पठाउनेको विवरण)
-  senderName    String   // Received From (Organization/Person Name)
-  senderAddress String?  // Sender's address
-  senderChalaniNo   String?   // प्राप्त पत्रको चलानी नं. (Reference from sender)
+  senderName        String // Received From (Organization/Person Name)
+  senderAddress     String? // Sender's address
+  senderChalaniNo   String? // प्राप्त पत्रको चलानी नं. (Reference from sender)
   senderChalaniDate DateTime? // प्राप्त पत्रको मिति
-  receivedDate  DateTime @default(now()) // दर्ता मिति (Registration Date)
+  receivedDate      DateTime  @default(now()) // दर्ता मिति (Registration Date)
 
   // Tracking & Public Access
-  qrCode        String?  @unique // QR code for public tracking
-  trackingCode  String?  @unique // Public tracking code (e.g., "TRK-ABC123")
+  qrCode                String? @unique // QR code for public tracking
+  trackingCode          String? @unique // Public tracking code (e.g., "TRK-ABC123")
   publicTrackingEnabled Boolean @default(false) // Allow public tracking page
 
   // Audit Trail
   createdBy     String?
-  createdByUser User?    @relation("DartaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  createdByUser User?   @relation("DartaCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
   updatedBy     String?
-  updatedByUser User?    @relation("DartaUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  updatedByUser User?   @relation("DartaUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
   closedBy      String?
-  closedByUser  User?    @relation("DartaClosedBy", fields: [closedBy], references: [id], onDelete: SetNull)
-  
+  closedByUser  User?   @relation("DartaClosedBy", fields: [closedBy], references: [id], onDelete: SetNull)
+
   // Soft Delete & Archival
-  deletedAt     DateTime?
-  deletedBy     String?
-  isArchived    Boolean  @default(false)
-  archivedAt    DateTime?
-  archivedBy    String?
+  deletedAt      DateTime?
+  deletedBy      String?
+  isArchived     Boolean   @default(false)
+  archivedAt     DateTime?
+  archivedBy     String?
   retentionUntil DateTime? // Auto-archive after this date
 
   // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  closedAt      DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  closedAt  DateTime?
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  documents   DartaDocument[]
-  movements   DartaMovement[]
-  generatedChalanis PatraChalani[] @relation("DartaToChalani") // Chalani generated from this Darta
+  cooperative       Cooperative     @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  documents         DartaDocument[]
+  movements         DartaMovement[]
+  generatedChalanis PatraChalani[]  @relation("DartaToChalani") // Chalani generated from this Darta
 
   // Constraints & Indexes
   @@unique([cooperativeId, fiscalYear, serialNo]) // Ensures numbering is unique per Cooperative per Fiscal Year
@@ -1258,49 +1269,49 @@ model Darta {
 }
 
 model DartaDocument {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   dartaId       String
   cooperativeId String
-  
+
   // Document Metadata
-  title         String
-  fileName      String
-  description   String?
-  
+  title       String
+  fileName    String
+  description String?
+
   // Storage Information
-  storageProvider StorageProvider @default(LOCAL)
-  filePath      String   // Local path or S3 key
-  fileUrl       String?  // Public/Pre-signed URL
-  fileSize      Int?     // Size in bytes
-  mimeType      String?
+  storageProvider    StorageProvider @default(LOCAL)
+  filePath           String // Local path or S3 key
+  fileUrl            String? // Public/Pre-signed URL
+  fileSize           Int? // Size in bytes
+  mimeType           String?
   contentDisposition String? // "inline" or "attachment"
-  
+
   // S3/Cloud Storage Metadata
-  bucket        String?  // S3 bucket name
-  key           String?  // S3 object key
-  region        String?  // AWS region
-  fileHash      String?  // SHA-256 hash for integrity
-  etag          String?  // S3 ETag
-  
+  bucket   String? // S3 bucket name
+  key      String? // S3 object key
+  region   String? // AWS region
+  fileHash String? // SHA-256 hash for integrity
+  etag     String? // S3 ETag
+
   // Versioning
-  version       Int      @default(1)
-  isLatest      Boolean  @default(true)
+  version           Int     @default(1)
+  isLatest          Boolean @default(true)
   previousVersionId String? // Link to previous version
-  
+
   // Audit
-  uploadedBy    String?
-  uploadedByUser User?   @relation("DartaDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  uploadedAt    DateTime @default(now())
-  
+  uploadedBy     String?
+  uploadedByUser User?    @relation("DartaDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  uploadedAt     DateTime @default(now())
+
   // Soft Delete
-  deletedAt     DateTime?
-  deletedBy     String?
-  
+  deletedAt DateTime?
+  deletedBy String?
+
   // Retention
   retentionUntil DateTime? // Auto-delete after this date
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1313,21 +1324,21 @@ model DartaDocument {
 }
 
 model DartaMovement {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   dartaId       String
   cooperativeId String
-  
+
   // Movement Details
-  movementType  DartaMovementType
-  fromUserId    String?  // User who sent/transferred
-  toUserId      String?  // User who received
+  movementType   DartaMovementType
+  fromUserId     String? // User who sent/transferred
+  toUserId       String? // User who received
   fromDepartment String? // Department/office from
-  toDepartment  String?  // Department/office to
-  remarks       String?  @db.Text
-  
+  toDepartment   String? // Department/office to
+  remarks        String?           @db.Text
+
   // Audit
-  movedBy       String?  // User who performed the movement
-  movedAt       DateTime @default(now())
+  movedBy String? // User who performed the movement
+  movedAt DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1346,71 +1357,71 @@ model DartaMovement {
 
 // Patra Chalani (Letter Dispatch/Correspondence System)
 model PatraChalani {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   cooperativeId String
-  
+
   // Smart Numbering (Atomic via Counter Table)
-  fiscalYear    String   // e.g., "2081/82"
-  serialNo      Int      // e.g., 1 (Generated atomically)
-  chalaniNumber String   @unique // Auto-generated (e.g., "C-081/82-001")
-  
+  fiscalYear    String // e.g., "2081/82"
+  serialNo      Int // e.g., 1 (Generated atomically)
+  chalaniNumber String @unique // Auto-generated (e.g., "C-081/82-001")
+
   // Link to Darta (Reply)
   replyToDartaId String?
   replyToDarta   Darta?  @relation("DartaToChalani", fields: [replyToDartaId], references: [id], onDelete: SetNull)
-  patraNumber   String?  // Reference letter number (if replying to external letter)
-  
+  patraNumber    String? // Reference letter number (if replying to external letter)
+
   // Document Details
-  type          ChalaniType
-  subject       String
-  content       String?  @db.Text // पत्रको ब्यहोरा (Letter content)
-  category      ChalaniCategory?
-  status        ChalaniStatus @default(DRAFT)
-  priority      DocumentPriority @default(NORMAL)
-  remarks       String?  @db.Text
-  
+  type     ChalaniType
+  subject  String
+  content  String?          @db.Text // पत्रको ब्यहोरा (Letter content)
+  category ChalaniCategory?
+  status   ChalaniStatus    @default(DRAFT)
+  priority DocumentPriority @default(NORMAL)
+  remarks  String?          @db.Text
+
   // Receiver/Sender Details
-  receiverName  String   // पत्र पाउने संस्था वा व्यक्ति
+  receiverName    String // पत्र पाउने संस्था वा व्यक्ति
   receiverAddress String?
-  senderName    String?  // Sender (usually our office for outgoing)
-  senderAddress String?  // Our office address
-  
+  senderName      String? // Sender (usually our office for outgoing)
+  senderAddress   String? // Our office address
+
   // Dispatch Details
   date          DateTime // Letter date (पत्रको मिति)
   receivedDate  DateTime? // Date received (for incoming)
   sentDate      DateTime? // Date sent (चलानी मिति)
-  transportMode String?  // "Email", "Post Office", "By Hand", "Courier"
-  
+  transportMode String? // "Email", "Post Office", "By Hand", "Courier"
+
   // CC/BODHARTHA
-  bodhartha     String?  @db.Text // CC to other departments/orgs
-  
+  bodhartha String? @db.Text // CC to other departments/orgs
+
   // Tracking & Public Access
-  qrCode        String?  @unique // QR code for public tracking
-  trackingCode  String?  @unique // Public tracking code
+  qrCode                String? @unique // QR code for public tracking
+  trackingCode          String? @unique // Public tracking code
   publicTrackingEnabled Boolean @default(false)
 
   // Audit Trail
-  createdBy     String?
-  createdByUser User?    @relation("ChalaniCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
-  updatedBy     String?
-  updatedByUser User?    @relation("ChalaniUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
-  completedBy   String?
-  completedByUser User?  @relation("ChalaniCompletedBy", fields: [completedBy], references: [id], onDelete: SetNull)
-  
+  createdBy       String?
+  createdByUser   User?   @relation("ChalaniCreatedBy", fields: [createdBy], references: [id], onDelete: SetNull)
+  updatedBy       String?
+  updatedByUser   User?   @relation("ChalaniUpdatedBy", fields: [updatedBy], references: [id], onDelete: SetNull)
+  completedBy     String?
+  completedByUser User?   @relation("ChalaniCompletedBy", fields: [completedBy], references: [id], onDelete: SetNull)
+
   // Soft Delete & Archival
-  deletedAt     DateTime?
-  deletedBy     String?
-  isArchived    Boolean  @default(false)
-  archivedAt    DateTime?
-  archivedBy    String?
+  deletedAt      DateTime?
+  deletedBy      String?
+  isArchived     Boolean   @default(false)
+  archivedAt     DateTime?
+  archivedBy     String?
   retentionUntil DateTime?
 
   // Timestamps
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  completedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative            @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   documents   PatraChalaniDocument[]
   actions     PatraChalaniAction[]
 
@@ -1431,52 +1442,52 @@ model PatraChalani {
 }
 
 model PatraChalaniDocument {
-  id            String   @id @default(cuid())
+  id             String @id @default(cuid())
   patraChalaniId String
-  cooperativeId String
-  
+  cooperativeId  String
+
   // Document Metadata
-  title         String
-  fileName      String
-  description   String?
-  
+  title       String
+  fileName    String
+  description String?
+
   // Storage Information
-  storageProvider StorageProvider @default(LOCAL)
-  filePath      String   // Local path or S3 key
-  fileUrl       String?  // Public/Pre-signed URL
-  fileSize      Int?     // Size in bytes
-  mimeType      String?
+  storageProvider    StorageProvider @default(LOCAL)
+  filePath           String // Local path or S3 key
+  fileUrl            String? // Public/Pre-signed URL
+  fileSize           Int? // Size in bytes
+  mimeType           String?
   contentDisposition String? // "inline" or "attachment"
-  
+
   // S3/Cloud Storage Metadata
-  bucket        String?  // S3 bucket name
-  key           String?  // S3 object key
-  region        String?  // AWS region
-  fileHash      String?  // SHA-256 hash for integrity
-  etag          String?  // S3 ETag
-  
+  bucket   String? // S3 bucket name
+  key      String? // S3 object key
+  region   String? // AWS region
+  fileHash String? // SHA-256 hash for integrity
+  etag     String? // S3 ETag
+
   // Versioning
-  version       Int      @default(1)
-  isLatest      Boolean  @default(true)
+  version           Int     @default(1)
+  isLatest          Boolean @default(true)
   previousVersionId String? // Link to previous version
-  
+
   // Audit
-  uploadedBy    String?
-  uploadedByUser User?   @relation("ChalaniDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  uploadedAt    DateTime @default(now())
-  
+  uploadedBy     String?
+  uploadedByUser User?    @relation("ChalaniDocumentUploadedBy", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  uploadedAt     DateTime @default(now())
+
   // Soft Delete
-  deletedAt     DateTime?
-  deletedBy     String?
-  
+  deletedAt DateTime?
+  deletedBy String?
+
   // Retention
   retentionUntil DateTime? // Auto-delete after this date
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  cooperative  Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative  Cooperative  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   patraChalani PatraChalani @relation(fields: [patraChalaniId], references: [id], onDelete: Cascade)
 
   @@index([patraChalaniId])
@@ -1486,24 +1497,24 @@ model PatraChalaniDocument {
 }
 
 model PatraChalaniAction {
-  id            String   @id @default(cuid())
+  id             String @id @default(cuid())
   patraChalaniId String
-  cooperativeId String
-  
+  cooperativeId  String
+
   // Action Details
-  actionType    ChalaniActionType
-  actionTo      String?  // User/Department action is forwarded to
-  remarks       String?  @db.Text
-  actionDate    DateTime @default(now())
+  actionType ChalaniActionType
+  actionTo   String? // User/Department action is forwarded to
+  remarks    String?           @db.Text
+  actionDate DateTime          @default(now())
 
   // Audit
-  actionBy      String?  // User who performed the action
+  actionBy String? // User who performed the action
 
   // Relations
-  cooperative  Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative  Cooperative  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   patraChalani PatraChalani @relation(fields: [patraChalaniId], references: [id], onDelete: Cascade)
-  actionByUser User?       @relation("ChalaniActionBy", fields: [actionBy], references: [id], onDelete: SetNull)
-  actionToUser User?       @relation("ChalaniActionTo", fields: [actionTo], references: [id], onDelete: SetNull)
+  actionByUser User?        @relation("ChalaniActionBy", fields: [actionBy], references: [id], onDelete: SetNull)
+  actionToUser User?        @relation("ChalaniActionTo", fields: [actionTo], references: [id], onDelete: SetNull)
 
   @@index([patraChalaniId])
   @@index([cooperativeId, actionDate])
@@ -1545,17 +1556,17 @@ model Designation {
 }
 
 model Shift {
-  id              String   @id @default(cuid())
-  cooperativeId   String
-  name            String
-  expectedCheckIn DateTime
+  id               String   @id @default(cuid())
+  cooperativeId    String
+  name             String
+  expectedCheckIn  DateTime
   expectedCheckOut DateTime
-  graceMinutes    Int      @default(5)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  graceMinutes     Int      @default(5)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative  @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   employees   Employee[]
   attendances Attendance[]
 
@@ -1564,38 +1575,38 @@ model Shift {
 }
 
 model Employee {
-  id            String   @id @default(cuid())
-  cooperativeId String
-  userId        String?
-  code          String   // Employee code (e.g., EMP-001)
-  firstName     String
-  lastName      String
-  email         String?
-  phone         String?
-  address       String?
-  employeeNumber String  // Keep for backward compatibility
-  position      String?  // Keep for backward compatibility
-  departmentId  String?
-  department    Department? @relation(fields: [departmentId], references: [id])
-  designationId String?
-  designation   Designation? @relation(fields: [designationId], references: [id])
-  joinDate      DateTime
-  basicSalary   Decimal  @db.Decimal(15, 2)
+  id             String       @id @default(cuid())
+  cooperativeId  String
+  userId         String?
+  code           String // Employee code (e.g., EMP-001)
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  address        String?
+  employeeNumber String // Keep for backward compatibility
+  position       String? // Keep for backward compatibility
+  departmentId   String?
+  department     Department?  @relation(fields: [departmentId], references: [id])
+  designationId  String?
+  designation    Designation? @relation(fields: [designationId], references: [id])
+  joinDate       DateTime
+  basicSalary    Decimal      @db.Decimal(15, 2)
   defaultShiftId String?
-  defaultShift  Shift?   @relation(fields: [defaultShiftId], references: [id])
-  status        String   @default("active") // "active", "inactive", "terminated"
+  defaultShift   Shift?       @relation(fields: [defaultShiftId], references: [id])
+  status         String       @default("active") // "active", "inactive", "terminated"
   terminatedDate DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   // Relations
-  cooperative    Cooperative    @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  payrollLogs    PayrollLog[]
-  attendanceLogs AttendanceLog[]
-  attendances    Attendance[]
-  leaves         LeaveRequest[]
-  payrolls       Payroll[]
-  leaveBalances  EmployeeLeaveBalance[]
+  cooperative        Cooperative            @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  payrollLogs        PayrollLog[]
+  attendanceLogs     AttendanceLog[]
+  attendances        Attendance[]
+  leaves             LeaveRequest[]
+  payrolls           Payroll[]
+  leaveBalances      EmployeeLeaveBalance[]
   trainingAttendance TrainingAttendance[]
 
   @@unique([cooperativeId, code])
@@ -1609,19 +1620,19 @@ model Employee {
 }
 
 model PayrollLog {
-  id            String   @id @default(cuid())
-  employeeId    String
-  cooperativeId String
+  id             String    @id @default(cuid())
+  employeeId     String
+  cooperativeId  String
   payPeriodStart DateTime
   payPeriodEnd   DateTime
-  grossSalary    Decimal  @db.Decimal(15, 2)
-  deductions     Decimal  @db.Decimal(15, 2) @default(0)
-  netSalary      Decimal  @db.Decimal(15, 2)
+  grossSalary    Decimal   @db.Decimal(15, 2)
+  deductions     Decimal   @default(0) @db.Decimal(15, 2)
+  netSalary      Decimal   @db.Decimal(15, 2)
   paymentDate    DateTime?
-  status         String   @default("pending") // "pending", "paid", "cancelled"
+  status         String    @default("pending") // "pending", "paid", "cancelled"
   remarks        String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1635,17 +1646,17 @@ model PayrollLog {
 }
 
 model AttendanceLog {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   employeeId    String
   cooperativeId String
-  date          DateTime @default(now())
+  date          DateTime  @default(now())
   checkIn       DateTime?
   checkOut      DateTime?
-  hoursWorked   Decimal? @db.Decimal(5, 2)
-  status        String   @default("present") // "present", "absent", "late", "leave", "holiday"
+  hoursWorked   Decimal?  @db.Decimal(5, 2)
+  status        String    @default("present") // "present", "absent", "late", "leave", "holiday"
   remarks       String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1660,19 +1671,19 @@ model AttendanceLog {
 }
 
 model Attendance {
-  id              String   @id @default(cuid())
-  employeeId      String
-  cooperativeId   String
-  date            DateTime
-  checkIn         DateTime?
-  checkOut        DateTime?
-  status          String   // PRESENT, ABSENT, LATE, LEAVE
-  shiftId         String?
-  shift           Shift?   @relation(fields: [shiftId], references: [id])
-  expectedCheckIn DateTime?
+  id               String    @id @default(cuid())
+  employeeId       String
+  cooperativeId    String
+  date             DateTime
+  checkIn          DateTime?
+  checkOut         DateTime?
+  status           String // PRESENT, ABSENT, LATE, LEAVE
+  shiftId          String?
+  shift            Shift?    @relation(fields: [shiftId], references: [id])
+  expectedCheckIn  DateTime?
   expectedCheckOut DateTime?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1687,16 +1698,16 @@ model Attendance {
 }
 
 model LeaveType {
-  id                String   @id @default(cuid())
-  cooperativeId     String
-  name              String
-  isPaid            Boolean  @default(true)
-  defaultAnnualQuota Int     @default(0)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                 String   @id @default(cuid())
+  cooperativeId      String
+  name               String
+  isPaid             Boolean  @default(true)
+  defaultAnnualQuota Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative   Cooperative            @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   leaveRequests LeaveRequest[]
   leaveBalances EmployeeLeaveBalance[]
 
@@ -1705,19 +1716,19 @@ model LeaveType {
 }
 
 model LeaveRequest {
-  id            String   @id @default(cuid())
+  id            String    @id @default(cuid())
   employeeId    String
   leaveTypeId   String
   cooperativeId String
   startDate     DateTime
   endDate       DateTime
   days          Float
-  status        String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  status        String    @default("PENDING") // PENDING, APPROVED, REJECTED
   comment       String?
   approvedBy    String?
   approvedAt    DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1732,14 +1743,14 @@ model LeaveRequest {
 }
 
 model EmployeeLeaveBalance {
-  id            String   @id @default(cuid())
-  employeeId    String
-  leaveTypeId   String
-  fiscalYear    String
-  totalQuota    Float
-  usedDays      Float    @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String   @id @default(cuid())
+  employeeId  String
+  leaveTypeId String
+  fiscalYear  String
+  totalQuota  Float
+  usedDays    Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
   employee  Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
@@ -1750,20 +1761,20 @@ model EmployeeLeaveBalance {
 }
 
 model PayrollRun {
-  id            String   @id @default(cuid())
-  cooperativeId String
-  fiscalYear    String   // "2082/83"
-  monthBs       Int      // 1-12 (Baishakh=1, Chaitra=12)
-  totalBasic    Float    @default(0)
-  totalNetPay   Float    @default(0)
-  totalSSF      Float    @default(0)
-  totalTDS      Float    @default(0)
-  status        String   @default("DRAFT") // DRAFT, FINALIZED
+  id             String    @id @default(cuid())
+  cooperativeId  String
+  fiscalYear     String // "2082/83"
+  monthBs        Int // 1-12 (Baishakh=1, Chaitra=12)
+  totalBasic     Float     @default(0)
+  totalNetPay    Float     @default(0)
+  totalSSF       Float     @default(0)
+  totalTDS       Float     @default(0)
+  status         String    @default("DRAFT") // DRAFT, FINALIZED
   journalEntryId String?
-  finalizedAt   DateTime?
-  finalizedBy   String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  finalizedAt    DateTime?
+  finalizedBy    String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1776,25 +1787,25 @@ model PayrollRun {
 }
 
 model Payroll {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   employeeId    String
   payrollRunId  String?
   payrollRun    PayrollRun? @relation(fields: [payrollRunId], references: [id])
   cooperativeId String
-  fiscalYear    String   // e.g., "2082/83"
-  monthBs       Int      // 1-12
+  fiscalYear    String // e.g., "2082/83"
+  monthBs       Int // 1-12
   basicSalary   Float
-  allowances    Json     // { grade: 1000, fuel: 500 }
-  taxTds        Float    @default(0)
-  ssfEmployee   Float    @default(0) // 11%
-  ssfEmployer   Float    @default(0) // 20%
-  loanDeduction Float    @default(0)
-  festivalBonus Float    @default(0)
+  allowances    Json // { grade: 1000, fuel: 500 }
+  taxTds        Float       @default(0)
+  ssfEmployee   Float       @default(0) // 11%
+  ssfEmployer   Float       @default(0) // 20%
+  loanDeduction Float       @default(0)
+  festivalBonus Float       @default(0)
   netSalary     Float
-  isPaid        Boolean  @default(false)
+  isPaid        Boolean     @default(false)
   finalizedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1809,19 +1820,19 @@ model Payroll {
 }
 
 model PayrollSettings {
-  id                    String   @id @default(cuid())
-  cooperativeId         String   @unique
+  id                    String        @id @default(cuid())
+  cooperativeId         String        @unique
   scheme                PayrollScheme @default(SSF)
-  tdsConfig             Json     // Tax slabs configuration
-  glSalaryExpense       String   // Chart of Accounts ID
+  tdsConfig             Json // Tax slabs configuration
+  glSalaryExpense       String // Chart of Accounts ID
   glSsfExpense          String
   glTdsPayable          String
   glSsfPayable          String
   glStaffLoanReceivable String
   glCashOrBank          String
-  festivalBonusMonthBs  Int?     // Month for festival bonus (default: Ashwin/Kartik)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  festivalBonusMonthBs  Int? // Month for festival bonus (default: Ashwin/Kartik)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -1831,38 +1842,38 @@ model PayrollSettings {
 
 // Governance
 model Meeting {
-  id            String   @id @default(cuid())
-  cooperativeId String
-  title         String
-  description   String?
-  meetingType   String   // "board", "general", "committee", "other"
-  meetingNo     Int?     // Auto-increment per cooperative
-  date          DateTime? // Renamed from scheduledDate (nullable for migration)
-  scheduledDate DateTime? // Keep for backward compatibility during migration
-  startTime     DateTime?
-  endTime       DateTime?
-  location      String?
-  status        MeetingStatus @default(PLANNED) // PLANNED, SCHEDULED, COMPLETED, CANCELLED
+  id             String                @id @default(cuid())
+  cooperativeId  String
+  title          String
+  description    String?
+  meetingType    String // "board", "general", "committee", "other"
+  meetingNo      Int? // Auto-increment per cooperative
+  date           DateTime? // Renamed from scheduledDate (nullable for migration)
+  scheduledDate  DateTime? // Keep for backward compatibility during migration
+  startTime      DateTime?
+  endTime        DateTime?
+  location       String?
+  status         MeetingStatus         @default(PLANNED) // PLANNED, SCHEDULED, COMPLETED, CANCELLED
   workflowStatus MeetingWorkflowStatus @default(DRAFT) // DRAFT, LOCKED, MINUTED, FINALIZED
-  baseAllowance Float    @default(0) // Default rate for this meeting
-  totalExpense  Float    @default(0) // Calculated after finalization
-  createdBy     String?  // User ID who created the meeting
-  attendees     Json?    // Array of attendee IDs (legacy, kept for backward compatibility)
-  committeeId   String?  // Link meeting to a committee
+  baseAllowance  Float                 @default(0) // Default rate for this meeting
+  totalExpense   Float                 @default(0) // Calculated after finalization
+  createdBy      String? // User ID who created the meeting
+  attendees      Json? // Array of attendee IDs (legacy, kept for backward compatibility)
+  committeeId    String? // Link meeting to a committee
   minutesFileUrl String? // For file uploads
-  minutesStatus String   @default("DRAFT") // "DRAFT" or "FINALIZED" (legacy, kept for backward compatibility)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  minutesStatus  String                @default("DRAFT") // "DRAFT" or "FINALIZED" (legacy, kept for backward compatibility)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
 
   // Relations
-  cooperative Cooperative    @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  committee   Committee?     @relation(fields: [committeeId], references: [id])
-  minutes     MeetingMinute[]
-  memberKYCApprovals MemberKYC[]
+  cooperative             Cooperative       @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  committee               Committee?        @relation(fields: [committeeId], references: [id])
+  minutes                 MeetingMinute[]
+  memberKYCApprovals      MemberKYC[]
   institutionKYCApprovals InstitutionKYC[]
-  agendas     MeetingAgenda[]
-  meetingAttendees MeetingAttendee[]
-  managerReports ManagerReport[]
+  agendas                 MeetingAgenda[]
+  meetingAttendees        MeetingAttendee[]
+  managerReports          ManagerReport[]
 
   @@index([cooperativeId, committeeId])
   @@index([cooperativeId, meetingNo])
@@ -1876,8 +1887,8 @@ model MeetingMinute {
   agenda        String?
   discussion    String?
   decisions     String?
-  actionItems   Json?    // Array of action items
-  recordedBy    String?  // User ID
+  actionItems   Json? // Array of action items
+  recordedBy    String? // User ID
   recordedAt    DateTime @default(now())
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -1891,15 +1902,15 @@ model MeetingMinute {
 }
 
 model MeetingAgenda {
-  id            String   @id @default(cuid())
-  meetingId     String
-  title         String
-  description   String?
-  decision      String?  // The minute text
+  id             String         @id @default(cuid())
+  meetingId      String
+  title          String
+  description    String?
+  decision       String? // The minute text
   decisionStatus DecisionStatus @default(PENDING) // PENDING, PASSED, REJECTED, DEFERRED
-  order         Int      @default(0) // To sort agendas
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  order          Int            @default(0) // To sort agendas
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   // Relations
   meeting Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
@@ -1911,9 +1922,9 @@ model MeetingAgenda {
 model MeetingAttendee {
   id                String   @id @default(cuid())
   meetingId         String
-  committeeMemberId String?  // Link to CommitteeMember if applicable
-  name              String?  // For non-members (Invitee)
-  role              String?  // "Member", "Invitee", "Guest"
+  committeeMemberId String? // Link to CommitteeMember if applicable
+  name              String? // For non-members (Invitee)
+  role              String? // "Member", "Invitee", "Guest"
   isPresent         Boolean  @default(false)
   allowance         Float    @default(0)
   tdsAmount         Float    @default(0) // 15% of allowance
@@ -1932,19 +1943,19 @@ model MeetingAttendee {
 }
 
 model Committee {
-  id            String    @id @default(uuid())
-  cooperativeId String
-  name          String    // e.g., "Board of Directors"
-  nameNepali    String?   // e.g., "सञ्चालक समिति"
-  description   String?
-  type          CommitteeType @default(OTHER)
-  isStatutory   Boolean   @default(false) // To distinguish statutory committees from ad-hoc ones
-  defaultAllowanceRate Float @default(0) // Default meeting allowance rate for this committee
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                   String        @id @default(uuid())
+  cooperativeId        String
+  name                 String // e.g., "Board of Directors"
+  nameNepali           String? // e.g., "सञ्चालक समिति"
+  description          String?
+  type                 CommitteeType @default(OTHER)
+  isStatutory          Boolean       @default(false) // To distinguish statutory committees from ad-hoc ones
+  defaultAllowanceRate Float         @default(0) // Default meeting allowance rate for this committee
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   // Relations
-  cooperative Cooperative    @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative       @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   members     CommitteeMember[]
   tenures     CommitteeTenure[]
   meetings    Meeting[]
@@ -1954,15 +1965,15 @@ model Committee {
 }
 
 model CommitteeTenure {
-  id            String    @id @default(uuid())
-  committeeId   String
-  name          String    // e.g., "Term 2080-2084"
-  startDate     DateTime
-  endDate       DateTime? // Null means currently active/ongoing
-  notes         String?
-  isCurrent     Boolean   @default(false) // Helper flag for quick queries
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  committeeId String
+  name        String // e.g., "Term 2080-2084"
+  startDate   DateTime
+  endDate     DateTime? // Null means currently active/ongoing
+  notes       String?
+  isCurrent   Boolean   @default(false) // Helper flag for quick queries
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // Relations
   committee Committee         @relation(fields: [committeeId], references: [id], onDelete: Cascade)
@@ -1972,24 +1983,24 @@ model CommitteeTenure {
 }
 
 model CommitteeMember {
-  id            String    @id @default(uuid())
-  committeeId   String
-  memberId      String    // Link to the actual Cooperative Member
-  tenureId      String?   // Optional: Some members might be ad-hoc outside a tenure
-  position      String    // e.g., "Chairman", "Secretary"
+  id             String    @id @default(uuid())
+  committeeId    String
+  memberId       String // Link to the actual Cooperative Member
+  tenureId       String? // Optional: Some members might be ad-hoc outside a tenure
+  position       String // e.g., "Chairman", "Secretary"
   positionNepali String?
-  photoPath     String?   // Specific photo for the committee display (if different from profile)
-  startDate     DateTime
-  endDate       DateTime?
-  isActive      Boolean   @default(true)
-  isActing      Boolean   @default(false) // Karyabahak (Acting) check
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  photoPath      String? // Specific photo for the committee display (if different from profile)
+  startDate      DateTime
+  endDate        DateTime?
+  isActive       Boolean   @default(true)
+  isActing       Boolean   @default(false) // Karyabahak (Acting) check
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Relations
-  committee Committee         @relation(fields: [committeeId], references: [id], onDelete: Cascade)
-  member    Member            @relation(fields: [memberId], references: [id])
-  tenure    CommitteeTenure?  @relation(fields: [tenureId], references: [id])
+  committee        Committee         @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  member           Member            @relation(fields: [memberId], references: [id])
+  tenure           CommitteeTenure?  @relation(fields: [tenureId], references: [id])
   meetingAttendees MeetingAttendee[]
 
   @@index([committeeId, isActive])
@@ -1997,23 +2008,23 @@ model CommitteeMember {
 }
 
 model AGM {
-  id                    String    @id @default(uuid())
-  cooperativeId         String
-  fiscalYear            String    // e.g., "2080/081"
-  agmNumber             Int       // e.g., 15 (15th AGM)
-  bookCloseDate         DateTime? // Share book close date
-  scheduledDate         DateTime
-  location              String?
-  totalMembers          Int       @default(0) // Snapshot of total members at time of AGM
-  presentMembers        Int       @default(0)
-  quorumThresholdPercent Float    @default(51.0) // Usually 51%
-  approvedDividendBonus Float?    // %
-  approvedDividendCash  Float?    // %
-  status                AGMStatus @default(PLANNED)
-  notes                 String?   // General summary
-  minutesFileUrl        String?   // Link to scanned minutes PDF
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                     String    @id @default(uuid())
+  cooperativeId          String
+  fiscalYear             String // e.g., "2080/081"
+  agmNumber              Int // e.g., 15 (15th AGM)
+  bookCloseDate          DateTime? // Share book close date
+  scheduledDate          DateTime
+  location               String?
+  totalMembers           Int       @default(0) // Snapshot of total members at time of AGM
+  presentMembers         Int       @default(0)
+  quorumThresholdPercent Float     @default(51.0) // Usually 51%
+  approvedDividendBonus  Float? // %
+  approvedDividendCash   Float? // %
+  status                 AGMStatus @default(PLANNED)
+  notes                  String? // General summary
+  minutesFileUrl         String? // Link to scanned minutes PDF
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2034,8 +2045,8 @@ model InventoryCategory {
   updatedAt     DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative        @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  parent      InventoryCategory? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  cooperative Cooperative         @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  parent      InventoryCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    InventoryCategory[] @relation("CategoryHierarchy")
   items       InventoryItem[]
 
@@ -2050,8 +2061,8 @@ model InventoryItem {
   code          String
   name          String
   description   String?
-  unit          String   // "piece", "kg", "liter", etc.
-  quantity      Decimal  @db.Decimal(15, 2) @default(0)
+  unit          String // "piece", "kg", "liter", etc.
+  quantity      Decimal  @default(0) @db.Decimal(15, 2)
   minQuantity   Decimal? @db.Decimal(15, 2)
   maxQuantity   Decimal? @db.Decimal(15, 2)
   unitPrice     Decimal? @db.Decimal(15, 2)
@@ -2072,11 +2083,11 @@ model InventoryItem {
 model AuditLog {
   id            String   @id @default(cuid())
   cooperativeId String
-  action        String   // "create", "update", "delete", "view", "export", etc.
-  entityType    String   // "user", "member", "loan", "saving", etc.
+  action        String // "create", "update", "delete", "view", "export", etc.
+  entityType    String // "user", "member", "loan", "saving", etc.
   entityId      String?
-  userId        String?  // User who performed the action
-  details       Json?    // Additional details about the action
+  userId        String? // User who performed the action
+  details       Json? // Additional details about the action
   ipAddress     String?
   userAgent     String?
   timestamp     DateTime @default(now())
@@ -2124,15 +2135,15 @@ model ProcessedAmlEvents {
 }
 
 model AmlFlag {
-  id          String      @id @default(cuid())
-  memberId    String
+  id            String      @id @default(cuid())
+  memberId      String
   cooperativeId String
-  type        AmlFlagType
-  details     Json
-  isAttempted Boolean     @default(false) // For manual SARs
-  status      String      @default("pending")
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  type          AmlFlagType
+  details       Json
+  isAttempted   Boolean     @default(false) // For manual SARs
+  status        String      @default("pending")
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2146,18 +2157,18 @@ model AmlFlag {
 }
 
 model AmlTtrReport {
-  id             String                      @id @default(cuid())
-  forDate        DateTime
-  memberId       String
-  cooperativeId  String
-  totalAmount    Decimal                     @db.Decimal(15, 2)
-  counterparty   TransactionCounterpartyType @default(MEMBER) // For exemption logic
-  status         String                      @default("pending")
-  deadline       DateTime
-  remarks        String?                     // For rejection/correction reasons
-  xmlPath        String?
-  createdAt      DateTime                    @default(now())
-  updatedAt      DateTime                    @updatedAt
+  id            String                      @id @default(cuid())
+  forDate       DateTime
+  memberId      String
+  cooperativeId String
+  totalAmount   Decimal                     @db.Decimal(15, 2)
+  counterparty  TransactionCounterpartyType @default(MEMBER) // For exemption logic
+  status        String                      @default("pending")
+  deadline      DateTime
+  remarks       String? // For rejection/correction reasons
+  xmlPath       String?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2172,14 +2183,14 @@ model AmlTtrReport {
 }
 
 model SourceOfFundsDeclaration {
-  id              String   @id @default(cuid())
-  transactionId   String
-  memberId        String
-  cooperativeId   String
-  declaredText    String
-  attachmentPath  String?  // Path to supporting document (e.g., land sale deed)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id             String   @id @default(cuid())
+  transactionId  String
+  memberId       String
+  cooperativeId  String
+  declaredText   String
+  attachmentPath String? // Path to supporting document (e.g., land sale deed)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2193,32 +2204,35 @@ model SourceOfFundsDeclaration {
 }
 
 model AccountSignatory {
-  id                  String   @id @default(cuid())
-  accountId           String   // Can reference SavingAccount or other account types
-  accountType         String   // "saving", "loan", etc.
-  memberId            String
-  cooperativeId       String
-  role                String   // e.g., "Guardian", "Operator"
-  biometricData       String?  // Stores ISO 19794-2 template or encrypted path to secure storage
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id            String   @id @default(cuid())
+  accountId     String // Can reference SavingAccount or other account types
+  accountType   String // "saving", "loan", etc.
+  memberId      String
+  cooperativeId String
+  role          String // e.g., "Guardian", "Operator"
+  biometricData String? // Stores ISO 19794-2 template or encrypted path to secure storage
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   member      Member      @relation(fields: [memberId], references: [id], onDelete: Cascade)
 
+  @@index([cooperativeId])
+  @@index([memberId])
+  @@index([accountId])
   @@map("account_signatories")
 }
 
 model WhitelistedMatch {
-  id              String   @id @default(cuid())
-  memberId        String
-  cooperativeId   String
-  sanctionListId  String   // ID from the source sanction list
-  sanctionListType String  // "UN", "HOME_MINISTRY"
-  reason          String
-  whitelistedById String   // User ID who whitelisted
-  createdAt       DateTime @default(now())
+  id               String   @id @default(cuid())
+  memberId         String
+  cooperativeId    String
+  sanctionListId   String // ID from the source sanction list
+  sanctionListType String // "UN", "HOME_MINISTRY"
+  reason           String
+  whitelistedById  String // User ID who whitelisted
+  createdAt        DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2228,11 +2242,11 @@ model WhitelistedMatch {
 }
 
 model SensitiveDataAccessLog {
-  id         String   @id @default(cuid())
-  userId     String
+  id            String   @id @default(cuid())
+  userId        String
   cooperativeId String
-  endpoint   String   // e.g., GET /api/compliance/aml/cases
-  accessedAt DateTime @default(now())
+  endpoint      String // e.g., GET /api/compliance/aml/cases
+  accessedAt    DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2241,14 +2255,14 @@ model SensitiveDataAccessLog {
 }
 
 model SanctionListUN {
-  id          String   @id @default(cuid())
+  id            String   @id @default(cuid())
   cooperativeId String
-  fullName    String
-  aliases     Json?    // Array of alternative names
-  dob         String?  // Date of birth
-  nationality String?
-  lastUpdated DateTime @default(now())
-  createdAt   DateTime @default(now())
+  fullName      String
+  aliases       Json? // Array of alternative names
+  dob           String? // Date of birth
+  nationality   String?
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2257,14 +2271,14 @@ model SanctionListUN {
 }
 
 model SanctionListHomeMinistry {
-  id          String   @id @default(cuid())
+  id            String   @id @default(cuid())
   cooperativeId String
-  fullName    String
-  aliases     Json?    // Array of alternative names
-  nationalId  String?
-  noticeRef   String?
-  lastUpdated DateTime @default(now())
-  createdAt   DateTime @default(now())
+  fullName      String
+  aliases       Json? // Array of alternative names
+  nationalId    String?
+  noticeRef     String?
+  lastUpdated   DateTime @default(now())
+  createdAt     DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2273,16 +2287,16 @@ model SanctionListHomeMinistry {
 }
 
 model AmlCase {
-  id            String      @id @default(cuid())
-  memberId      String
-  cooperativeId String
-  type          AmlFlagType
-  status        String      @default("open")
-  notes         String?
-  isConfidential Boolean    @default(true)
-  createdAt     DateTime    @default(now())
-  closedAt      DateTime?
-  updatedAt     DateTime    @updatedAt
+  id             String      @id @default(cuid())
+  memberId       String
+  cooperativeId  String
+  type           AmlFlagType
+  status         String      @default("open")
+  notes          String?
+  isConfidential Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  closedAt       DateTime?
+  updatedAt      DateTime    @updatedAt
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
@@ -2301,15 +2315,15 @@ model TrainingSession {
   cooperativeId String
   title         String
   description   String?
-  sessionType   String   // "aml_workshop", "kyc_training", etc.
-  conductedBy   String?  // User ID
+  sessionType   String // "aml_workshop", "kyc_training", etc.
+  conductedBy   String? // User ID
   sessionDate   DateTime
-  duration      Int?     // Duration in minutes
+  duration      Int? // Duration in minutes
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  cooperative Cooperative        @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative          @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   attendance  TrainingAttendance[]
 
   @@map("training_sessions")
@@ -2325,7 +2339,7 @@ model TrainingAttendance {
   createdAt     DateTime @default(now())
 
   // Relations
-  cooperative Cooperative    @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  cooperative Cooperative     @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
   session     TrainingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   employee    Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
@@ -2335,47 +2349,47 @@ model TrainingAttendance {
 
 // Manager's Report
 model ManagerReport {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   cooperativeId String
   cooperative   Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  
-  title         String   // e.g. "2081 Shrawan - Monthly Progress Report"
-  fiscalYear    String   // e.g. "2081"
-  month         String   // e.g. "Shrawan", "Ashad"
-  
+
+  title      String // e.g. "2081 Shrawan - Monthly Progress Report"
+  fiscalYear String // e.g. "2081"
+  month      String // e.g. "Shrawan", "Ashad"
+
   // Financial Snapshot (JSON for structured data)
-  financialData Json?    // Balance sheet, P&L, PEARLS ratios
+  financialData     Json? // Balance sheet, P&L, PEARLS ratios
   previousMonthData Json? // Previous month's values for comparison
-  
+
   // Member Data
-  memberData    Json?    // New/closed members, KYC status, AML flags
-  
+  memberData Json? // New/closed members, KYC status, AML flags
+
   // Loan Data
-  loanData      Json?    // Approved loans by level, overdue, recovery, insider lending
-  
+  loanData Json? // Approved loans by level, overdue, recovery, insider lending
+
   // Liquidity Data
-  liquidityData Json?    // Liabilities, top 20 lists, gap analysis
-  
+  liquidityData Json? // Liabilities, top 20 lists, gap analysis
+
   // Governance Data
-  governanceData Json?   // Committee meetings, complaints, circulars, policies
-  
+  governanceData Json? // Committee meetings, complaints, circulars, policies
+
   // Narrative Sections (Rich Text)
-  description   String?  @db.Text // Manager's overall analysis
-  challenges    String?  @db.Text // Problems and challenges
-  plans         String?  @db.Text // Future plans
-  suggestions   String?  @db.Text // Manager's suggestions to board
-  
-  status        ReportStatus @default(DRAFT)
-  finalizedAt   DateTime?
-  finalizedBy   String?  // User ID
-  
+  description String? @db.Text // Manager's overall analysis
+  challenges  String? @db.Text // Problems and challenges
+  plans       String? @db.Text // Future plans
+  suggestions String? @db.Text // Manager's suggestions to board
+
+  status      ReportStatus @default(DRAFT)
+  finalizedAt DateTime?
+  finalizedBy String? // User ID
+
   // Link to meeting (optional)
   presentedInMeetingId String?
   meeting              Meeting? @relation(fields: [presentedInMeetingId], references: [id])
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([cooperativeId, fiscalYear, month])
   @@index([cooperativeId, status])
   @@map("manager_reports")
@@ -2383,24 +2397,24 @@ model ManagerReport {
 
 // Day End / Day Begin (EOD/BOD) Management
 model DayBook {
-  id              String        @id @default(cuid())
-  cooperativeId   String
-  date            DateTime      // The "System Date" for accounting
-  status          DayBookStatus @default(OPEN)
-  dayBeginBy      String?       // User ID
-  dayEndBy        String?       // User ID
-  openingCash     Decimal?      @db.Decimal(18, 2)
-  closingCash     Decimal?      @db.Decimal(18, 2)
-  transactionsCount Int         @default(0)
-  version         Int           @default(1) // Optimistic Locking
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  cooperativeId     String
+  date              DateTime // The "System Date" for accounting
+  status            DayBookStatus @default(OPEN)
+  dayBeginBy        String? // User ID
+  dayEndBy          String? // User ID
+  openingCash       Decimal?      @db.Decimal(18, 2)
+  closingCash       Decimal?      @db.Decimal(18, 2)
+  transactionsCount Int           @default(0)
+  version           Int           @default(1) // Optimistic Locking
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   // Relations
-  cooperative     Cooperative   @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  dayBeginByUser  User?         @relation("DayBeginBy", fields: [dayBeginBy], references: [id], onDelete: SetNull)
-  dayEndByUser    User?         @relation("DayEndBy", fields: [dayEndBy], references: [id], onDelete: SetNull)
-  settlements     TellerSettlement[]
+  cooperative    Cooperative        @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  dayBeginByUser User?              @relation("DayBeginBy", fields: [dayBeginBy], references: [id], onDelete: SetNull)
+  dayEndByUser   User?              @relation("DayEndBy", fields: [dayEndBy], references: [id], onDelete: SetNull)
+  settlements    TellerSettlement[]
 
   @@unique([cooperativeId, date])
   @@index([cooperativeId, status])
@@ -2409,32 +2423,32 @@ model DayBook {
 }
 
 model TellerSettlement {
-  id              String                  @id @default(cuid())
-  dayBookId       String
-  cooperativeId   String                  // Direct relation to Cooperative for performance
-  tellerId        String                  // User ID of the teller
-  physicalCash    Decimal                 @db.Decimal(18, 2)
-  systemCash      Decimal                 @db.Decimal(18, 2)
-  difference      Decimal                 @db.Decimal(18, 2)
-  denominationData Json?                  // Denomination count data
-  status          TellerSettlementStatus  @default(PENDING)
-  settlementRef   String                  @unique // Unique for Idempotency
-  executedBy      String                  // User ID
-  executedAt      DateTime                @default(now())
-  approvalBy      String?                 // User ID (Optional)
-  approvalAt      DateTime?               // DateTime (Optional)
-  attachmentUrl   String?                 // Scan/Proof document URL
-  rejectionReason String?                 // If unsettled/rejected
-  isForceClosed   Boolean                 @default(false)
-  createdAt       DateTime                @default(now())
-  updatedAt       DateTime                @updatedAt
+  id               String                 @id @default(cuid())
+  dayBookId        String
+  cooperativeId    String // Direct relation to Cooperative for performance
+  tellerId         String // User ID of the teller
+  physicalCash     Decimal                @db.Decimal(18, 2)
+  systemCash       Decimal                @db.Decimal(18, 2)
+  difference       Decimal                @db.Decimal(18, 2)
+  denominationData Json? // Denomination count data
+  status           TellerSettlementStatus @default(PENDING)
+  settlementRef    String                 @unique // Unique for Idempotency
+  executedBy       String // User ID
+  executedAt       DateTime               @default(now())
+  approvalBy       String? // User ID (Optional)
+  approvalAt       DateTime? // DateTime (Optional)
+  attachmentUrl    String? // Scan/Proof document URL
+  rejectionReason  String? // If unsettled/rejected
+  isForceClosed    Boolean                @default(false)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 
   // Relations
-  cooperative     Cooperative             @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
-  dayBook         DayBook                 @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
-  teller          User                    @relation("TellerSettlements", fields: [tellerId], references: [id], onDelete: Restrict)
-  executedByUser  User                    @relation("SettlementExecutedBy", fields: [executedBy], references: [id], onDelete: Restrict)
-  approvalByUser  User?                   @relation("SettlementApprovedBy", fields: [approvalBy], references: [id], onDelete: SetNull)
+  cooperative    Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  dayBook        DayBook     @relation(fields: [dayBookId], references: [id], onDelete: Cascade)
+  teller         User        @relation("TellerSettlements", fields: [tellerId], references: [id], onDelete: Restrict)
+  executedByUser User        @relation("SettlementExecutedBy", fields: [executedBy], references: [id], onDelete: Restrict)
+  approvalByUser User?       @relation("SettlementApprovedBy", fields: [approvalBy], references: [id], onDelete: SetNull)
 
   @@index([dayBookId])
   @@index([cooperativeId])
@@ -2463,18 +2477,18 @@ enum NotificationStatus {
 model Notification {
   id            String              @id @default(cuid())
   cooperativeId String
-  userId        String?             // Target user (null for broadcast notifications)
-  type          String              // Notification type (e.g., "meeting_scheduled", "loan_approved", "payment_received")
+  userId        String? // Target user (null for broadcast notifications)
+  type          String // Notification type (e.g., "meeting_scheduled", "loan_approved", "payment_received")
   channel       NotificationChannel // SMS, EMAIL, IN_APP, PUSH
   title         String
   message       String
   status        NotificationStatus  @default(PENDING)
-  phone         String?             // Phone number for SMS
-  email         String?             // Email address for EMAIL
-  metadata      Json?               // Additional data (e.g., meeting ID, transaction ID)
-  sentAt        DateTime?           // When notification was sent
-  readAt        DateTime?           // When notification was read (for IN_APP)
-  errorMessage  String?             // Error message if status is FAILED
+  phone         String? // Phone number for SMS
+  email         String? // Email address for EMAIL
+  metadata      Json? // Additional data (e.g., meeting ID, transaction ID)
+  sentAt        DateTime? // When notification was sent
+  readAt        DateTime? // When notification was read (for IN_APP)
+  errorMessage  String? // Error message if status is FAILED
   retryCount    Int                 @default(0)
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
@@ -2496,18 +2510,18 @@ model Notification {
 
 // Generic Workflow History - for tracking workflow transitions for any entity type
 model GenericWorkflowHistory {
-  id            String    @id @default(uuid())
+  id            String   @id @default(uuid())
   cooperativeId String
-  entityType    String    // e.g., 'Member', 'LoanApplication', 'Meeting', etc.
-  entityId      String    // ID of the entity that transitioned
-  workflowName  String    // Name of the workflow (e.g., 'member-onboarding', 'loan-approval')
-  fromStatus    String?   // Previous state (null for initial creation)
-  toStatus      String    // New state
-  changedById   String?   // ID of the user who made the change
-  changedBy     User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
-  remarks       String?   // Optional remarks about the transition
-  metadata      Json?     // Additional metadata about the transition
-  changedAt     DateTime  @default(now())
+  entityType    String // e.g., 'Member', 'LoanApplication', 'Meeting', etc.
+  entityId      String // ID of the entity that transitioned
+  workflowName  String // Name of the workflow (e.g., 'member-onboarding', 'loan-approval')
+  fromStatus    String? // Previous state (null for initial creation)
+  toStatus      String // New state
+  changedById   String? // ID of the user who made the change
+  changedBy     User?    @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  remarks       String? // Optional remarks about the transition
+  metadata      Json? // Additional metadata about the transition
+  changedAt     DateTime @default(now())
 
   // Relations
   cooperative Cooperative @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)

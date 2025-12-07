@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { KymForm } from './KymForm';
+import { KymForm } from '@/components/KymForm';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock components that might cause issues in tests
@@ -25,7 +25,7 @@ describe('KymForm', () => {
 
   it('validates required fields on next', async () => {
     render(<KymForm mode="onboarding" onSubmit={mockOnSubmit} />);
-    
+
     const nextButton = screen.getByText('Next');
     fireEvent.click(nextButton);
 

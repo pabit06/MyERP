@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
-import Link from 'next/link';
 
 interface Plan {
   id: string;
@@ -22,7 +21,7 @@ interface Subscription {
 }
 
 export default function SubscriptionPage() {
-  const { token, refreshAuth } = useAuth();
+  const { refreshAuth } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,22 +30,12 @@ export default function SubscriptionPage() {
   useEffect(() => {
     fetchSubscription();
     fetchPlans();
-  }, [token]);
+  }, []);
 
   const fetchSubscription = async () => {
     try {
-      const response = await fetch(`${API_URL}/subscription`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSubscription(data.subscription);
-      } else {
-        setError('Failed to load subscription');
-      }
+      const data = await apiClient.get<{ subscription: Subscription }>('/subscription');
+      setSubscription(data.subscription);
     } catch (err) {
       setError('Error loading subscription');
     } finally {
@@ -56,16 +45,8 @@ export default function SubscriptionPage() {
 
   const fetchPlans = async () => {
     try {
-      const response = await fetch(`${API_URL}/subscription/plans`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPlans(data.plans);
-      }
+      const data = await apiClient.get<{ plans: Plan[] }>('/subscription/plans');
+      setPlans(data.plans);
     } catch (err) {
       console.error('Error loading plans:', err);
     }
@@ -77,25 +58,12 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/subscription/change-plan`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ planId }),
-      });
-
-      if (response.ok) {
-        await fetchSubscription();
-        await refreshAuth(); // Refresh auth to get updated modules
-        alert('Subscription plan updated successfully! Please refresh the page to see changes.');
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to change plan');
-      }
-    } catch (err) {
-      alert('Error changing plan');
+      await apiClient.put('/subscription/change-plan', { planId });
+      await fetchSubscription();
+      await refreshAuth(); // Refresh auth to get updated modules
+      alert('Subscription plan updated successfully! Please refresh the page to see changes.');
+    } catch (err: any) {
+      alert(err.message || 'Error changing plan');
     }
   };
 

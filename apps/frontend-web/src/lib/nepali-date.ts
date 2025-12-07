@@ -119,4 +119,3 @@ export function getNepaliMonthName(month: number): string {
   ];
   return nepaliMonths[month - 1] || '';
 }
-

@@ -2,6 +2,21 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
 
 /**
+ * Prisma query types for dynamic model access
+ */
+type PrismaWhereInput = Record<string, unknown>;
+type PrismaSelectInput = Record<string, boolean>;
+type PrismaIncludeInput = Record<string, boolean>;
+type PrismaOrderByInput = Record<string, 'asc' | 'desc'>;
+type PrismaFindManyArgs = {
+  where?: PrismaWhereInput;
+  select?: PrismaSelectInput;
+  include?: PrismaIncludeInput;
+  orderBy?: PrismaOrderByInput | PrismaOrderByInput[];
+  take?: number;
+};
+
+/**
  * Report Column Definition
  */
 export interface ReportColumn {
@@ -21,7 +36,7 @@ export interface ReportColumn {
 export interface ReportFilter {
   field: string;
   operator: 'equals' | 'notEquals' | 'greaterThan' | 'lessThan' | 'between' | 'in' | 'contains' | 'startsWith' | 'endsWith';
-  value: any;
+  value: string | number | boolean | Date | (string | number | boolean | Date)[];
 }
 
 /**
@@ -53,7 +68,7 @@ export interface ReportConfig {
  */
 export interface ReportResult {
   config: ReportConfig;
-  data: any[];
+  data: Record<string, unknown>[];
   summary?: {
     totalRows: number;
     aggregations?: Record<string, number>;
@@ -99,6 +114,7 @@ export class ReportBuilder {
     };
   }
 
+
   /**
    * Build base query based on configuration
    */
@@ -106,16 +122,19 @@ export class ReportBuilder {
     config: ReportConfig,
     cooperativeId: string,
     filters: ReportFilter[]
-  ): Promise<any[]> {
+  ): Promise<Record<string, unknown>[]> {
     const modelName = this.getModelName(config.entityType);
-    const model = (prisma as any)[modelName];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const model = (prisma as any)[modelName] as {
+      findMany: (args: PrismaFindManyArgs) => Promise<Record<string, unknown>[]>;
+    };
 
     if (!model) {
       throw new Error(`Entity type '${config.entityType}' not found`);
     }
 
     // Build where clause
-    const where: any = {
+    const where: PrismaWhereInput = {
       cooperativeId,
     };
 
@@ -125,7 +144,7 @@ export class ReportBuilder {
     }
 
     // Build include clause for joins
-    const include: any = {};
+    const include: PrismaIncludeInput = {};
     if (config.joins) {
       for (const join of config.joins) {
         include[join.entity.toLowerCase()] = true;
@@ -133,13 +152,13 @@ export class ReportBuilder {
     }
 
     // Build select clause
-    const select: any = {};
+    const select: PrismaSelectInput = {};
     for (const column of config.columns) {
       select[column.key] = true;
     }
 
     // Build orderBy
-    const orderBy: any = {};
+    const orderBy: PrismaOrderByInput = {};
     if (config.orderBy && config.orderBy.length > 0) {
       for (const order of config.orderBy) {
         orderBy[order.field] = order.direction;
@@ -147,7 +166,7 @@ export class ReportBuilder {
     }
 
     // Execute query
-    const query: any = {
+    const query: PrismaFindManyArgs = {
       where,
       select: Object.keys(select).length > 0 ? select : undefined,
       include: Object.keys(include).length > 0 ? include : undefined,
@@ -164,7 +183,7 @@ export class ReportBuilder {
   /**
    * Build filter condition
    */
-  private static buildFilterCondition(filter: ReportFilter): any {
+  private static buildFilterCondition(filter: ReportFilter): unknown {
     switch (filter.operator) {
       case 'equals':
         return filter.value;
@@ -174,8 +193,10 @@ export class ReportBuilder {
         return { gt: filter.value };
       case 'lessThan':
         return { lt: filter.value };
-      case 'between':
-        return { gte: filter.value[0], lte: filter.value[1] };
+      case 'between': {
+        const values = Array.isArray(filter.value) ? filter.value : [filter.value];
+        return { gte: values[0], lte: values[1] };
+      }
       case 'in':
         return { in: Array.isArray(filter.value) ? filter.value : [filter.value] };
       case 'contains':
@@ -192,9 +213,12 @@ export class ReportBuilder {
   /**
    * Format results based on column definitions
    */
-  private static formatResults(results: any[], config: ReportConfig): any[] {
+  private static formatResults(
+    results: Record<string, unknown>[],
+    config: ReportConfig
+  ): Record<string, unknown>[] {
     return results.map((row) => {
-      const formatted: any = {};
+      const formatted: Record<string, unknown> = {};
       for (const column of config.columns) {
         let value = this.getNestedValue(row, column.key);
 
@@ -223,15 +247,20 @@ export class ReportBuilder {
   /**
    * Get nested value from object
    */
-  private static getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current?.[key], obj);
+  private static getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+    return path.split('.').reduce((current, key) => {
+      if (current && typeof current === 'object' && key in current) {
+        return (current as Record<string, unknown>)[key];
+      }
+      return undefined;
+    }, obj as unknown);
   }
 
   /**
    * Calculate aggregations
    */
   private static calculateAggregations(
-    data: any[],
+    data: Record<string, unknown>[],
     aggregations: Array<{ field: string; function: string; label: string }>
   ): Record<string, number> {
     const result: Record<string, number> = {};

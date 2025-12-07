@@ -40,7 +40,10 @@ export default function Header() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showUtilities, setShowUtilities] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
-  const [currentDate, setCurrentDate] = useState<{ ad: string; bs: string; systemDate?: Date }>({ ad: '', bs: '' });
+  const [currentDate, setCurrentDate] = useState<{ ad: string; bs: string; systemDate?: Date }>({
+    ad: '',
+    bs: '',
+  });
   const [dayStatus, setDayStatus] = useState<{ status: string; date?: Date } | null>(null);
 
   // Fetch system date from DayBook (active day)
@@ -50,20 +53,23 @@ export default function Header() {
         const token = localStorage.getItem('token');
         if (!token) return;
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/cbs/day-book/status`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        });
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/cbs/day-book/status`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
         if (response.ok) {
           const data = await response.json();
           if (data.status === 'OPEN' && data.date) {
             const systemDate = new Date(data.date);
-            const adDate = systemDate.toLocaleDateString('en-GB', { 
-              day: '2-digit', 
-              month: 'short', 
-              year: 'numeric' 
+            const adDate = systemDate.toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
             });
             const bsDate = formatBsDate(adToBs(systemDate));
             setCurrentDate({ ad: adDate, bs: bsDate, systemDate });
@@ -77,10 +83,10 @@ export default function Header() {
 
       // Fallback to current date if no active day
       const now = new Date();
-      const adDate = now.toLocaleDateString('en-GB', { 
-        day: '2-digit', 
-        month: 'short', 
-        year: 'numeric' 
+      const adDate = now.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
       });
       const bsDate = formatBsDate(adToBs(now));
       setCurrentDate({ ad: adDate, bs: bsDate });
@@ -122,7 +128,7 @@ export default function Header() {
       paths.forEach((path, index) => {
         const fullPath = '/' + paths.slice(0, index + 1).join('/');
         const label = pageTitles[fullPath] || path.charAt(0).toUpperCase() + path.slice(1);
-        
+
         // Only add if it's not the last item (last item is the current page, shown as title)
         if (index < paths.length - 1) {
           breadcrumbs.push({ label, href: fullPath });

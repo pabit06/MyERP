@@ -23,8 +23,8 @@ interface SavingAccount {
 }
 
 export default function IssueSharePage() {
-  const { token } = useAuth();
   const router = useRouter();
+  const { token } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [savingAccounts, setSavingAccounts] = useState<SavingAccount[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
@@ -57,51 +57,35 @@ export default function IssueSharePage() {
   }, [formData.memberId, formData.paymentMode]);
 
   const fetchMembers = async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/members`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMembers(data.members || []);
-      }
+      const data = await apiClient.get<{ members: Member[] }>('/members');
+      setMembers(data.members || []);
     } catch (err) {
       console.error('Error fetching members:', err);
     }
   };
 
   const fetchSavingAccounts = async (memberId: string) => {
-    if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/savings/accounts?memberId=${memberId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setSavingAccounts(data.accounts || []);
-      }
+      const data = await apiClient.get<{ accounts: SavingAccount[] }>(
+        `/savings/accounts?memberId=${memberId}`
+      );
+      setSavingAccounts(data.accounts || []);
     } catch (err) {
       console.error('Error fetching saving accounts:', err);
     }
   };
 
   const fetchBankAccounts = async () => {
-    if (!token) return;
     try {
       // Fetch bank accounts from chart of accounts
-      const response = await fetch(`${API_URL}/general-ledger/assets`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        // Filter for bank accounts (you may need to adjust this based on your account structure)
-        setBankAccounts(
-          data.accounts?.filter(
-            (acc: any) => acc.name.toLowerCase().includes('bank') || acc.code.startsWith('1002')
-          ) || []
-        );
-      }
+      const data = await apiClient.get<{ accounts: any[] }>('/general-ledger/assets');
+      // Filter for bank accounts (you may need to adjust this based on your account structure)
+      setBankAccounts(
+        data.accounts?.filter(
+          (acc: any) => acc.name.toLowerCase().includes('bank') || acc.code.startsWith('1002')
+        ) || []
+      );
     } catch (err) {
       console.error('Error fetching bank accounts:', err);
     }
@@ -122,7 +106,6 @@ export default function IssueSharePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
 
     if (!formData.memberId || !formData.kitta || !formData.date) {
       setError('Please fill in all required fields');
@@ -143,31 +126,18 @@ export default function IssueSharePage() {
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/shares/issue`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          memberId: formData.memberId,
-          kitta: parseInt(formData.kitta),
-          date: formData.date,
-          paymentMode: formData.paymentMode,
-          bankAccountId: formData.bankAccountId || undefined,
-          savingAccountId: formData.savingAccountId || undefined,
-          remarks: formData.remarks,
-        }),
+      await apiClient.post('/shares/issue', {
+        memberId: formData.memberId,
+        kitta: parseInt(formData.kitta),
+        date: formData.date,
+        paymentMode: formData.paymentMode,
+        bankAccountId: formData.bankAccountId || undefined,
+        savingAccountId: formData.savingAccountId || undefined,
+        remarks: formData.remarks,
       });
-
-      if (response.ok) {
-        router.push('/shares?success=issued');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to issue shares');
-      }
-    } catch (err) {
-      setError('Error issuing shares');
+      router.push('/shares?success=issued');
+    } catch (err: any) {
+      setError(err.message || 'Error issuing shares');
     } finally {
       setIsLoading(false);
     }

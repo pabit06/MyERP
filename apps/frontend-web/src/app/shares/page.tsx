@@ -15,9 +15,9 @@ interface DashboardStats {
 }
 
 export default function SharesPage() {
-  const { token, hasModule } = useAuth();
+  const { hasModule } = useAuth();
   const [activeTab, setActiveTab] = useState<
-    'dashboard' | 'issue' | 'return' | 'statement' | 'certificates'
+    'dashboard' | 'issue' | 'return' | 'statement' | 'certificates' | 'register'
   >('dashboard');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,22 +32,13 @@ export default function SharesPage() {
     if (activeTab === 'dashboard') {
       fetchDashboard();
     }
-  }, [token, hasModule, activeTab]);
+  }, [hasModule, activeTab]);
 
   const fetchDashboard = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/shares/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      } else {
-        setError('Error loading dashboard data');
-      }
+      const data = await apiClient.get<DashboardStats>('/shares/dashboard');
+      setStats(data);
     } catch (err) {
       setError('Error loading dashboard data');
     } finally {

@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
 interface Member {
   id: string;
   memberNumber: string;
@@ -23,8 +25,8 @@ interface ShareAccount {
 }
 
 export default function ReturnSharePage() {
-  const { token } = useAuth();
   const router = useRouter();
+  const { token } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [shareAccount, setShareAccount] = useState<ShareAccount | null>(null);
@@ -121,7 +123,6 @@ export default function ReturnSharePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
 
     if (!formData.memberId || !formData.kitta || !formData.date) {
       setError('Please fill in all required fields');
@@ -142,30 +143,17 @@ export default function ReturnSharePage() {
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/shares/return`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          memberId: formData.memberId,
-          kitta: parseInt(formData.kitta),
-          date: formData.date,
-          paymentMode: formData.paymentMode,
-          bankAccountId: formData.bankAccountId || undefined,
-          remarks: formData.remarks,
-        }),
+      await apiClient.post('/shares/return', {
+        memberId: formData.memberId,
+        kitta: parseInt(formData.kitta),
+        date: formData.date,
+        paymentMode: formData.paymentMode,
+        bankAccountId: formData.bankAccountId || undefined,
+        remarks: formData.remarks,
       });
-
-      if (response.ok) {
-        router.push('/shares?success=returned');
-      } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to return shares');
-      }
-    } catch (err) {
-      setError('Error returning shares');
+      router.push('/shares?success=returned');
+    } catch (err: any) {
+      setError(err.message || 'Error returning shares');
     } finally {
       setIsLoading(false);
     }

@@ -157,44 +157,47 @@ export default function NepaliDatePicker({
   }, []); // Only run once on mount
 
   // Handle BS date change from the picker
-  const handleBsDateChange = useCallback((bsDateString: string) => {
-    try {
-      if (!bsDateString) {
-        setBsDate('');
-        setAdDate('');
-        onChange('');
-        if (onBsDateChange) {
-          onBsDateChange('');
+  const handleBsDateChange = useCallback(
+    (bsDateString: string) => {
+      try {
+        if (!bsDateString) {
+          setBsDate('');
+          setAdDate('');
+          onChange('');
+          if (onBsDateChange) {
+            onBsDateChange('');
+          }
+          return;
         }
-        return;
+
+        // Parse BS date (format: YYYY-MM-DD)
+        const [year, month, day] = bsDateString.split('-').map(Number);
+        if (!year || !month || !day) {
+          console.error('Invalid BS date format:', bsDateString);
+          return;
+        }
+
+        setBsDate(bsDateString);
+
+        // Convert BS to AD (NepaliDate constructor expects month to be 0-indexed)
+        // @ts-ignore
+        const nepaliDate = new NepaliDate(year, month - 1, day);
+        // @ts-ignore
+        const adDateObj = nepaliDate.toJsDate();
+        const isoString = adDateObj.toISOString().split('T')[0];
+
+        setAdDate(isoString);
+        onChange(isoString);
+
+        if (onBsDateChange) {
+          onBsDateChange(bsDateString);
+        }
+      } catch (error) {
+        console.error('Error handling BS date change:', error);
       }
-
-      // Parse BS date (format: YYYY-MM-DD)
-      const [year, month, day] = bsDateString.split('-').map(Number);
-      if (!year || !month || !day) {
-        console.error('Invalid BS date format:', bsDateString);
-        return;
-      }
-
-      setBsDate(bsDateString);
-
-      // Convert BS to AD (NepaliDate constructor expects month to be 0-indexed)
-      // @ts-ignore
-      const nepaliDate = new NepaliDate(year, month - 1, day);
-      // @ts-ignore
-      const adDateObj = nepaliDate.toJsDate();
-      const isoString = adDateObj.toISOString().split('T')[0];
-
-      setAdDate(isoString);
-      onChange(isoString);
-
-      if (onBsDateChange) {
-        onBsDateChange(bsDateString);
-      }
-    } catch (error) {
-      console.error('Error handling BS date change:', error);
-    }
-  }, [onChange, onBsDateChange]);
+    },
+    [onChange, onBsDateChange]
+  );
 
   // Handle AD date selection (native date input)
   const handleAdDateChange = (adDateString: string) => {
@@ -252,7 +255,7 @@ export default function NepaliDatePicker({
       link.rel = 'stylesheet';
       link.href = '/nepali.datepicker.v5.0.6.min.css';
       link.id = 'nepali-datepicker-css';
-      
+
       // Check if already added
       if (!document.getElementById('nepali-datepicker-css')) {
         document.head.appendChild(link);
@@ -281,79 +284,79 @@ export default function NepaliDatePicker({
           </label>
         )}
 
-      <div className="space-y-2">
-        {/* Calendar Type Toggle */}
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setCalendarType('BS')}
-            className={`px-3 py-1 text-sm rounded ${
-              calendarType === 'BS'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            बिक्रम सम्बत (BS)
-          </button>
-          <button
-            type="button"
-            onClick={() => setCalendarType('AD')}
-            className={`px-3 py-1 text-sm rounded ${
-              calendarType === 'AD'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            ईस्वी (AD)
-          </button>
-        </div>
+        <div className="space-y-2">
+          {/* Calendar Type Toggle */}
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCalendarType('BS')}
+              className={`px-3 py-1 text-sm rounded ${
+                calendarType === 'BS'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              बिक्रम सम्बत (BS)
+            </button>
+            <button
+              type="button"
+              onClick={() => setCalendarType('AD')}
+              className={`px-3 py-1 text-sm rounded ${
+                calendarType === 'AD'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              ईस्वी (AD)
+            </button>
+          </div>
 
-        {/* Date Picker */}
-        {calendarType === 'BS' ? (
-          <div>
-            <div className="w-full">
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder={placeholder || 'Select date'}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                readOnly
-              />
+          {/* Date Picker */}
+          {calendarType === 'BS' ? (
+            <div>
+              <div className="w-full">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder={placeholder || 'Select date'}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  readOnly
+                />
+              </div>
+              {bsDate && adDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  {formatBsDate(bsDate)} (AD: {adDate})
+                </p>
+              )}
+              {!bsDate && !adDate && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Click the input above to open the calendar picker
+                </p>
+              )}
             </div>
-            {bsDate && adDate && (
-              <p className="text-xs text-gray-500 mt-1">
-                {formatBsDate(bsDate)} (AD: {adDate})
-              </p>
-            )}
-            {!bsDate && !adDate && (
-              <p className="text-xs text-gray-400 mt-1">
-                Click the input above to open the calendar picker
-              </p>
-            )}
-          </div>
-        ) : (
-          <div>
-            <input
-              type="date"
-              value={adDate}
-              onChange={(e) => handleAdDateChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
-            {adDate && bsDate && (
-              <p className="text-xs text-gray-500 mt-1">
-                BS: {formatBsDate(bsDate)} ({bsDate})
-              </p>
-            )}
-          </div>
-        )}
+          ) : (
+            <div>
+              <input
+                type="date"
+                value={adDate}
+                onChange={(e) => handleAdDateChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+              {adDate && bsDate && (
+                <p className="text-xs text-gray-500 mt-1">
+                  BS: {formatBsDate(bsDate)} ({bsDate})
+                </p>
+              )}
+            </div>
+          )}
 
-        {/* Helper text */}
-        <p className="text-xs text-gray-400">
-          {calendarType === 'BS'
-            ? 'Select date using the calendar picker'
-            : 'Select date in Gregorian calendar'}
-        </p>
-      </div>
+          {/* Helper text */}
+          <p className="text-xs text-gray-400">
+            {calendarType === 'BS'
+              ? 'Select date using the calendar picker'
+              : 'Select date in Gregorian calendar'}
+          </p>
+        </div>
       </div>
     </>
   );

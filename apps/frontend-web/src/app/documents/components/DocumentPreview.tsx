@@ -6,6 +6,8 @@ interface Document {
   fileName: string;
   filePath: string;
   mimeType?: string | null;
+  documentType: string;
+  uploadedAt: string;
   title?: string;
 }
 
@@ -100,4 +102,3 @@ export default function DocumentPreview({
     </div>
   );
 }
-

@@ -29,7 +29,7 @@ export default function CreateMeetingByTypePage() {
   const router = useRouter();
   const params = useParams();
   const meetingType = params.type as string;
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingAgendaItems, setPendingAgendaItems] = useState<PendingAgendaItem[]>([]);
@@ -50,7 +50,7 @@ export default function CreateMeetingByTypePage() {
   });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && token) {
+    if (!authLoading && isAuthenticated) {
       // Only fetch pending agenda items for board meetings
       if (meetingType === 'board') {
         fetchPendingAgendaItems();
@@ -60,19 +60,13 @@ export default function CreateMeetingByTypePage() {
         fetchCommittees();
       }
     }
-  }, [authLoading, isAuthenticated, token, meetingType]);
+  }, [authLoading, isAuthenticated, meetingType]);
 
   const fetchCommittees = async () => {
-    if (!token) return;
     try {
       setLoadingCommittees(true);
-      const response = await fetch(`${API_URL}/governance/committees?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setCommittees(data.committees || []);
-      }
+      const data = await apiClient.get<{ committees: any[] }>('/governance/committees?limit=100');
+      setCommittees(data.committees || []);
     } catch (error) {
       console.error('Error fetching committees:', error);
     } finally {
@@ -81,16 +75,11 @@ export default function CreateMeetingByTypePage() {
   };
 
   const fetchPendingAgendaItems = async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/member-workflow/pending-agenda`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setPendingAgendaItems(data.pendingAgendaItems || []);
-      }
+      const data = await apiClient.get<{ pendingAgendaItems: PendingAgendaItem[] }>(
+        '/member-workflow/pending-agenda'
+      );
+      setPendingAgendaItems(data.pendingAgendaItems || []);
     } catch (error) {
       console.error('Error fetching pending agenda items:', error);
     }
@@ -98,39 +87,21 @@ export default function CreateMeetingByTypePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!token) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/governance/meetings`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...formData,
-          date: formData.date || formData.scheduledDate, // Use date if provided, fallback to scheduledDate
-          meetingType,
-          committeeId: formData.committeeId || undefined,
-          assignPendingAgendaItems:
-            meetingType === 'board' && selectedAgendaItems.length > 0
-              ? selectedAgendaItems
-              : undefined,
-        }),
+      const data = await apiClient.post<{ meeting: { id: string } }>('/governance/meetings', {
+        ...formData,
+        date: formData.date || formData.scheduledDate, // Use date if provided, fallback to scheduledDate
+        meetingType,
+        committeeId: formData.committeeId || undefined,
+        assignPendingAgendaItems:
+          meetingType === 'board' && selectedAgendaItems.length > 0
+            ? selectedAgendaItems
+            : undefined,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        const errorMessage = errorData.details
-          ? `${errorData.error || 'Failed to create meeting'}: ${errorData.details}`
-          : errorData.error || 'Failed to create meeting';
-        throw new Error(errorMessage);
-      }
-
-      const data = await response.json();
       router.push(`/governance/meetings/${data.meeting.id}`);
     } catch (error: any) {
       console.error('Error creating meeting:', error);

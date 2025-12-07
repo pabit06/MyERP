@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, ArrowLeft, FileText, Download, Calendar, Filter, Gift, Cake } from 'lucide-react';
 import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
-import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 
 interface UpcomingBirthday {
@@ -30,7 +29,6 @@ interface MemberListItem {
 
 export default function MemberReportsPage() {
   const router = useRouter();
-  const { token } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [upcomingBirthdays, setUpcomingBirthdays] = useState<UpcomingBirthday[]>([]);
@@ -43,21 +41,13 @@ export default function MemberReportsPage() {
   });
 
   const fetchUpcomingBirthdays = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     setSelectedReport('birthdays');
     try {
-      const response = await fetch(`${API_URL}/members/upcoming-birthdays?daysAhead=${daysAhead}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setUpcomingBirthdays(data);
-      } else {
-        console.error('Failed to fetch upcoming birthdays');
-        setUpcomingBirthdays([]);
-      }
+      const data = await apiClient.get<UpcomingBirthday[]>(
+        `/members/upcoming-birthdays?daysAhead=${daysAhead}`
+      );
+      setUpcomingBirthdays(data);
     } catch (error) {
       console.error('Error fetching upcoming birthdays:', error);
       setUpcomingBirthdays([]);
@@ -67,22 +57,13 @@ export default function MemberReportsPage() {
   };
 
   const fetchMemberList = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     setSelectedReport('list');
     try {
-      const response = await fetch(`${API_URL}/members/list?includeInactive=${includeInactive}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMemberList(data);
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Failed to fetch member list:', errorData);
-        setMemberList([]);
-      }
+      const data = await apiClient.get<MemberListItem[]>(
+        `/members/list?includeInactive=${includeInactive}`
+      );
+      setMemberList(data);
     } catch (error) {
       console.error('Error fetching member list:', error);
       setMemberList([]);
@@ -149,9 +130,7 @@ export default function MemberReportsPage() {
               <div>
                 <NepaliDatePicker
                   value={dateFilters.toDate}
-                  onChange={(dateString) =>
-                    setDateFilters({ ...dateFilters, toDate: dateString })
-                  }
+                  onChange={(dateString) => setDateFilters({ ...dateFilters, toDate: dateString })}
                   label="To Date"
                 />
               </div>

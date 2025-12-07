@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '../../lib/prisma.js';
+import { getBsMonthDates } from '../../lib/nepali-date.js';
 
 /**
  * Get total loan deduction amount for an employee for a specific month
@@ -75,34 +76,39 @@ export async function getEmployeeLoanDeduction(
       return 0;
     }
 
-    // Calculate total EMI for the month from all active loans
-    // Convert fiscal year and month to date range for EMI schedule lookup
-    // For now, we'll get EMI schedules due in the current month
-    // Note: This is a simplified implementation - you may need to adjust based on your EMI schedule structure
+    // Parse fiscal year (e.g., "2081/82" -> 2081)
+    const [startYearStr] = fiscalYear.split('/');
+    const startYear = parseInt(startYearStr, 10);
+
+    // Determine target BS year based on month
+    // Fiscal Year starts in Shrawan (4).
+    // Months 4-12 are in startYear.
+    // Months 1-3 are in startYear + 1.
+    const targetBsYear = monthBs >= 4 ? startYear : startYear + 1;
+
+    // Get AD date range for the month
+    const { monthStart, monthEnd } = getBsMonthDates(targetBsYear, monthBs);
 
     let totalDeduction = 0;
 
     for (const loan of activeLoans) {
-      // Get EMI schedules for this loan that are due in the current month
-      // This is a placeholder - adjust based on your actual EMI schedule structure
+      // Get EMI schedules for this loan that are due in the specific month
       const emiSchedules = await prisma.eMISchedule.findMany({
         where: {
           applicationId: loan.id,
-          status: 'pending', // Only pending EMIs
+          status: 'pending',
+          dueDate: {
+            gte: monthStart,
+            lte: monthEnd,
+          },
         },
         select: {
           totalAmount: true,
-          dueDate: true,
         },
       });
 
-      // Filter EMIs due in the current month
-      // Note: You'll need to implement proper date matching based on fiscal year and monthBs
-      // For now, this is a placeholder that sums all pending EMIs
-      // TODO: Implement proper date-based filtering for the specific month
+      // Sum up the due amounts
       for (const emi of emiSchedules) {
-        // Add logic to check if EMI is due in the specified month
-        // This requires converting fiscalYear and monthBs to a date range
         totalDeduction += Number(emi.totalAmount) || 0;
       }
     }

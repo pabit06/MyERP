@@ -8,8 +8,12 @@ interface StatusBadgeProps {
 export default function StatusBadge({ status, className = '' }: StatusBadgeProps) {
   const getStatusStyles = (status: string) => {
     const normalizedStatus = status.toUpperCase();
-    
-    if (normalizedStatus === 'COMPLETED' || normalizedStatus === 'DONE' || normalizedStatus === 'SENT') {
+
+    if (
+      normalizedStatus === 'COMPLETED' ||
+      normalizedStatus === 'DONE' ||
+      normalizedStatus === 'SENT'
+    ) {
       return 'bg-green-100 text-green-800';
     }
     if (normalizedStatus === 'PENDING' || normalizedStatus === 'DRAFT') {
@@ -22,9 +26,10 @@ export default function StatusBadge({ status, className = '' }: StatusBadgeProps
   };
 
   return (
-    <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyles(status)} ${className}`}>
+    <span
+      className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusStyles(status)} ${className}`}
+    >
       {status}
     </span>
   );
 }
-

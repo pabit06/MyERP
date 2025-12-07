@@ -14,8 +14,10 @@ import {
 } from '@myerp/shared-types';
 import { postEntryFee, getCurrentSharePrice } from '../services/accounting.js';
 import { NotFoundError, ValidationError, BadRequestError } from '../lib/errors.js';
+import { paginationWithSearchSchema } from '../validators/common.js';
+import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { validate, validateAll } from '../middleware/validate.js';
+import { validate, validateAll, validateQuery, validateParams } from '../middleware/validate.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 import { sanitizeText, sanitizeEmail } from '../lib/sanitize.js';
@@ -733,18 +735,27 @@ router.get(
  */
 router.get(
   '/',
+  validateQuery(
+    paginationWithSearchSchema.extend({
+      isActive: z.string().optional(),
+      hasMemberNumber: z.string().optional(),
+    })
+  ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     if (!tenantId) {
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { isActive, search, page = '1', limit = '20', hasMemberNumber } = req.query;
-
-    // Parse and validate pagination parameters
-    const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
-    const limitNum = Math.min(100, Math.max(1, parseInt(limit as string, 10) || 20));
-    const skip = (pageNum - 1) * limitNum;
+    const {
+      isActive,
+      search,
+      page,
+      limit,
+      hasMemberNumber,
+      sortBy,
+      sortOrder,
+    } = req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId!,
@@ -760,41 +771,37 @@ router.get(
 
     if (search) {
       where.OR = [
-        { memberNumber: { contains: search as string, mode: 'insensitive' } },
-        { firstName: { contains: search as string, mode: 'insensitive' } },
-        { middleName: { contains: search as string, mode: 'insensitive' } },
-        { lastName: { contains: search as string, mode: 'insensitive' } },
-        { fullName: { contains: search as string, mode: 'insensitive' } },
-        { fullNameNepali: { contains: search as string, mode: 'insensitive' } },
-        { email: { contains: search as string, mode: 'insensitive' } },
-        { phone: { contains: search as string, mode: 'insensitive' } },
+        { memberNumber: { contains: search, mode: 'insensitive' as const } },
+        { firstName: { contains: search, mode: 'insensitive' as const } },
+        { middleName: { contains: search, mode: 'insensitive' as const } },
+        { lastName: { contains: search, mode: 'insensitive' as const } },
+        { fullName: { contains: search, mode: 'insensitive' as const } },
+        { fullNameNepali: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' as const } },
+        { phone: { contains: search, mode: 'insensitive' as const } },
       ];
     }
 
-    // Fetch total count for pagination metadata
-    const totalMembers = await prisma.member.count({ where });
+    const [members, total] = await Promise.all([
+      prisma.member.findMany(
+        applySorting(
+          applyPagination(
+            {
+              where,
+            },
+            { page, limit, sortOrder: sortOrder || 'desc' }
+          ),
+          sortBy,
+          sortOrder,
+          'createdAt'
+        )
+      ),
+      prisma.member.count({ where }),
+    ]);
 
-    // Fetch paginated members
-    const members = await prisma.member.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip,
-      take: limitNum,
-    });
-
-    res.json({
-      members,
-      pagination: {
-        total: totalMembers,
-        page: pageNum,
-        limit: limitNum,
-        totalPages: Math.ceil(totalMembers / limitNum),
-        hasNextPage: pageNum < Math.ceil(totalMembers / limitNum),
-        hasPreviousPage: pageNum > 1,
-      },
-    });
+    res.json(
+      createPaginatedResponse(members, total, { page, limit, sortOrder: sortOrder || 'desc' })
+    );
   })
 );
 
@@ -870,10 +877,10 @@ router.get(
         loanApplications: loanApplications || [],
         shareAccount: shareAccount
           ? {
-              totalKitta: shareAccount.totalKitta,
-              unitPrice: shareAccount.unitPrice,
-              totalAmount: shareAccount.totalAmount,
-            }
+            totalKitta: shareAccount.totalKitta,
+            unitPrice: shareAccount.unitPrice,
+            totalAmount: shareAccount.totalAmount,
+          }
           : null,
       },
     });

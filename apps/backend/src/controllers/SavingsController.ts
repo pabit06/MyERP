@@ -106,7 +106,11 @@ export class SavingsController extends BaseController {
   ) {
     await this.validateTenant(cooperativeId);
 
-    const where: any = {
+    const where: {
+      cooperativeId: string;
+      memberId?: string;
+      status?: string;
+    } = {
       cooperativeId,
     };
 

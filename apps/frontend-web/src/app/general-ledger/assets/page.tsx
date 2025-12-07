@@ -84,22 +84,25 @@ export default function AssetsPage() {
     ledgerAccounts: number;
   } | null>(null);
 
-  const fetchAccountBalances = useCallback(async (accountsList: Account[]) => {
-    if (!token) return;
+  const fetchAccountBalances = useCallback(
+    async (accountsList: Account[]) => {
+      if (!token) return;
 
-    try {
-      // Balances are now included in the accounts response from the backend
-      const balanceMap: Record<string, number> = {};
-      accountsList.forEach((account: any) => {
-        if (account.balance !== undefined) {
-          balanceMap[account.id] = account.balance;
-        }
-      });
-      setAccountBalances(balanceMap);
-    } catch (err) {
-      console.error('Error processing balances:', err);
-    }
-  }, [token]);
+      try {
+        // Balances are now included in the accounts response from the backend
+        const balanceMap: Record<string, number> = {};
+        accountsList.forEach((account: any) => {
+          if (account.balance !== undefined) {
+            balanceMap[account.id] = account.balance;
+          }
+        });
+        setAccountBalances(balanceMap);
+      } catch (err) {
+        console.error('Error processing balances:', err);
+      }
+    },
+    [token]
+  );
 
   const fetchAccounts = useCallback(async () => {
     if (!token) return;

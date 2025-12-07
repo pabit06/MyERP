@@ -1,9 +1,10 @@
 'use client';
 
 import { ResponsiveContainer } from 'recharts';
+import { ReactElement } from 'react';
 
 interface ChartWrapperProps {
-  children: React.ReactNode;
+  children: ReactElement;
   isLoading?: boolean;
   isEmpty?: boolean;
   height?: number;

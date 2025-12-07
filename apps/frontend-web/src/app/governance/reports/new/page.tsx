@@ -24,7 +24,7 @@ const NEPALI_MONTHS = [
 
 export default function NewReportPage() {
   const router = useRouter();
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasModule, isAuthenticated, isLoading: authLoading, token } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -46,25 +46,11 @@ export default function NewReportPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_URL}/governance/reports`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fiscalYear: formData.fiscalYear,
-          month: formData.month,
-          title: formData.title || undefined,
-        }),
+      const data = await apiClient.post<{ report: { id: string } }>('/governance/reports', {
+        fiscalYear: formData.fiscalYear,
+        month: formData.month,
+        title: formData.title || undefined,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create report');
-      }
-
-      const data = await response.json();
       router.push(`/governance/reports/${data.report.id}`);
     } catch (error: any) {
       console.error('Error creating report:', error);

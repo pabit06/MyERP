@@ -270,7 +270,8 @@ export const KYMInstitutionForm: React.FC<KYMInstitutionFormProps> = ({
               <CardContent className="pt-6 space-y-4">
                 <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
                   <p className="text-sm text-blue-700">
-                    <strong>Application Payment:</strong> Share Amount, Savings, and Entry Fee are required at application time.
+                    <strong>Application Payment:</strong> Share Amount, Savings, and Entry Fee are
+                    required at application time.
                   </p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -346,7 +347,9 @@ export const KYMInstitutionForm: React.FC<KYMInstitutionFormProps> = ({
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">PAN/VAT Registration No.</label>
+                    <label className="block text-sm font-medium mb-1">
+                      PAN/VAT Registration No.
+                    </label>
                     <Input {...register('panVatRegistrationNo')} />
                   </div>
                 </div>

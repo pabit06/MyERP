@@ -6,12 +6,14 @@ interface Document {
   id: string;
   docType: 'member' | 'official';
   fileName: string;
+  filePath: string;
   fileSize?: number | null;
   mimeType?: string | null;
   documentType: string;
   description?: string | null;
   uploadedAt: string;
   member?: {
+    id: string;
     memberNumber: string;
     firstName: string;
     lastName: string;
@@ -50,9 +52,7 @@ export default function DocumentGrid({
             onChange={onSelectAll}
             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
           />
-          <span className="text-sm text-gray-600">
-            Select all ({documents.length} documents)
-          </span>
+          <span className="text-sm text-gray-600">Select all ({documents.length} documents)</span>
         </div>
       )}
 
@@ -72,4 +72,3 @@ export default function DocumentGrid({
     </div>
   );
 }
-

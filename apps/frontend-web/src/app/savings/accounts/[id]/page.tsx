@@ -47,7 +47,9 @@ export default function SavingsAccountDetailPage() {
   const [account, setAccount] = useState<SavingAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'operations'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'operations'>(
+    'overview'
+  );
 
   useEffect(() => {
     if (token && params.id) {
@@ -136,7 +138,10 @@ export default function SavingsAccountDetailPage() {
           <div className="bg-white shadow rounded-lg p-6">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Accrued Interest</h3>
             <p className="text-3xl font-bold text-indigo-600">
-              NPR {Number(account.interestAccrued || 0).toLocaleString('en-NP', { minimumFractionDigits: 2 })}
+              NPR{' '}
+              {Number(account.interestAccrued || 0).toLocaleString('en-NP', {
+                minimumFractionDigits: 2,
+              })}
             </p>
           </div>
           <div className="bg-white shadow rounded-lg p-6">
@@ -146,8 +151,8 @@ export default function SavingsAccountDetailPage() {
                 account.status === 'active'
                   ? 'bg-green-100 text-green-800'
                   : account.status === 'closed'
-                  ? 'bg-red-100 text-red-800'
-                  : 'bg-gray-100 text-gray-800'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-gray-100 text-gray-800'
               }`}
             >
               {account.status}
@@ -215,7 +220,8 @@ export default function SavingsAccountDetailPage() {
                         href={`/members/${account.memberId}`}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
-                        {account.member.firstName} {account.member.lastName} ({account.member.memberNumber})
+                        {account.member.firstName} {account.member.lastName} (
+                        {account.member.memberNumber})
                       </Link>
                     ) : (
                       '-'
@@ -231,7 +237,10 @@ export default function SavingsAccountDetailPage() {
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Minimum Balance</dt>
                   <dd className="mt-1 text-sm text-gray-900">
-                    NPR {Number(account.product?.minimumBalance || 0).toLocaleString('en-NP', { minimumFractionDigits: 2 })}
+                    NPR{' '}
+                    {Number(account.product?.minimumBalance || 0).toLocaleString('en-NP', {
+                      minimumFractionDigits: 2,
+                    })}
                   </dd>
                 </div>
                 <div>
@@ -269,7 +278,9 @@ export default function SavingsAccountDetailPage() {
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Relation</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{account.nominee.relation || '-'}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {account.nominee.relation || '-'}
+                    </dd>
                   </div>
                   {account.nominee.citizenship && (
                     <div>
@@ -313,4 +324,3 @@ export default function SavingsAccountDetailPage() {
     </ProtectedRoute>
   );
 }
-

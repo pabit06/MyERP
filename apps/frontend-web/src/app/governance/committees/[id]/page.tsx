@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ProtectedRoute, Card, CardContent, CardHeader, CardTitle, Button, Input } from '@/features/components/shared';
+import {
+  ProtectedRoute,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Button,
+  Input,
+} from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import Link from 'next/link';
@@ -75,7 +83,7 @@ const COMMITTEE_TYPES = [
 
 export default function CommitteeDetailPage() {
   const params = useParams();
-  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<'members' | 'tenure' | 'settings'>('members');
   const [committee, setCommittee] = useState<Committee | null>(null);
   const [loading, setLoading] = useState(true);
@@ -121,25 +129,17 @@ export default function CommitteeDetailPage() {
   const committeeId = params.id as string;
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && token && committeeId) {
+    if (!authLoading && isAuthenticated && committeeId) {
       fetchCommittee();
     }
-  }, [authLoading, isAuthenticated, token, committeeId]);
+  }, [authLoading, isAuthenticated, committeeId]);
 
   const fetchCommittee = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/governance/committees/${committeeId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch committee');
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ committee: Committee }>(
+        `/governance/committees/${committeeId}`
+      );
       setCommittee(data.committee);
       setSettingsFormData({
         name: data.committee.name,
@@ -158,50 +158,26 @@ export default function CommitteeDetailPage() {
   };
 
   const fetchAvailableMembers = async () => {
-    if (!token) return;
     try {
-      const response = await fetch(`${API_URL}/members?isActive=true&limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAvailableMembers(data.members || []);
-      }
+      const data = await apiClient.get<{ members: any[] }>('/members?isActive=true&limit=100');
+      setAvailableMembers(data.members || []);
     } catch (err) {
       console.error('Error fetching members:', err);
     }
   };
 
   const handleAddMember = async () => {
-    if (
-      !token ||
-      !memberFormData.memberId ||
-      !memberFormData.position ||
-      !memberFormData.startDate
-    ) {
+    if (!memberFormData.memberId || !memberFormData.position || !memberFormData.startDate) {
       alert('Please fill in all required fields');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/governance/committees/${committeeId}/members`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...memberFormData,
-          tenureId: memberFormData.tenureId || null,
-          endDate: memberFormData.endDate || null,
-        }),
+      await apiClient.post(`/governance/committees/${committeeId}/members`, {
+        ...memberFormData,
+        tenureId: memberFormData.tenureId || null,
+        endDate: memberFormData.endDate || null,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add member');
-      }
-
       await fetchCommittee();
       setShowAddMemberModal(false);
       setMemberFormData({
@@ -219,25 +195,12 @@ export default function CommitteeDetailPage() {
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    if (!token || !confirm('Are you sure you want to remove this member from the committee?')) {
+    if (!confirm('Are you sure you want to remove this member from the committee?')) {
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/governance/committees/${committeeId}/members/${memberId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to remove member');
-      }
-
+      await apiClient.delete(`/governance/committees/${committeeId}/members/${memberId}`);
       await fetchCommittee();
     } catch (err: any) {
       alert(err.message || 'Error removing member');
@@ -245,29 +208,16 @@ export default function CommitteeDetailPage() {
   };
 
   const handleAddTenure = async () => {
-    if (!token || !tenureFormData.name || !tenureFormData.startDate) {
+    if (!tenureFormData.name || !tenureFormData.startDate) {
       alert('Please fill in all required fields');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/governance/committees/${committeeId}/tenure`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...tenureFormData,
-          endDate: tenureFormData.endDate || null,
-        }),
+      await apiClient.post(`/governance/committees/${committeeId}/tenure`, {
+        ...tenureFormData,
+        endDate: tenureFormData.endDate || null,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to add tenure');
-      }
-
       await fetchCommittee();
       setShowAddTenureModal(false);
       setTenureFormData({
@@ -283,26 +233,12 @@ export default function CommitteeDetailPage() {
   };
 
   const handleDeleteTenure = async (tenureId: string) => {
-    if (!token || !confirm('Are you sure you want to delete this tenure period?')) {
+    if (!confirm('Are you sure you want to delete this tenure period?')) {
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/governance/committees/${committeeId}/tenure/${tenureId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete tenure');
-      }
-
+      await apiClient.delete(`/governance/committees/${committeeId}/tenure/${tenureId}`);
       await fetchCommittee();
     } catch (err: any) {
       alert(err.message || 'Error deleting tenure');
@@ -310,26 +246,13 @@ export default function CommitteeDetailPage() {
   };
 
   const handleUpdateSettings = async () => {
-    if (!token || !settingsFormData.name.trim()) {
+    if (!settingsFormData.name.trim()) {
       alert('Committee name is required');
       return;
     }
 
     try {
-      const response = await fetch(`${API_URL}/governance/committees/${committeeId}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(settingsFormData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update committee');
-      }
-
+      await apiClient.put(`/governance/committees/${committeeId}`, settingsFormData);
       await fetchCommittee();
       setIsEditingSettings(false);
     } catch (err: any) {

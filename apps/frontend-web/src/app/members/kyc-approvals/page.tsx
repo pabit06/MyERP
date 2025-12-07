@@ -54,9 +54,7 @@ export default function KYMApprovalsPage() {
         const data = await response.json();
         // Filter members that need KYM approval
         const pending = (data.members || []).filter((m: Member) =>
-          ['application', 'under_review', 'approved'].includes(
-            m.workflowStatus || ''
-          )
+          ['application', 'under_review', 'approved'].includes(m.workflowStatus || '')
         );
         setMembers(pending);
       } else {

@@ -156,4 +156,3 @@ const InterestOperations: React.FC<InterestOperationsProps> = ({ onRefresh }) =>
 };
 
 export default InterestOperations;
-

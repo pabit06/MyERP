@@ -11,16 +11,16 @@ interface CreateRecordModalProps {
   initialTab?: 'darta' | 'chalani';
 }
 
-export default function CreateRecordModal({ 
-  isOpen, 
-  onClose, 
-  onSuccess, 
-  initialTab: _initialTab = 'darta' 
+export default function CreateRecordModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialTab: _initialTab = 'darta',
 }: CreateRecordModalProps) {
   const { token } = useAuth();
   const [showSelection, setShowSelection] = useState(true); // Show selection screen first
   const [activeTab, setActiveTab] = useState<'darta' | 'chalani' | null>(null);
-  
+
   // Reset when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -34,7 +34,7 @@ export default function CreateRecordModal({
       setChalaniDragActive(false);
     }
   }, [isOpen]);
-  
+
   // Handle selection
   const handleSelectType = (type: 'darta' | 'chalani') => {
     setActiveTab(type);
@@ -80,7 +80,7 @@ export default function CreateRecordModal({
   });
 
   const [submitting, setSubmitting] = useState(false);
-  
+
   // File upload states - separate for Darta and Chalani
   const [dartaFile, setDartaFile] = useState<File | null>(null);
   const [chalaniFile, setChalaniFile] = useState<File | null>(null);
@@ -143,15 +143,15 @@ export default function CreateRecordModal({
   const validateFile = (file: File): { valid: boolean; error?: string } => {
     const maxSize = 10 * 1024 * 1024; // 10MB
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
-    
+
     if (file.size > maxSize) {
       return { valid: false, error: 'File size must be less than 10MB' };
     }
-    
+
     if (!allowedTypes.includes(file.type)) {
       return { valid: false, error: 'Only PDF, JPG, PNG, and GIF files are allowed' };
     }
-    
+
     return { valid: true };
   };
 
@@ -181,16 +181,16 @@ export default function CreateRecordModal({
     } else {
       setChalaniDragActive(false);
     }
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       const validation = validateFile(file);
-      
+
       if (!validation.valid) {
         toast.error(validation.error || 'Invalid file');
         return;
       }
-      
+
       if (type === 'darta') {
         setDartaFile(file);
       } else {
@@ -203,13 +203,13 @@ export default function CreateRecordModal({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const validation = validateFile(file);
-      
+
       if (!validation.valid) {
         toast.error(validation.error || 'Invalid file');
         e.target.value = ''; // Reset input
         return;
       }
-      
+
       if (type === 'darta') {
         setDartaFile(file);
       } else {
@@ -250,11 +250,11 @@ export default function CreateRecordModal({
               headers: { Authorization: `Bearer ${token}` },
               body: formDataUpload,
             });
-            
+
             if (!uploadResponse.ok) {
               throw new Error('File upload failed');
             }
-            
+
             setUploadProgress({ darta: 100 });
             toast.success('File uploaded successfully');
           } catch (uploadErr) {
@@ -271,18 +271,18 @@ export default function CreateRecordModal({
         onClose();
         // Reset form
         setDartaForm({
-            title: '',
-            description: '',
-            subject: '',
-            category: '',
-            priority: 'NORMAL',
-            status: 'ACTIVE',
-            remarks: '',
-            senderName: '',
-            senderAddress: '',
-            senderChalaniNo: '',
-            senderChalaniDate: '',
-            receivedDate: new Date().toISOString().split('T')[0],
+          title: '',
+          description: '',
+          subject: '',
+          category: '',
+          priority: 'NORMAL',
+          status: 'ACTIVE',
+          remarks: '',
+          senderName: '',
+          senderAddress: '',
+          senderChalaniNo: '',
+          senderChalaniDate: '',
+          receivedDate: new Date().toISOString().split('T')[0],
         });
       } else {
         throw new Error('Failed to create darta');
@@ -324,16 +324,19 @@ export default function CreateRecordModal({
 
           try {
             setUploadProgress({ chalani: 0 });
-            const uploadResponse = await fetch(`${API_URL}/patra-chalani/${patraChalaniId}/upload`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-              body: formDataUpload,
-            });
-            
+            const uploadResponse = await fetch(
+              `${API_URL}/patra-chalani/${patraChalaniId}/upload`,
+              {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${token}` },
+                body: formDataUpload,
+              }
+            );
+
             if (!uploadResponse.ok) {
               throw new Error('File upload failed');
             }
-            
+
             setUploadProgress({ chalani: 100 });
             toast.success('File uploaded successfully');
           } catch (uploadErr) {
@@ -371,14 +374,21 @@ export default function CreateRecordModal({
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-3xl font-bold mb-2">Add New Entry</h2>
-                <p className="text-white/90 text-sm">Choose the type of document you want to register</p>
+                <p className="text-white/90 text-sm">
+                  Choose the type of document you want to register
+                </p>
               </div>
               <button
                 onClick={onClose}
                 className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -400,25 +410,39 @@ export default function CreateRecordModal({
                 <div className="space-y-2 text-sm text-gray-700">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Incoming letters & documents</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Track sender information</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Reference number tracking</span>
                   </div>
                 </div>
                 <div className="mt-6 pt-4 border-t border-green-200">
-                  <span className="text-green-700 font-semibold group-hover:text-green-800">Register Darta →</span>
+                  <span className="text-green-700 font-semibold group-hover:text-green-800">
+                    Register Darta →
+                  </span>
                 </div>
               </div>
             </button>
@@ -437,25 +461,39 @@ export default function CreateRecordModal({
                 <div className="space-y-2 text-sm text-gray-700">
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Outgoing correspondence</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>Track dispatch details</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
                     </svg>
                     <span>CC & attachment support</span>
                   </div>
                 </div>
                 <div className="mt-6 pt-4 border-t border-blue-200">
-                  <span className="text-blue-700 font-semibold group-hover:text-blue-800">Create Chalani →</span>
+                  <span className="text-blue-700 font-semibold group-hover:text-blue-800">
+                    Create Chalani →
+                  </span>
                 </div>
               </div>
             </button>
@@ -468,16 +506,20 @@ export default function CreateRecordModal({
   // Form Screen
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className={`
+      <div
+        className={`
         transition-all duration-300 ease-in-out
         bg-gradient-to-br rounded-xl max-w-4xl w-full max-h-[95vh] overflow-hidden shadow-2xl border-4 flex flex-col
         ${activeTab === 'darta' ? 'from-green-50 to-white border-green-600' : 'from-blue-50 to-white border-blue-600'}
-      `}>
+      `}
+      >
         {/* Unified Header */}
-        <div className={`
+        <div
+          className={`
           px-8 py-4 text-white flex-shrink-0 transition-colors duration-300
           ${activeTab === 'darta' ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gradient-to-r from-blue-600 to-blue-700'}
-        `}>
+        `}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
@@ -486,7 +528,12 @@ export default function CreateRecordModal({
                 title="Back to selection"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
                 </svg>
               </button>
               <div>
@@ -503,7 +550,12 @@ export default function CreateRecordModal({
               className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -547,7 +599,9 @@ export default function CreateRecordModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Category
+                    </label>
                     <select
                       value={dartaForm.category}
                       onChange={(e) => setDartaForm({ ...dartaForm, category: e.target.value })}
@@ -565,7 +619,9 @@ export default function CreateRecordModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Priority
+                    </label>
                     <select
                       value={dartaForm.priority}
                       onChange={(e) => setDartaForm({ ...dartaForm, priority: e.target.value })}
@@ -578,7 +634,9 @@ export default function CreateRecordModal({
                     </select>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Description
+                    </label>
                     <textarea
                       value={dartaForm.description}
                       onChange={(e) => setDartaForm({ ...dartaForm, description: e.target.value })}
@@ -617,7 +675,9 @@ export default function CreateRecordModal({
                     <input
                       type="text"
                       value={dartaForm.senderAddress}
-                      onChange={(e) => setDartaForm({ ...dartaForm, senderAddress: e.target.value })}
+                      onChange={(e) =>
+                        setDartaForm({ ...dartaForm, senderAddress: e.target.value })
+                      }
                       placeholder="Sender's address"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-sm hover:border-green-400"
                     />
@@ -629,7 +689,9 @@ export default function CreateRecordModal({
                     <input
                       type="text"
                       value={dartaForm.senderChalaniNo}
-                      onChange={(e) => setDartaForm({ ...dartaForm, senderChalaniNo: e.target.value })}
+                      onChange={(e) =>
+                        setDartaForm({ ...dartaForm, senderChalaniNo: e.target.value })
+                      }
                       placeholder="Reference number from sender"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-sm hover:border-green-400"
                     />
@@ -641,7 +703,9 @@ export default function CreateRecordModal({
                     <input
                       type="date"
                       value={dartaForm.senderChalaniDate}
-                      onChange={(e) => setDartaForm({ ...dartaForm, senderChalaniDate: e.target.value })}
+                      onChange={(e) =>
+                        setDartaForm({ ...dartaForm, senderChalaniDate: e.target.value })
+                      }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-sm hover:border-green-400"
                     />
                   </div>
@@ -668,7 +732,9 @@ export default function CreateRecordModal({
                 </h3>
                 <div className="space-y-6">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Remarks (कैफियत)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Remarks (कैफियत)
+                    </label>
                     <textarea
                       value={dartaForm.remarks}
                       onChange={(e) => setDartaForm({ ...dartaForm, remarks: e.target.value })}
@@ -677,7 +743,7 @@ export default function CreateRecordModal({
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white shadow-sm resize-none hover:border-green-400"
                     />
                   </div>
-                  
+
                   {/* File Upload Section */}
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -689,7 +755,9 @@ export default function CreateRecordModal({
                       onDragOver={(e) => handleDrag(e, 'darta')}
                       onDrop={(e) => handleDrop(e, 'darta')}
                       className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                        dartaDragActive ? 'border-green-500 bg-green-50' : 'border-gray-300 bg-gray-50 hover:border-green-400'
+                        dartaDragActive
+                          ? 'border-green-500 bg-green-50'
+                          : 'border-gray-300 bg-gray-50 hover:border-green-400'
                       }`}
                     >
                       <input
@@ -701,8 +769,18 @@ export default function CreateRecordModal({
                       />
                       {!dartaFile ? (
                         <div className="space-y-2">
-                          <svg className="w-12 h-12 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          <svg
+                            className="w-12 h-12 text-gray-400 mx-auto"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
                           </svg>
                           <p className="text-sm text-gray-600">Drag and drop document here or</p>
                           <button
@@ -712,17 +790,33 @@ export default function CreateRecordModal({
                           >
                             Browse Files
                           </button>
-                          <p className="text-xs text-gray-500 mt-2">Supports: PDF, JPG, PNG, GIF (Max 10MB)</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Supports: PDF, JPG, PNG, GIF (Max 10MB)
+                          </p>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between bg-white p-3 rounded border border-green-200">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <svg className="w-8 h-8 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <svg
+                              className="w-8 h-8 text-green-600 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
                             </svg>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{dartaFile.name}</p>
-                              <p className="text-xs text-gray-500">{(dartaFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {dartaFile.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(dartaFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             </div>
                           </div>
                           <button
@@ -731,8 +825,18 @@ export default function CreateRecordModal({
                             className="text-red-500 hover:text-red-700 ml-3 flex-shrink-0"
                             title="Remove file"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
                         </div>
@@ -740,8 +844,8 @@ export default function CreateRecordModal({
                       {uploadProgress.darta !== undefined && uploadProgress.darta < 100 && (
                         <div className="mt-2">
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-green-600 h-2 rounded-full transition-all duration-300"
                               style={{ width: `${uploadProgress.darta}%` }}
                             ></div>
                           </div>
@@ -751,7 +855,7 @@ export default function CreateRecordModal({
                   </div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end gap-4 pt-6 border-t mt-4">
                 <button
                   type="button"
@@ -770,7 +874,7 @@ export default function CreateRecordModal({
               </div>
             </form>
           )}
-          
+
           {activeTab === 'chalani' && (
             // --- CHALANI FORM ---
             <form onSubmit={handleChalaniSubmit} className="space-y-6 animate-fadeIn">
@@ -787,7 +891,9 @@ export default function CreateRecordModal({
                     </label>
                     <select
                       value={chalaniForm.fiscalYear}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, fiscalYear: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, fiscalYear: e.target.value })
+                      }
                       required
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:border-blue-400"
                     >
@@ -836,7 +942,9 @@ export default function CreateRecordModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Category
+                    </label>
                     <select
                       value={chalaniForm.category}
                       onChange={(e) => setChalaniForm({ ...chalaniForm, category: e.target.value })}
@@ -853,7 +961,9 @@ export default function CreateRecordModal({
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Priority</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Priority
+                    </label>
                     <select
                       value={chalaniForm.priority}
                       onChange={(e) => setChalaniForm({ ...chalaniForm, priority: e.target.value })}
@@ -895,7 +1005,9 @@ export default function CreateRecordModal({
                     <input
                       type="text"
                       value={chalaniForm.receiverName}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, receiverName: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, receiverName: e.target.value })
+                      }
                       required
                       placeholder="Recipient Name / Office"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:border-blue-400"
@@ -908,7 +1020,9 @@ export default function CreateRecordModal({
                     <input
                       type="text"
                       value={chalaniForm.receiverAddress}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, receiverAddress: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, receiverAddress: e.target.value })
+                      }
                       placeholder="Recipient address"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:border-blue-400"
                     />
@@ -952,7 +1066,9 @@ export default function CreateRecordModal({
                     </label>
                     <select
                       value={chalaniForm.transportMode}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, transportMode: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, transportMode: e.target.value })
+                      }
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:border-blue-400"
                     >
                       <option value="">Select...</option>
@@ -969,7 +1085,9 @@ export default function CreateRecordModal({
                     <input
                       type="text"
                       value={chalaniForm.patraNumber}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, patraNumber: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, patraNumber: e.target.value })
+                      }
                       placeholder="If replying to external letter"
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm hover:border-blue-400"
                     />
@@ -990,14 +1108,18 @@ export default function CreateRecordModal({
                     </label>
                     <textarea
                       value={chalaniForm.bodhartha}
-                      onChange={(e) => setChalaniForm({ ...chalaniForm, bodhartha: e.target.value })}
+                      onChange={(e) =>
+                        setChalaniForm({ ...chalaniForm, bodhartha: e.target.value })
+                      }
                       rows={3}
                       placeholder="List departments/orgs to be informed (CC)..."
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white shadow-sm resize-none hover:border-blue-400"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Remarks</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Remarks
+                    </label>
                     <textarea
                       value={chalaniForm.remarks}
                       onChange={(e) => setChalaniForm({ ...chalaniForm, remarks: e.target.value })}
@@ -1007,14 +1129,18 @@ export default function CreateRecordModal({
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Attachment (संलग्न कागजात)</label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Attachment (संलग्न कागजात)
+                    </label>
                     <div
                       onDragEnter={(e) => handleDrag(e, 'chalani')}
                       onDragLeave={(e) => handleDrag(e, 'chalani')}
                       onDragOver={(e) => handleDrag(e, 'chalani')}
                       onDrop={(e) => handleDrop(e, 'chalani')}
                       className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-all ${
-                        chalaniDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:border-blue-400'
+                        chalaniDragActive
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-300 bg-gray-50 hover:border-blue-400'
                       }`}
                     >
                       <input
@@ -1026,8 +1152,18 @@ export default function CreateRecordModal({
                       />
                       {!chalaniFile ? (
                         <div className="space-y-2">
-                          <svg className="w-12 h-12 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          <svg
+                            className="w-12 h-12 text-gray-400 mx-auto"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                            />
                           </svg>
                           <p className="text-sm text-gray-600">Drag and drop document here or</p>
                           <button
@@ -1037,17 +1173,33 @@ export default function CreateRecordModal({
                           >
                             Browse Files
                           </button>
-                          <p className="text-xs text-gray-500 mt-2">Supports: PDF, JPG, PNG (Max 10MB)</p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Supports: PDF, JPG, PNG (Max 10MB)
+                          </p>
                         </div>
                       ) : (
                         <div className="flex items-center justify-between bg-white p-3 rounded border border-blue-200">
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <svg className="w-8 h-8 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            <svg
+                              className="w-8 h-8 text-blue-600 flex-shrink-0"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
                             </svg>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-900 truncate">{chalaniFile.name}</p>
-                              <p className="text-xs text-gray-500">{(chalaniFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {chalaniFile.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {(chalaniFile.size / 1024 / 1024).toFixed(2)} MB
+                              </p>
                             </div>
                           </div>
                           <button
@@ -1056,8 +1208,18 @@ export default function CreateRecordModal({
                             className="text-red-500 hover:text-red-700 ml-3 flex-shrink-0"
                             title="Remove file"
                           >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
                             </svg>
                           </button>
                         </div>
@@ -1065,8 +1227,8 @@ export default function CreateRecordModal({
                       {uploadProgress.chalani !== undefined && uploadProgress.chalani < 100 && (
                         <div className="mt-2">
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                            <div
+                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                               style={{ width: `${uploadProgress.chalani}%` }}
                             ></div>
                           </div>
@@ -1100,4 +1262,3 @@ export default function CreateRecordModal({
     </div>
   );
 }
-

@@ -13,6 +13,7 @@ import {
   INCOME_SOURCE_TYPES,
   RELATIONSHIP_OPTIONS,
   RESIDENCE_TYPE_OPTIONS,
+  type OccupationOption,
 } from '@myerp/shared-types';
 import {
   Button,
@@ -34,20 +35,13 @@ import {
 import { Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface KymFormProps {
-  memberId?: string;
   defaultValues?: Partial<KymFormData>;
   mode: 'onboarding' | 'update';
   onSubmit: (data: KymFormData) => Promise<void>;
   onCancel?: () => void;
 }
 
-export const KymForm: React.FC<KymFormProps> = ({
-  memberId,
-  defaultValues,
-  mode,
-  onSubmit,
-  onCancel,
-}) => {
+export const KymForm: React.FC<KymFormProps> = ({ defaultValues, mode, onSubmit, onCancel }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = mode === 'onboarding' ? 9 : 8;
 
@@ -630,7 +624,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
-                          {GENDER_OPTIONS.map((option) => (
+                          {GENDER_OPTIONS.map((option: { label: string; value: string }) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -687,11 +681,13 @@ export const KymForm: React.FC<KymFormProps> = ({
                           <SelectValue placeholder="Select marital status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {MARITAL_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
+                          {MARITAL_STATUS_OPTIONS.map(
+                            (option: { label: string; value: string }) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            )
+                          )}
                         </SelectContent>
                       </Select>
                     )}
@@ -731,7 +727,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                           <SelectValue placeholder="Select family type" />
                         </SelectTrigger>
                         <SelectContent>
-                          {FAMILY_TYPE_OPTIONS.map((option) => (
+                          {FAMILY_TYPE_OPTIONS.map((option: { label: string; value: string }) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -776,7 +772,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                           <SelectValue placeholder="Select occupation" />
                         </SelectTrigger>
                         <SelectContent>
-                          {OCCUPATION_OPTIONS.map((option) => (
+                          {OCCUPATION_OPTIONS.map((option: OccupationOption) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -841,7 +837,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                               <SelectValue placeholder="Select occupation" />
                             </SelectTrigger>
                             <SelectContent>
-                              {OCCUPATION_OPTIONS.map((option) => (
+                              {OCCUPATION_OPTIONS.map((option: OccupationOption) => (
                                 <SelectItem key={option.value} value={option.value}>
                                   {option.label}
                                 </SelectItem>
@@ -920,11 +916,13 @@ export const KymForm: React.FC<KymFormProps> = ({
                                 <SelectValue placeholder="Select relationship" />
                               </SelectTrigger>
                               <SelectContent>
-                                {RELATIONSHIP_OPTIONS.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
+                                {RELATIONSHIP_OPTIONS.map(
+                                  (option: { label: string; value: string }) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  )
+                                )}
                               </SelectContent>
                             </Select>
                           )}
@@ -946,7 +944,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                                 <SelectValue placeholder="Select occupation" />
                               </SelectTrigger>
                               <SelectContent>
-                                {OCCUPATION_OPTIONS.map((option) => (
+                                {OCCUPATION_OPTIONS.map((option: OccupationOption) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
@@ -1193,11 +1191,13 @@ export const KymForm: React.FC<KymFormProps> = ({
                             <SelectValue placeholder="Select residence type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {RESIDENCE_TYPE_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
+                            {RESIDENCE_TYPE_OPTIONS.map(
+                              (option: { label: string; value: string }) => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              )
+                            )}
                           </SelectContent>
                         </Select>
                       )}
@@ -1686,7 +1686,7 @@ export const KymForm: React.FC<KymFormProps> = ({
                           <SelectValue placeholder="Select income range" />
                         </SelectTrigger>
                         <SelectContent>
-                          {ANNUAL_INCOME_RANGES.map((option) => (
+                          {ANNUAL_INCOME_RANGES.map((option: { label: string; value: string }) => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
@@ -1747,11 +1747,13 @@ export const KymForm: React.FC<KymFormProps> = ({
                                   <SelectValue placeholder="Select source" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {INCOME_SOURCE_TYPES.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                      {option.label}
-                                    </SelectItem>
-                                  ))}
+                                  {INCOME_SOURCE_TYPES.map(
+                                    (option: { label: string; value: string }) => (
+                                      <SelectItem key={option.value} value={option.value}>
+                                        {option.label}
+                                      </SelectItem>
+                                    )
+                                  )}
                                 </SelectContent>
                               </Select>
                             )}
@@ -1805,9 +1807,9 @@ export const KymForm: React.FC<KymFormProps> = ({
             <CardContent className="pt-6 space-y-4">
               <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
                 <p className="text-sm text-blue-700">
-                  <strong>Examples:</strong> Share Amount: "10000" (must be multiple of 100, per kitta = Rs. 100), Savings: "5000", Entry Fee
-                  (Other): "500", Specify: "Entry Fee (Prabesh Shulka)", Transactions per year:
-                  "12", Annual deposit: "100000"
+                  <strong>Examples:</strong> Share Amount: "10000" (must be multiple of 100, per
+                  kitta = Rs. 100), Savings: "5000", Entry Fee (Other): "500", Specify: "Entry Fee
+                  (Prabesh Shulka)", Transactions per year: "12", Annual deposit: "100000"
                 </p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

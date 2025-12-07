@@ -37,9 +37,12 @@ export default function DashboardPage() {
     try {
       // Fetch members count (using fast summary endpoint)
       try {
-        const data = await apiClient.get<{ membersWithCapitalLedger?: number }>('/members/summary', {
-          skipErrorToast: true, // Don't show toast for optional stats
-        });
+        const data = await apiClient.get<{ membersWithCapitalLedger?: number }>(
+          '/members/summary',
+          {
+            skipErrorToast: true, // Don't show toast for optional stats
+          }
+        );
         // Show only members with capital ledger (share ledger) accounts
         newStats.members = data.membersWithCapitalLedger || 0;
       } catch (e) {

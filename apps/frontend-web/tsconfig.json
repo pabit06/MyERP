@@ -23,7 +23,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@/features/*": ["./src/features/*"],
-      "@/components/*": ["./src/features/components/shared/*"],
+      "@/components/*": ["./src/components/*"],
       "@/lib/*": ["./src/lib/*"],
       "@myerp/shared-types": ["../../packages/shared-types/src"]
     }
@@ -35,6 +35,5 @@
     ".next/types/**/*.ts",
     "../../packages/shared-types/src/**/*.ts"
   ],
-  "exclude": ["node_modules"],
-  "references": [{ "path": "../../packages/shared-types" }]
+  "exclude": ["node_modules", "../../packages/shared-types/dist"]
 }

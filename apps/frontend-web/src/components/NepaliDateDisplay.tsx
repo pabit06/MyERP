@@ -44,4 +44,3 @@ export default function NepaliDateDisplay({
     return <span className={className}>-</span>;
   }
 }
-

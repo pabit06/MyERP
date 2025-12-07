@@ -53,7 +53,7 @@ interface Statistics {
 }
 
 export default function DocumentsPage() {
-  const { token, hasModule } = useAuth();
+  const { hasModule } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [filteredDocuments, setFilteredDocuments] = useState<Document[]>([]);
   const [statistics, setStatistics] = useState<Statistics | null>(null);
@@ -88,7 +88,7 @@ export default function DocumentsPage() {
     }
     fetchStatistics();
     fetchDocuments();
-  }, [token, hasModule]);
+  }, [hasModule]);
 
   useEffect(() => {
     if (searchQuery || Object.values(filters).some((v) => v !== '' && v !== 'all')) {
@@ -99,8 +99,6 @@ export default function DocumentsPage() {
   }, [searchQuery, filters, pagination.page]);
 
   const fetchStatistics = async () => {
-    if (!token) return;
-
     try {
       const data = await apiClient.get<Statistics>('/dms/statistics', {
         skipErrorToast: true,
@@ -112,15 +110,13 @@ export default function DocumentsPage() {
   };
 
   const fetchDocuments = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     try {
       const data = await apiClient.get<{
         documents: Document[];
         pagination: { total: number };
       }>(`/dms/documents/search?page=${pagination.page}&limit=${pagination.limit}`);
-      
+
       setDocuments(data.documents || []);
       setFilteredDocuments(data.documents || []);
       setPagination((prev) => ({
@@ -135,8 +131,6 @@ export default function DocumentsPage() {
   };
 
   const performSearch = async () => {
-    if (!token) return;
-
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -153,21 +147,15 @@ export default function DocumentsPage() {
       if (filters.startDate) params.append('startDate', filters.startDate);
       if (filters.endDate) params.append('endDate', filters.endDate);
 
-      const response = await fetch(`${API_URL}/dms/documents/search?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data.documents || []);
-        setFilteredDocuments(data.documents || []);
-        setPagination((prev) => ({
-          ...prev,
-          total: data.pagination?.total || 0,
-        }));
-      } else {
-        throw new Error('Failed to search documents');
-      }
+      const data = await apiClient.get<{ documents: Document[]; pagination?: { total: number } }>(
+        `/dms/documents/search?${params.toString()}`
+      );
+      setDocuments(data.documents || []);
+      setFilteredDocuments(data.documents || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: data.pagination?.total || 0,
+      }));
     } catch (err) {
       setError('Error searching documents');
       toast.error('Could not search documents.');
@@ -184,7 +172,6 @@ export default function DocumentsPage() {
   };
 
   const handleDelete = async (document: Document) => {
-    if (!token) return;
     if (!confirm(`Are you sure you want to delete "${document.fileName}"?`)) return;
 
     try {
@@ -193,25 +180,17 @@ export default function DocumentsPage() {
           ? `/dms/member-documents/${document.id}`
           : `/dms/official-documents/${document.id}`;
 
-      const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        toast.success('Document deleted successfully');
-        fetchDocuments();
-        fetchStatistics();
-      } else {
-        throw new Error('Failed to delete document');
-      }
+      await apiClient.delete(endpoint);
+      toast.success('Document deleted successfully');
+      fetchDocuments();
+      fetchStatistics();
     } catch (err) {
       toast.error('Failed to delete document');
     }
   };
 
   const handleBulkDelete = async () => {
-    if (!token || selectedDocuments.size === 0) return;
+    if (selectedDocuments.size === 0) return;
 
     const ids: string[] = [];
     const types: ('member' | 'official')[] = [];
@@ -226,23 +205,11 @@ export default function DocumentsPage() {
     if (!confirm(`Are you sure you want to delete ${ids.length} document(s)?`)) return;
 
     try {
-      const response = await fetch(`${API_URL}/dms/documents/bulk-delete`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ ids, types }),
-      });
-
-      if (response.ok) {
-        toast.success(`Deleted ${ids.length} document(s) successfully`);
-        setSelectedDocuments(new Set());
-        fetchDocuments();
-        fetchStatistics();
-      } else {
-        throw new Error('Failed to delete documents');
-      }
+      await apiClient.post('/dms/documents/bulk-delete', { ids, types });
+      toast.success(`Deleted ${ids.length} document(s) successfully`);
+      setSelectedDocuments(new Set());
+      fetchDocuments();
+      fetchStatistics();
     } catch (err) {
       toast.error('Failed to delete documents');
     }
@@ -250,7 +217,8 @@ export default function DocumentsPage() {
 
   const handleDownload = (document: Document) => {
     const type = document.docType;
-    window.open(`${API_URL}/dms/documents/${document.id}/download?type=${type}`, '_blank');
+    const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+    window.open(`${baseURL}/dms/documents/${document.id}/download?type=${type}`, '_blank');
   };
 
   const handlePreview = async (document: Document) => {
@@ -437,12 +405,7 @@ export default function DocumentsPage() {
               }`}
               title="Grid View"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -460,12 +423,7 @@ export default function DocumentsPage() {
               }`}
               title="List View"
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -478,9 +436,7 @@ export default function DocumentsPage() {
         </div>
 
         {/* Filters Sidebar */}
-        {showFilters && (
-          <DocumentFilters filters={filters} onFiltersChange={setFilters} />
-        )}
+        {showFilters && <DocumentFilters filters={filters} onFiltersChange={setFilters} />}
 
         {/* Bulk Actions Bar */}
         {selectedDocuments.size > 0 && (
@@ -597,4 +553,3 @@ export default function DocumentsPage() {
     </ProtectedRoute>
   );
 }
-

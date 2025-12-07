@@ -216,7 +216,7 @@ export default function SavingsPage() {
       <Toaster position="top-right" />
       <div className="space-y-6">
         <SavingsHeader
-          activeTab={activeTab}
+          activeTab={activeTab === 'operations' ? 'accounts' : activeTab}
           onAddProduct={() => setShowProductModal(true)}
           onOpenAccount={() => setShowAccountModal(true)}
         />

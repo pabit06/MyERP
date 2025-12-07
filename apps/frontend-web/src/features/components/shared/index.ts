@@ -1,6 +1,6 @@
 /**
  * Shared Components - Barrel Export
- * 
+ *
  * Components that are used across multiple features
  */
 

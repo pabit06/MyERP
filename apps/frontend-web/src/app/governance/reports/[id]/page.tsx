@@ -37,8 +37,7 @@ type TabType = 'financial' | 'members' | 'loans' | 'liquidity' | 'governance';
 
 export default function ReportDetailPage() {
   const params = useParams();
-  const router = useRouter();
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('financial');
   const [report, setReport] = useState<ManagerReport | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,10 +55,10 @@ export default function ReportDetailPage() {
   const [suggestions, setSuggestions] = useState('');
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated && token && params.id) {
+    if (!authLoading && isAuthenticated && params.id) {
       fetchReportDetails();
     }
-  }, [authLoading, isAuthenticated, token, params.id]);
+  }, [authLoading, isAuthenticated, params.id]);
 
   useEffect(() => {
     if (report) {
@@ -71,18 +70,12 @@ export default function ReportDetailPage() {
   }, [report]);
 
   const fetchReportDetails = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/governance/reports/${params.id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
+      const data = await apiClient.get<{ report: ManagerReport }>(
+        `/governance/reports/${params.id}`
+      );
       setReport(data.report);
       setError(null);
     } catch (error: any) {
@@ -94,19 +87,10 @@ export default function ReportDetailPage() {
   };
 
   const handleFetchData = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setFetchingData(true);
     try {
-      const response = await fetch(`${API_URL}/governance/reports/${params.id}/fetch-data`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch data');
-      }
-
+      await apiClient.post(`/governance/reports/${params.id}/fetch-data`);
       await fetchReportDetails();
       alert('Data fetched successfully!');
     } catch (error: any) {
@@ -118,28 +102,15 @@ export default function ReportDetailPage() {
   };
 
   const handleSaveDraft = async () => {
-    if (!token || !params.id || !report) return;
+    if (!params.id || !report) return;
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/governance/reports/${params.id}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          description,
-          challenges,
-          plans,
-          suggestions,
-        }),
+      await apiClient.put(`/governance/reports/${params.id}`, {
+        description,
+        challenges,
+        plans,
+        suggestions,
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to save report');
-      }
-
       await fetchReportDetails();
       alert('Report saved successfully!');
     } catch (error: any) {
@@ -150,19 +121,10 @@ export default function ReportDetailPage() {
   };
 
   const handleFinalize = async () => {
-    if (!token || !params.id) return;
+    if (!params.id) return;
     setFinalizing(true);
     try {
-      const response = await fetch(`${API_URL}/governance/reports/${params.id}/finalize`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to finalize report');
-      }
-
+      await apiClient.post(`/governance/reports/${params.id}/finalize`);
       await fetchReportDetails();
       alert('Report finalized successfully!');
     } catch (error: any) {

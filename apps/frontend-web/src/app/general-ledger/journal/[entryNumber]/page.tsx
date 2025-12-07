@@ -178,7 +178,9 @@ export default function JournalEntryDetailPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Journal Entry</h1>
               {journalEntry && (
-                <p className="text-gray-600 mt-1 font-mono">{journalEntry.journalEntry.entryNumber}</p>
+                <p className="text-gray-600 mt-1 font-mono">
+                  {journalEntry.journalEntry.entryNumber}
+                </p>
               )}
             </div>
           </div>
@@ -227,7 +229,8 @@ export default function JournalEntryDetailPage() {
                   <div className="flex items-center space-x-2">
                     <Calendar className="h-4 w-4 text-indigo-600" />
                     <p className="text-lg font-semibold text-indigo-900">
-                      {formatNepaliDate(journalEntry.journalEntry.date)} ({formatEnglishDate(journalEntry.journalEntry.date)})
+                      {formatNepaliDate(journalEntry.journalEntry.date)} (
+                      {formatEnglishDate(journalEntry.journalEntry.date)})
                     </p>
                   </div>
                 </div>
@@ -265,7 +268,9 @@ export default function JournalEntryDetailPage() {
                     <tr key={entry.account.id} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <button
-                          onClick={() => router.push(`/general-ledger/statement/${entry.account.id}`)}
+                          onClick={() =>
+                            router.push(`/general-ledger/statement/${entry.account.id}`)
+                          }
                           className="text-xs font-mono text-indigo-600 hover:text-indigo-800 hover:underline"
                         >
                           {entry.account.code}
@@ -275,7 +280,9 @@ export default function JournalEntryDetailPage() {
                         <div className="flex items-center space-x-2">
                           <span className="text-sm text-gray-900">{entry.account.name}</span>
                           <button
-                            onClick={() => router.push(`/general-ledger/statement/${entry.account.id}`)}
+                            onClick={() =>
+                              router.push(`/general-ledger/statement/${entry.account.id}`)
+                            }
                             className="p-1 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
                             title="View Account Statement"
                           >
@@ -311,7 +318,10 @@ export default function JournalEntryDetailPage() {
                 </tbody>
                 <tfoot className="bg-indigo-50 font-semibold">
                   <tr>
-                    <td colSpan={3} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                    <td
+                      colSpan={3}
+                      className="px-4 py-3 text-right text-sm font-bold text-gray-900"
+                    >
                       Total:
                     </td>
                     <td className="px-4 py-3 text-right text-sm font-bold text-red-600">
@@ -337,7 +347,8 @@ export default function JournalEntryDetailPage() {
             {Math.abs(journalEntry.totals.debit - journalEntry.totals.credit) > 0.01 && (
               <div className="bg-red-50 border-t-2 border-red-200 p-4">
                 <p className="text-sm text-red-800">
-                  ⚠️ Warning: Debits ({journalEntry.totals.debit.toLocaleString()}) do not equal Credits ({journalEntry.totals.credit.toLocaleString()})
+                  ⚠️ Warning: Debits ({journalEntry.totals.debit.toLocaleString()}) do not equal
+                  Credits ({journalEntry.totals.credit.toLocaleString()})
                 </p>
               </div>
             )}
@@ -347,4 +358,3 @@ export default function JournalEntryDetailPage() {
     </ProtectedRoute>
   );
 }
-

@@ -257,7 +257,9 @@ export default function ShareRegisterPage() {
         <div className="mb-6 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Share Register</h1>
-            <p className="text-gray-600">Complete list of all shareholders and their share details</p>
+            <p className="text-gray-600">
+              Complete list of all shareholders and their share details
+            </p>
           </div>
           <div className="flex gap-3">
             <button
@@ -285,9 +287,7 @@ export default function ShareRegisterPage() {
           </div>
           <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
             <p className="text-sm font-medium text-gray-600">Total Kitta</p>
-            <p className="text-2xl font-bold text-gray-900 mt-2">
-              {totalKitta.toLocaleString()}
-            </p>
+            <p className="text-2xl font-bold text-gray-900 mt-2">{totalKitta.toLocaleString()}</p>
           </div>
           <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
             <p className="text-sm font-medium text-gray-600">Total Share Capital</p>
@@ -329,9 +329,7 @@ export default function ShareRegisterPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Min Kitta
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Min Kitta</label>
                 <input
                   type="number"
                   value={filters.minKitta}
@@ -341,9 +339,7 @@ export default function ShareRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Max Kitta
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Max Kitta</label>
                 <input
                   type="number"
                   value={filters.maxKitta}
@@ -353,9 +349,7 @@ export default function ShareRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Min Amount
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Min Amount</label>
                 <input
                   type="number"
                   value={filters.minAmount}
@@ -365,9 +359,7 @@ export default function ShareRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Max Amount
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Max Amount</label>
                 <input
                   type="number"
                   value={filters.maxAmount}
@@ -377,9 +369,7 @@ export default function ShareRegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">
-                  Certificate
-                </label>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Certificate</label>
                 <select
                   value={filters.hasCertificate}
                   onChange={(e) => setFilters({ ...filters, hasCertificate: e.target.value })}
@@ -420,9 +410,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center gap-1">
                         Member Number
-                        {sortBy === 'memberNumber' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'memberNumber' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -431,9 +424,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center gap-1">
                         Member Name
-                        {sortBy === 'memberName' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'memberName' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -442,9 +438,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center gap-1">
                         Certificate No.
-                        {sortBy === 'certificateNo' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'certificateNo' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -453,9 +452,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Total Kitta
-                        {sortBy === 'totalKitta' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'totalKitta' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -464,9 +466,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Unit Price
-                        {sortBy === 'unitPrice' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'unitPrice' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -475,9 +480,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center justify-end gap-1">
                         Total Amount
-                        {sortBy === 'totalAmount' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'totalAmount' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -486,9 +494,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center justify-center gap-1">
                         Transactions
-                        {sortBy === 'transactions' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'transactions' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                     <th
@@ -497,9 +508,12 @@ export default function ShareRegisterPage() {
                     >
                       <div className="flex items-center gap-1">
                         Issue Date
-                        {sortBy === 'issueDate' && (
-                          sortOrder === 'asc' ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />
-                        )}
+                        {sortBy === 'issueDate' &&
+                          (sortOrder === 'asc' ? (
+                            <ArrowUp className="w-3 h-3" />
+                          ) : (
+                            <ArrowDown className="w-3 h-3" />
+                          ))}
                       </div>
                     </th>
                   </tr>
@@ -531,7 +545,10 @@ export default function ShareRegisterPage() {
                             {account.totalKitta.toLocaleString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
-                            रु. {account.unitPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                            रु.{' '}
+                            {account.unitPrice.toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                            })}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
                             रु.{' '}
@@ -577,4 +594,3 @@ export default function ShareRegisterPage() {
     </ProtectedRoute>
   );
 }
-

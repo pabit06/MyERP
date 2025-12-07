@@ -8,6 +8,11 @@ export interface Darta {
   status: string;
   priority: string;
   remarks?: string | null;
+  senderName?: string | null;
+  senderAddress?: string | null;
+  senderChalaniNo?: string | null;
+  senderChalaniDate?: string | null;
+  receivedDate?: string | null;
   createdAt: string;
   documents: Array<{ id: string; title: string; fileName: string }>;
   _count: {
@@ -24,6 +29,12 @@ export interface PatraChalani {
   subject: string;
   from?: string | null;
   to?: string | null;
+  receiverName?: string | null;
+  receiverAddress?: string | null;
+  senderName?: string | null;
+  senderAddress?: string | null;
+  content?: string | null;
+  remarks?: string | null;
   date: string;
   receivedDate?: string | null;
   sentDate?: string | null;
@@ -39,4 +50,3 @@ export interface PatraChalani {
 }
 
 export type RecordType = 'darta' | 'chalani' | 'all';
-

@@ -62,9 +62,7 @@ export default function SavingsReportsPage() {
               <div>
                 <NepaliDatePicker
                   value={dateFilters.toDate}
-                  onChange={(dateString) =>
-                    setDateFilters({ ...dateFilters, toDate: dateString })
-                  }
+                  onChange={(dateString) => setDateFilters({ ...dateFilters, toDate: dateString })}
                   label="To Date"
                 />
               </div>

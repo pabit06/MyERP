@@ -194,8 +194,8 @@ export async function calculateEmployeePayroll(
   const basicSalary = Number(employee.basicSalary);
 
   // Get allowances from employee settings or department/designation defaults
-  // TODO: Implement employee-specific allowances or department/designation defaults
-  // For now, using empty allowances - can be extended to fetch from employee settings
+  // NOTE: Schema currently does not support allowances on Employee/Department models.
+  // This should be implemented when the schema is updated to include allowance configurations.
   const allowances: Record<string, number> = {};
   const totalAllowances = Object.values(allowances).reduce((sum, val) => sum + (val || 0), 0);
   const grossSalary = basicSalary + totalAllowances;

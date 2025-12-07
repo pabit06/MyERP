@@ -43,27 +43,33 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       // BS Mode: Build calendar based on BS month boundaries
       const currentBsDate = adToBs(currentDate);
       const [bsYear, bsMonth] = currentBsDate.split('-').map(Number);
-      
+
       // Get first day of BS month (gate 1)
       // @ts-ignore
       const firstDayBs = new NepaliDate(bsYear, bsMonth - 1, 1);
       // @ts-ignore
       const firstDayAd = firstDayBs.toJsDate();
-      
+
       // Get number of days in BS month
       const daysInBsMonth = getDaysInBsMonth(bsYear, bsMonth);
-      
+
       // Get last day of BS month
       // @ts-ignore
       const lastDayBs = new NepaliDate(bsYear, bsMonth - 1, daysInBsMonth);
       // @ts-ignore
       const lastDayAd = lastDayBs.toJsDate();
-      
+
       // Get starting day of week for BS month's first day
       const startingDayOfWeek = firstDayAd.getDay();
-      
-      const dates: Array<{ adDate: Date; bsDate: string; bsDay: number; adDay: number; isCurrentMonth: boolean }> = [];
-      
+
+      const dates: Array<{
+        adDate: Date;
+        bsDate: string;
+        bsDay: number;
+        adDay: number;
+        isCurrentMonth: boolean;
+      }> = [];
+
       // Add previous BS month's trailing days
       if (bsMonth === 1) {
         // Previous month is Chaitra of previous year
@@ -101,7 +107,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
           });
         }
       }
-      
+
       // Add current BS month's days (starting from gate 1)
       for (let bsDay = 1; bsDay <= daysInBsMonth; bsDay++) {
         // @ts-ignore
@@ -117,7 +123,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
           isCurrentMonth: true,
         });
       }
-      
+
       // Add next BS month's leading days to fill the grid
       const remainingDays = 42 - dates.length;
       for (let bsDay = 1; bsDay <= remainingDays; bsDay++) {
@@ -140,19 +146,25 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
           isCurrentMonth: false,
         });
       }
-      
+
       return dates;
     } else {
       // AD Mode: Build calendar based on AD month boundaries (original logic)
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
-      
+
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
       const startingDayOfWeek = firstDay.getDay();
 
-      const dates: Array<{ adDate: Date; bsDate: string; bsDay: number; adDay: number; isCurrentMonth: boolean }> = [];
+      const dates: Array<{
+        adDate: Date;
+        bsDate: string;
+        bsDay: number;
+        adDay: number;
+        isCurrentMonth: boolean;
+      }> = [];
 
       // Add previous month's trailing days
       const prevMonth = new Date(year, month, 0);
@@ -210,7 +222,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
   // Get BS month and year for current view
   const currentBsDate = adToBs(currentDate);
   const [bsYear, bsMonth] = currentBsDate.split('-').map(Number);
-  
+
   // When in BS mode, update currentDate to match BS month boundaries when navigating
   useEffect(() => {
     if (viewMode === 'BS') {
@@ -301,7 +313,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
         >
           <ChevronLeft className="h-3.5 w-3.5 text-gray-600" />
         </button>
-        
+
         <div className="text-center">
           {viewMode === 'BS' ? (
             <div>
@@ -424,4 +436,3 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
     </div>
   );
 }
-

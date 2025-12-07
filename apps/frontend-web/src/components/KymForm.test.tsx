@@ -25,7 +25,7 @@ describe('KymForm', () => {
 
   it('validates required fields on next', async () => {
     render(<KymForm mode="onboarding" onSubmit={mockOnSubmit} />);
-    
+
     const nextButton = screen.getByText('Next');
     fireEvent.click(nextButton);
 
@@ -34,4 +34,3 @@ describe('KymForm', () => {
     });
   });
 });
-

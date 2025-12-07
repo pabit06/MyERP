@@ -22,7 +22,9 @@ interface DocumentFiltersProps {
 
 export default function DocumentFilters({ filters, onFiltersChange }: DocumentFiltersProps) {
   const { token } = useAuth();
-  const [members, setMembers] = useState<Array<{ id: string; memberNumber: string; firstName: string; lastName: string }>>([]);
+  const [members, setMembers] = useState<
+    Array<{ id: string; memberNumber: string; firstName: string; lastName: string }>
+  >([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
 
   useEffect(() => {
@@ -69,10 +71,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
     <div className="bg-white shadow rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-        <button
-          onClick={clearFilters}
-          className="text-sm text-indigo-600 hover:text-indigo-800"
-        >
+        <button onClick={clearFilters} className="text-sm text-indigo-600 hover:text-indigo-800">
           Clear All
         </button>
       </div>
@@ -80,9 +79,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Document Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Document Type
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Document Type</label>
           <select
             value={filters.type}
             onChange={(e) => updateFilter('type', e.target.value)}
@@ -96,9 +93,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
 
         {/* Document Category/Type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category/Type
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Category/Type</label>
           <input
             type="text"
             value={filters.documentType}
@@ -111,9 +106,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
         {/* Category (for official docs) */}
         {(filters.type === 'official' || filters.type === 'all') && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Category
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
             <input
               type="text"
               value={filters.category}
@@ -127,9 +120,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
         {/* Member Filter */}
         {(filters.type === 'member' || filters.type === 'all') && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Member
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Member</label>
             <select
               value={filters.memberId}
               onChange={(e) => updateFilter('memberId', e.target.value)}
@@ -148,9 +139,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
 
         {/* File Type Filter */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            File Type
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">File Type</label>
           <select
             value={filters.fileType}
             onChange={(e) => updateFilter('fileType', e.target.value)}
@@ -167,9 +156,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
 
         {/* Start Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            From Date
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">From Date</label>
           <input
             type="date"
             value={filters.startDate}
@@ -180,9 +167,7 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
 
         {/* End Date */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            To Date
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">To Date</label>
           <input
             type="date"
             value={filters.endDate}
@@ -194,4 +179,3 @@ export default function DocumentFilters({ filters, onFiltersChange }: DocumentFi
     </div>
   );
 }
-

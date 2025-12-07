@@ -38,12 +38,15 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
 
   const searchMembers = async (query: string) => {
     if (!query || !token) return;
-    
+
     setIsSearching(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/members?search=${query}&status=active`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/members?search=${query}&status=active`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       if (response.ok) {
         const data = await response.json();
         setMembers(data.members || []);
@@ -69,7 +72,9 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
 
     await onSubmit({
       ...accountForm,
-      initialDeposit: accountForm.initialDeposit ? parseFloat(accountForm.initialDeposit) : undefined,
+      initialDeposit: accountForm.initialDeposit
+        ? parseFloat(accountForm.initialDeposit)
+        : undefined,
       nominee: nomineeData,
     });
     setAccountForm({
@@ -102,7 +107,9 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
               placeholder="Auto-generated if empty"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
-            <p className="text-xs text-gray-500 mt-1">Leave empty to auto-generate account number</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to auto-generate account number
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Member *</label>
@@ -127,11 +134,14 @@ const CreateAccountModal: React.FC<CreateAccountModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
                 size={5}
               >
-                <option value="" disabled className="text-gray-500 font-medium bg-gray-50">Select a member below</option>
+                <option value="" disabled className="text-gray-500 font-medium bg-gray-50">
+                  Select a member below
+                </option>
                 {members.length > 0 ? (
                   members.map((member) => (
                     <option key={member.id} value={member.id} className="py-1">
-                      {member.firstName} {member.lastName} ({member.memberNumber || 'No ID'}) - {member.email || member.phone || 'No Contact'}
+                      {member.firstName} {member.lastName} ({member.memberNumber || 'No ID'}) -{' '}
+                      {member.email || member.phone || 'No Contact'}
                     </option>
                   ))
                 ) : (

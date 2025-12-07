@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
-import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { KymForm } from '@/features/members';
 import { KymFormData } from '@myerp/shared-types';
@@ -12,40 +11,23 @@ export default function MemberKycPage() {
   const router = useRouter();
   const params = useParams();
   const memberId = params.id as string;
-  const { token } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [defaultValues, setDefaultValues] = useState<Partial<KymFormData> | null>(null);
-  const [member, setMember] = useState<{ firstName?: string; lastName?: string } | null>(null);
 
   useEffect(() => {
     const fetchMemberData = async () => {
-      if (!token || !memberId) return;
+      if (!memberId) return;
       try {
         // Fetch member basic data
-        const memberResponse = await fetch(`${API_URL}/members/${memberId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!memberResponse.ok) throw new Error('Failed to fetch member data');
-        const memberData = await memberResponse.json();
-        setMember(memberData.member);
+        const memberData = await apiClient.get<{
+          member: { firstName?: string; lastName?: string };
+        }>(`/members/${memberId}`);
 
         // Try to fetch existing KYM data if available
         try {
-          const kymResponse = await fetch(`${API_URL}/members/${memberId}/kym`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (kymResponse.ok) {
-            const kymData = await kymResponse.json();
-            setDefaultValues(kymData);
-          } else {
-            // No KYM data yet, use member basic data as defaults
-            setDefaultValues({
-              firstName: memberData.member.firstName || '',
-              surname: memberData.member.lastName || '',
-            });
-          }
+          const kymData = await apiClient.get<KymFormData>(`/members/${memberId}/kym`);
+          setDefaultValues(kymData);
         } catch {
           // No KYM data yet, use member basic data as defaults
           setDefaultValues({
@@ -60,61 +42,21 @@ export default function MemberKycPage() {
       }
     };
     fetchMemberData();
-  }, [memberId, token]);
+  }, [memberId]);
 
   const handleKymSubmit = async (data: KymFormData) => {
-    if (!token || !memberId) return;
+    if (!memberId) return;
     setError('');
 
     try {
-      const response = await fetch(`${API_URL}/members/${memberId}/kym`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-
-        // Handle validation errors with details
-        let errorMessage = errorData.error || 'Failed to submit KYM';
-
-        // Include the actual error message if available
-        if (errorData.message) {
-          errorMessage = `${errorMessage}\n\n${errorData.message}`;
-        }
-
-        if (errorData.details) {
-          // Format validation details
-          if (Array.isArray(errorData.details)) {
-            errorMessage = `${errorMessage}\n\nValidation Errors:\n${errorData.details
-              .map(
-                (detail: any) =>
-                  `- ${detail.path || detail.field || 'Field'}: ${detail.message || 'Invalid value'}`
-              )
-              .join('\n')}`;
-          } else if (typeof errorData.details === 'object') {
-            const detailsList = Object.entries(errorData.details)
-              .map(
-                ([key, value]: [string, any]) =>
-                  `- ${key}: ${typeof value === 'string' ? value : value.message || JSON.stringify(value)}`
-              )
-              .join('\n');
-            errorMessage = `${errorMessage}\n\nValidation Errors:\n${detailsList}`;
-          } else {
-            errorMessage = `${errorMessage}\n\nDetails: ${JSON.stringify(errorData.details, null, 2)}`;
-          }
-        }
-
-        throw new Error(errorMessage);
-      }
-
+      await apiClient.put(`/members/${memberId}/kym`, data);
       router.push(`/members/${memberId}`);
     } catch (err: any) {
-      setError(err.message || 'Error submitting KYM');
+      // The apiClient already handles error toasts, but we want to show detailed validation errors
+      const errorMessage = err.details
+        ? `${err.message}\n\n${JSON.stringify(err.details, null, 2)}`
+        : err.message || 'Error submitting KYM';
+      setError(errorMessage);
       // Scroll to top to show error
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

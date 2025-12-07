@@ -10,9 +10,7 @@ export default function TestDatePickerPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">
-          Nepali Date Picker Test
-        </h1>
+        <h1 className="text-2xl font-bold mb-6 text-gray-800">Nepali Date Picker Test</h1>
 
         <div className="space-y-6">
           {/* Basic Date Picker */}
@@ -60,15 +58,11 @@ export default function TestDatePickerPage() {
             <div className="space-y-2 text-sm">
               <div>
                 <span className="font-medium">AD Date:</span>{' '}
-                <span className="text-gray-700">
-                  {selectedDate || 'No date selected'}
-                </span>
+                <span className="text-gray-700">{selectedDate || 'No date selected'}</span>
               </div>
               <div>
                 <span className="font-medium">BS Date:</span>{' '}
-                <span className="text-gray-700">
-                  {selectedBsDate || 'No date selected'}
-                </span>
+                <span className="text-gray-700">{selectedBsDate || 'No date selected'}</span>
               </div>
             </div>
           </div>
@@ -89,4 +83,3 @@ export default function TestDatePickerPage() {
     </div>
   );
 }
-

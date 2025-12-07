@@ -4,12 +4,14 @@ interface Document {
   id: string;
   docType: 'member' | 'official';
   fileName: string;
+  filePath: string;
   fileSize?: number | null;
   mimeType?: string | null;
   documentType: string;
   description?: string | null;
   uploadedAt: string;
   member?: {
+    id: string;
     memberNumber: string;
     firstName: string;
     lastName: string;
@@ -138,4 +140,3 @@ export default function DocumentCard({
     </div>
   );
 }
-
