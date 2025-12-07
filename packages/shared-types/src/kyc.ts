@@ -44,21 +44,19 @@ export const KymFormSchema = z
     // Personal Details
     firstName: z.string().min(1, 'First name is required'),
     surname: z.string().min(1, 'Surname is required'),
-    dateOfBirth: z
-      .coerce.date({ required_error: 'Date of birth is required' })
-      .refine(
-        (date) => {
-          const today = new Date();
-          const age = today.getFullYear() - date.getFullYear();
-          const monthDiff = today.getMonth() - date.getMonth();
-          const dayDiff = today.getDate() - date.getDate();
-          const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-          return actualAge >= 16;
-        },
-        {
-          message: 'You must be at least 16 years old to become a cooperative member',
-        }
-      ),
+    dateOfBirth: z.coerce.date({ required_error: 'Date of birth is required' }).refine(
+      (date) => {
+        const today = new Date();
+        const age = today.getFullYear() - date.getFullYear();
+        const monthDiff = today.getMonth() - date.getMonth();
+        const dayDiff = today.getDate() - date.getDate();
+        const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
+        return actualAge >= 16;
+      },
+      {
+        message: 'You must be at least 16 years old to become a cooperative member',
+      }
+    ),
     citizenshipNumber: z.string().min(1, 'Citizenship number is required'),
     citizenshipIssuingOffice: z.string().min(1, 'Issuing office is required'),
     citizenshipIssuingDistrict: z.string().min(1, 'Issuing district is required'),
@@ -160,7 +158,7 @@ export const KymFormSchema = z
       const monthDiff = today.getMonth() - data.dateOfBirth.getMonth();
       const dayDiff = today.getDate() - data.dateOfBirth.getDate();
       const actualAge = monthDiff < 0 || (monthDiff === 0 && dayDiff < 0) ? age - 1 : age;
-      
+
       if (actualAge < 16) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -169,7 +167,7 @@ export const KymFormSchema = z
         });
       }
     }
-    
+
     if (data.maritalStatus === 'MARRIED' && !data.spouseName) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

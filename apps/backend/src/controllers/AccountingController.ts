@@ -55,7 +55,11 @@ export class AccountingController extends BaseController {
   async getChartOfAccounts(cooperativeId: string, type?: string) {
     await this.validateTenant(cooperativeId);
 
-    const where: any = { cooperativeId, isActive: true };
+    const where: {
+      cooperativeId: string;
+      isActive: boolean;
+      type?: string;
+    } = { cooperativeId, isActive: true };
     if (type) {
       where.type = type.toLowerCase();
     }
@@ -913,7 +917,7 @@ export class AccountingController extends BaseController {
       this.getChartOfAccounts(cooperativeId, 'expense'),
     ]);
 
-    const calculateTotal = (accounts: any[]) => {
+    const calculateTotal = (accounts: Array<{ isGroup: boolean; balance?: number | null }>) => {
       return accounts
         .filter((acc) => !acc.isGroup)
         .reduce((sum, acc) => sum + (acc.balance || 0), 0);
