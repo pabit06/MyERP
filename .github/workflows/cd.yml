@@ -1,11 +1,8 @@
 name: CD - Deploy to Production
 
 on:
-  # Disabled automatic deployment until Dockerfiles are created
-  # Uncomment when ready:
-  # push:
-  #   branches: [main]
   push:
+    branches: [main]
     tags:
       - 'v*.*.*'
   workflow_dispatch:
