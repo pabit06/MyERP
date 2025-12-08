@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
 
 /**
@@ -37,15 +36,15 @@ export interface ReportColumn {
 export interface ReportFilter {
   field: string;
   operator:
-  | 'equals'
-  | 'notEquals'
-  | 'greaterThan'
-  | 'lessThan'
-  | 'between'
-  | 'in'
-  | 'contains'
-  | 'startsWith'
-  | 'endsWith';
+    | 'equals'
+    | 'notEquals'
+    | 'greaterThan'
+    | 'lessThan'
+    | 'between'
+    | 'in'
+    | 'contains'
+    | 'startsWith'
+    | 'endsWith';
   value: string | number | boolean | Date | (string | number | boolean | Date)[];
 }
 

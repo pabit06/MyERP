@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import { initializeSentry } from './config/sentry.js';
 import saasRoutes from './routes/saas.js';
 import authRoutes from './routes/auth.js';
 import onboardingRoutes from './routes/onboarding.js';
@@ -27,6 +26,11 @@ import systemAdminRoutes from './routes/system-admin.js';
 import healthRoutes from './routes/health.js';
 import swaggerRoutes from './routes/swagger.js';
 import dashboardRoutes from './routes/dashboard.js';
+import fixedDepositRoutes from './routes/fixed-deposits.js';
+import { memberPortalRouter } from './routes/member-portal.js';
+
+// ... (other imports)
+
 import { initializeAmlMonitoring } from './services/aml/monitor.js';
 import { registerAccountingHooks } from './hooks/accounting-hooks.js';
 import { registerLoansHooks } from './hooks/loans-hooks.js';
@@ -117,7 +121,9 @@ app.use(`${API_PREFIX}/reports`, apiLimiter, reportsRoutes);
 app.use(`${API_PREFIX}/workflow`, apiLimiter, workflowRoutes);
 app.use(`${API_PREFIX}/notifications`, apiLimiter, notificationsRoutes);
 app.use(`${API_PREFIX}/dashboard`, apiLimiter, dashboardRoutes);
+app.use(`${API_PREFIX}/fixed-deposits`, apiLimiter, fixedDepositRoutes);
 app.use(`${API_PREFIX}/system-admin`, apiLimiter, systemAdminRoutes);
+app.use(`${API_PREFIX}/member`, apiLimiter, memberPortalRouter);
 
 // Sentry error handler is handled automatically via expressIntegration() in sentry.ts
 // Our custom errorHandler middleware will still work and can call Sentry.captureException

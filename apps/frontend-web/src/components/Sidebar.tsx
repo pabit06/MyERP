@@ -37,6 +37,7 @@ import {
   Award,
   Activity,
   LogOut,
+  Landmark,
 } from 'lucide-react';
 import type { LucideProps } from 'lucide-react';
 import type { ComponentType } from 'react';
@@ -97,6 +98,17 @@ export default function Sidebar() {
         ],
       },
       { label: 'Savings', href: '/savings', module: 'cbs', icon: PiggyBank, group: 'banking' },
+      {
+        label: 'Fixed Deposits',
+        href: '/fixed-deposits',
+        module: 'cbs',
+        icon: Landmark,
+        group: 'banking',
+        submenu: [
+          { label: 'Products', href: '/fixed-deposits/products', icon: Settings },
+          { label: 'Accounts', href: '/fixed-deposits/accounts', icon: Users },
+        ],
+      },
       { label: 'Loans', href: '/loans', module: 'cbs', icon: Banknote, group: 'banking' },
       {
         label: 'General Ledger',

@@ -85,6 +85,8 @@ model Cooperative {
   tellerSettlements         TellerSettlement[]
   notifications             Notification[]
   genericWorkflowHistory    GenericWorkflowHistory[]
+  fixedDepositProducts      FixedDepositProduct[]
+  fixedDepositAccounts      FixedDepositAccount[]
 
   @@map("cooperatives")
 }
@@ -342,6 +344,7 @@ model Member {
   email           String?
   phone           String?
   passwordHash    String? // Hashed password for member login (optional for backward compatibility)
+  lastLogin       DateTime?
   cooperativeId   String
   isActive        Boolean    @default(true)
   workflowStatus  String     @default("application") // "application", "under_review", "approved", "bod_pending", "active", "rejected"
@@ -376,6 +379,7 @@ model Member {
   amlCases                  AmlCase[]
   accountSignatories        AccountSignatory[]
   committeeMembers          CommitteeMember[]
+  fixedDepositAccounts      FixedDepositAccount[]
 
   @@unique([cooperativeId, memberNumber], name: "cooperativeId_memberNumber")
   @@index([cooperativeId, workflowStatus])
@@ -1016,6 +1020,104 @@ model ProductGLMap {
   @@unique([cooperativeId, productType, productId])
   @@index([productType, productId])
   @@map("product_gl_maps")
+}
+
+// Fixed Deposits (FD)
+enum FDInterestPostingFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  AT_MATURITY
+}
+
+enum FDPenaltyType {
+  LOWER_RATE // Recalculate whole tenure at lower rate (e.g. savings rate)
+  DEDUCT_INTEREST // Deduct % of accrued interest
+}
+
+model FixedDepositProduct {
+  id            String  @id @default(cuid())
+  cooperativeId String
+  name          String
+  description   String?
+
+  // Terms
+  minAmount Decimal  @db.Decimal(15, 2)
+  maxAmount Decimal? @db.Decimal(15, 2)
+
+  // Interest
+  interestRate     Decimal                    @db.Decimal(5, 2) // e.g., 12.50
+  postingFrequency FDInterestPostingFrequency @default(AT_MATURITY)
+
+  // Duration in months
+  durationMonths Int // e.g. 12 for 1 year
+
+  // Penalty Configuration
+  penaltyType        FDPenaltyType @default(LOWER_RATE)
+  penaltyValue       Decimal?      @db.Decimal(5, 2) // e.g. 2.00% reduction or 5% deduction
+  isPrematureAllowed Boolean       @default(true)
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  cooperative Cooperative           @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  accounts    FixedDepositAccount[]
+
+  @@unique([cooperativeId, name])
+  @@map("fixed_deposit_products")
+}
+
+enum FDAccountStatus {
+  ACTIVE
+  MATURED
+  CLOSED
+  PREMATURE_CLOSED
+}
+
+model FixedDepositAccount {
+  id            String @id @default(cuid())
+  cooperativeId String
+  memberId      String
+  productId     String
+
+  // Account Details
+  accountNumber String  @unique // Auto-generated
+  principal     Decimal @db.Decimal(15, 2)
+  interestRate  Decimal @db.Decimal(5, 2) // Locked-in rate at creation
+
+  // Dates
+  startDate    DateTime
+  maturityDate DateTime
+  closedAt     DateTime?
+
+  // Financials
+  accruedInterest Decimal @default(0) @db.Decimal(15, 2) // Interest earned so far
+  paidInterest    Decimal @default(0) @db.Decimal(15, 2) // Interest already paid out
+
+  // Nominee
+  nomineeName       String?
+  nomineeRelation   String?
+  nomineePhone      String?
+  nomineeFatherName String?
+
+  status  FDAccountStatus @default(ACTIVE)
+  remarks String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  cooperative Cooperative         @relation(fields: [cooperativeId], references: [id], onDelete: Cascade)
+  member      Member              @relation(fields: [memberId], references: [id], onDelete: Restrict)
+  product     FixedDepositProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([cooperativeId, memberId])
+  @@index([cooperativeId, status])
+  @@index([maturityDate])
+  @@map("fixed_deposit_accounts")
 }
 
 // Shares Module

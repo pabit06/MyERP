@@ -9,6 +9,8 @@ import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import { env, logger } from '../config/index.js';
 
+type Notification = Prisma.NotificationGetPayload<Record<string, never>>;
+
 export interface NotificationData {
   cooperativeId: string;
   userId?: string;
@@ -18,7 +20,7 @@ export interface NotificationData {
   channel: 'SMS' | 'EMAIL' | 'IN_APP' | 'PUSH';
   phone?: string;
   email?: string;
-  metadata?: Record<string, any>; // Additional data (e.g., meeting ID, transaction ID)
+  metadata?: Record<string, unknown>; // Additional data (e.g., meeting ID, transaction ID)
 }
 
 export interface NotificationQueryOptions {
@@ -38,7 +40,7 @@ export interface NotificationQueryOptions {
 async function createNotificationRecord(
   data: NotificationData,
   status: NotificationStatus = NotificationStatus.PENDING
-): Promise<any> {
+): Promise<Notification> {
   return await prisma.notification.create({
     data: {
       cooperativeId: data.cooperativeId,
@@ -111,7 +113,7 @@ function getSMSClient() {
  * Send SMS notification
  * Supports Twilio and console logging (for development)
  */
-export async function sendSMS(data: NotificationData): Promise<any> {
+export async function sendSMS(data: NotificationData): Promise<Notification> {
   if (!data.phone) {
     throw new Error('Phone number is required for SMS notification');
   }
@@ -134,9 +136,13 @@ export async function sendSMS(data: NotificationData): Promise<any> {
       await updateNotificationStatus(notification.id, NotificationStatus.SENT);
 
       // Fetch updated notification to return current status
-      return await prisma.notification.findUnique({
+      const updated = await prisma.notification.findUnique({
         where: { id: notification.id },
       });
+      if (!updated) {
+        throw new Error('Notification not found after update');
+      }
+      return updated;
     } else {
       // Console logging for development/local testing
       // Keep as PENDING since notification was not actually sent to external service
@@ -148,13 +154,10 @@ export async function sendSMS(data: NotificationData): Promise<any> {
       // Return current notification (still PENDING)
       return notification;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send SMS';
     console.error(`[SMS Notification] Failed to send SMS:`, error);
-    await updateNotificationStatus(
-      notification.id,
-      NotificationStatus.FAILED,
-      error.message || 'Failed to send SMS'
-    );
+    await updateNotificationStatus(notification.id, NotificationStatus.FAILED, errorMessage);
     throw error;
   }
 }
@@ -188,7 +191,7 @@ function getEmailTransporter() {
  * Send Email notification
  * Supports SMTP via Nodemailer (works with Gmail, SendGrid, AWS SES, etc.)
  */
-export async function sendEmail(data: NotificationData): Promise<any> {
+export async function sendEmail(data: NotificationData): Promise<Notification> {
   if (!data.email) {
     throw new Error('Email address is required for email notification');
   }
@@ -214,9 +217,13 @@ export async function sendEmail(data: NotificationData): Promise<any> {
       await updateNotificationStatus(notification.id, NotificationStatus.SENT);
 
       // Fetch updated notification to return current status
-      return await prisma.notification.findUnique({
+      const updated = await prisma.notification.findUnique({
         where: { id: notification.id },
       });
+      if (!updated) {
+        throw new Error('Notification not found after update');
+      }
+      return updated;
     } else {
       // Console logging for development/local testing
       // Keep as PENDING since notification was not actually sent to external service
@@ -230,13 +237,10 @@ export async function sendEmail(data: NotificationData): Promise<any> {
       // Return current notification (still PENDING)
       return notification;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to send email';
     console.error(`[Email Notification] Failed to send email:`, error);
-    await updateNotificationStatus(
-      notification.id,
-      NotificationStatus.FAILED,
-      error.message || 'Failed to send email'
-    );
+    await updateNotificationStatus(notification.id, NotificationStatus.FAILED, errorMessage);
     throw error;
   }
 }
@@ -244,7 +248,7 @@ export async function sendEmail(data: NotificationData): Promise<any> {
 /**
  * Create in-app notification record
  */
-export async function createInAppNotification(data: NotificationData): Promise<any> {
+export async function createInAppNotification(data: NotificationData): Promise<Notification> {
   if (!data.userId) {
     throw new Error('User ID is required for in-app notification');
   }
@@ -256,9 +260,13 @@ export async function createInAppNotification(data: NotificationData): Promise<a
   await updateNotificationStatus(notification.id, NotificationStatus.SENT);
 
   // Fetch updated notification to return current status
-  return await prisma.notification.findUnique({
+  const updated = await prisma.notification.findUnique({
     where: { id: notification.id },
   });
+  if (!updated) {
+    throw new Error('Notification not found after update');
+  }
+  return updated;
 }
 
 /**
@@ -276,6 +284,7 @@ async function getFCMAdmin() {
 
   try {
     // Dynamic import to avoid requiring firebase-admin if not configured
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const admin = (await import('firebase-admin').catch(() => null)) as any;
     if (!admin) {
       logger.warn('firebase-admin not available, push notifications disabled');
@@ -288,10 +297,10 @@ async function getFCMAdmin() {
         ? admin.credential.cert(fcmPrivateKeyPath)
         : fcmPrivateKey && fcmClientEmail
           ? admin.credential.cert({
-            projectId: fcmProjectId,
-            privateKey: fcmPrivateKey.replace(/\\n/g, '\n'),
-            clientEmail: fcmClientEmail,
-          })
+              projectId: fcmProjectId,
+              privateKey: fcmPrivateKey.replace(/\\n/g, '\n'),
+              clientEmail: fcmClientEmail,
+            })
           : null;
 
       if (credential) {
@@ -306,7 +315,7 @@ async function getFCMAdmin() {
     }
 
     return admin;
-  } catch (error) {
+  } catch {
     console.warn('[Push Notification] Firebase Admin not installed. Run: pnpm add firebase-admin');
     return null;
   }
@@ -317,7 +326,7 @@ async function getFCMAdmin() {
  * Supports FCM (Firebase Cloud Messaging) and basic storage
  * Can be extended with APNs for iOS
  */
-async function sendPushNotification(data: NotificationData): Promise<any> {
+async function sendPushNotification(data: NotificationData): Promise<Notification> {
   if (!data.userId) {
     throw new Error('User ID is required for push notification');
   }
@@ -390,13 +399,11 @@ async function sendPushNotification(data: NotificationData): Promise<any> {
 
     // For now, keep as PENDING since we're not actually sending
     return notification;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to send push notification';
     console.error(`[Push Notification] Failed to send push:`, error);
-    await updateNotificationStatus(
-      notification.id,
-      NotificationStatus.FAILED,
-      error.message || 'Failed to send push notification'
-    );
+    await updateNotificationStatus(notification.id, NotificationStatus.FAILED, errorMessage);
     throw error;
   }
 }
@@ -405,7 +412,7 @@ async function sendPushNotification(data: NotificationData): Promise<any> {
  * Send notification via specified channel(s)
  * Returns the notification object for all channels
  */
-export async function sendNotification(data: NotificationData): Promise<any> {
+export async function sendNotification(data: NotificationData): Promise<Notification> {
   switch (data.channel) {
     case 'SMS':
       return await sendSMS(data);
@@ -424,8 +431,12 @@ export async function sendNotification(data: NotificationData): Promise<any> {
 /**
  * Get notifications for a user or cooperative
  */
+type NotificationWithUser = Prisma.NotificationGetPayload<{
+  include: { user: { select: { id: true; firstName: true; lastName: true; email: true } } };
+}>;
+
 export async function getNotifications(options: NotificationQueryOptions): Promise<{
-  notifications: any[];
+  notifications: NotificationWithUser[];
   total: number;
 }> {
   const where: Prisma.NotificationWhereInput = {
@@ -616,17 +627,22 @@ export async function deleteNotification(
  * Send bulk notification to multiple recipients
  * Returns summary of successful and failed sends
  */
+interface BulkNotificationError {
+  recipient: string;
+  error: string;
+}
+
 export async function sendBulkNotification(
   cooperativeId: string,
   channel: 'SMS' | 'EMAIL' | 'IN_APP' | 'PUSH',
   recipients: Array<{ userId?: string; phone?: string; email?: string; name?: string }>,
   title: string,
   message: string,
-  metadata?: Record<string, any>
-): Promise<{ success: number; failed: number; errors: any[] }> {
+  metadata?: Record<string, unknown>
+): Promise<{ success: number; failed: number; errors: BulkNotificationError[] }> {
   let successCount = 0;
   let failedCount = 0;
-  const errors: any[] = [];
+  const errors: BulkNotificationError[] = [];
 
   // Process in chunks to avoid overwhelming providers
   const CHUNK_SIZE = 50;
@@ -653,11 +669,12 @@ export async function sendBulkNotification(
             metadata,
           });
           successCount++;
-        } catch (error: any) {
+        } catch (error: unknown) {
           failedCount++;
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           errors.push({
-            recipient: recipient.userId || recipient.phone || recipient.email,
-            error: error.message,
+            recipient: recipient.userId || recipient.phone || recipient.email || 'unknown',
+            error: errorMessage,
           });
         }
       })

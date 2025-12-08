@@ -168,8 +168,6 @@ router.delete(
   })
 );
 
-
-
 /**
  * POST /api/notifications/bulk
  * Send bulk notifications to members
@@ -205,21 +203,21 @@ router.post(
       });
 
       // Map members to recipient format
-      recipients = members.map(m => ({
+      recipients = members.map((m) => ({
         // userId: undefined, // Members don't have direct User accounts yet
         phone: m.phone || undefined,
         email: m.email || undefined,
-        name: m.fullName || undefined
+        name: m.fullName || undefined,
       }));
     } else if (target === 'SPECIFIC_MEMBERS' && memberIds && memberIds.length > 0) {
       const members = await prisma.member.findMany({
         where: { cooperativeId, id: { in: memberIds } },
         select: { id: true, phone: true, email: true, fullName: true },
       });
-      recipients = members.map(m => ({
+      recipients = members.map((m) => ({
         phone: m.phone || undefined,
         email: m.email || undefined,
-        name: m.fullName || undefined
+        name: m.fullName || undefined,
       }));
     } else {
       res.status(400).json({ error: 'Invalid target or missing memberIds' });
@@ -232,7 +230,13 @@ router.post(
     }
 
     // 2. Send Bulk
-    const result = await sendBulkNotification(cooperativeId, channel as any, recipients, title, message);
+    const result = await sendBulkNotification(
+      cooperativeId,
+      channel as 'SMS' | 'EMAIL' | 'IN_APP' | 'PUSH',
+      recipients,
+      title,
+      message
+    );
 
     res.json({
       message: 'Bulk notification process completed',

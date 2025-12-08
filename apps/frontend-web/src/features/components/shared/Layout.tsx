@@ -15,7 +15,9 @@ const FULL_WIDTH_PAGES = ['/login', '/register'];
 export default function Layout({ children }: LayoutProps) {
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
-  const isFullWidth = FULL_WIDTH_PAGES.includes(pathname || '') || !isAuthenticated;
+  const isMemberPortal = pathname?.startsWith('/member');
+  const isFullWidth =
+    FULL_WIDTH_PAGES.includes(pathname || '') || !isAuthenticated || isMemberPortal;
 
   if (isFullWidth) {
     return <>{children}</>;
