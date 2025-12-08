@@ -30,7 +30,7 @@ export async function setupAmlCronJobs() {
     });
 
     console.log('✅ AML cron jobs scheduled (daily at 2 AM)');
-  } catch (error) {
+  } catch {
     console.warn('⚠️  node-cron not installed. Skipping cron job setup.');
     console.warn('   To enable automated AML tasks, install: pnpm add node-cron @types/node-cron');
   }

@@ -13,7 +13,7 @@ export function registerSavingsHooks() {
   hooks.register(
     'SavingProduct',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
     },
     50,
@@ -50,7 +50,7 @@ export function registerSavingsHooks() {
   hooks.register(
     'SavingAccount',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
     },
     50,

@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { getCurrentNepaliFiscalYear } from '../lib/nepali-fiscal-year.js';
 
 export class DashboardController {
   /**

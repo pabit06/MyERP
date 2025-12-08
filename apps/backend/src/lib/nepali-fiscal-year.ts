@@ -10,9 +10,6 @@
 
 import { getBaisakh1Date, getBsMonthDates, adToBs } from './nepali-date.js';
 
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
-import NepaliDate from 'nepali-date-converter';
-
 export interface FiscalYearRange {
   bsYear: number; // The starting BS year (e.g., 2081 for FY 2081/82)
   adYearStart: number; // Starting AD year
@@ -76,9 +73,8 @@ export function getCurrentNepaliFiscalYear(): FiscalYearRange {
   const now = new Date();
   // Get current BS date string and parse it
   const currentBsDateString = adToBs(now);
-  const [currentBsYearStr, currentBsMonthStr] = currentBsDateString.split('-');
+  const [currentBsYearStr] = currentBsDateString.split('-');
   const currentBsYear = parseInt(currentBsYearStr);
-  const currentBsMonth = parseInt(currentBsMonthStr);
 
   let fiscalYearBsYear: number;
   let fiscalYearStart: Date;

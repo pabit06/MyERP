@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { postShareCapital, postShareReturn, getCurrentSharePrice } from './accounting.js';
 import { amlEvents, AML_EVENTS } from '../lib/events.js';

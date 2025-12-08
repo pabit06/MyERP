@@ -1,4 +1,3 @@
-import { Prisma } from '@prisma/client';
 import { HookContext } from '../controllers/BaseController.js';
 
 /**
@@ -57,7 +56,7 @@ class HookRegistry {
     priority: number = 100,
     name?: string
   ): void {
-    const key = `${model}:${hookType}`;
+    const _key = `${model}:${hookType}`;
     if (!this.hooks.has(model)) {
       this.hooks.set(model, new Map());
     }

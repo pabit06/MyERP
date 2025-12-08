@@ -5,8 +5,8 @@ import { prisma } from '../lib/prisma.js';
  */
 export async function getUpcomingLiabilities(
   cooperativeId: string,
-  nextMonthStart: Date,
-  nextMonthEnd: Date
+  _nextMonthStart: Date,
+  _nextMonthEnd: Date
 ): Promise<{
   taxes: number;
   tds: number;
@@ -94,7 +94,7 @@ export async function getUpcomingLiabilities(
  */
 export async function getTop20Borrowers(
   cooperativeId: string,
-  asOfDate: Date = new Date()
+  _asOfDate: Date = new Date()
 ): Promise<
   Array<{
     memberId: string;
@@ -165,7 +165,7 @@ export async function getTop20Borrowers(
  */
 export async function calculateGapAnalysis(
   cooperativeId: string,
-  horizonMonths: number = 12
+  _horizonMonths: number = 12
 ): Promise<{
   gaps: Array<{
     period: string;

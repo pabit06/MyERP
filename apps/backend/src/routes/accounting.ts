@@ -552,8 +552,7 @@ router.get(
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { page, limit, sortBy, sortOrder, startDate, endDate, minAmount, maxAmount, search } =
-      req.validatedQuery!;
+    const { page, limit, sortBy, sortOrder, startDate, endDate, search } = req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId,

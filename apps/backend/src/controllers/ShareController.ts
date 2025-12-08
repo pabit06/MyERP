@@ -1,6 +1,5 @@
 import { BaseController } from './BaseController.js';
 import { ShareService } from '../services/share.service.js';
-import { prisma } from '../lib/prisma.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 import { getCurrentSharePrice } from '../services/accounting.js';
 

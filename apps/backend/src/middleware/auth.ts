@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyToken, JWTPayload } from '../lib/auth.js';
+import { verifyToken } from '../lib/auth.js';
 import { prisma } from '../lib/prisma.js';
 
 // Extend Express Request type to include user (already declared in types/express.d.ts)
@@ -49,7 +49,7 @@ export const authenticate = async (
     req.currentCooperativeId = user.cooperativeId || null;
 
     next();
-  } catch (error) {
+  } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
 };

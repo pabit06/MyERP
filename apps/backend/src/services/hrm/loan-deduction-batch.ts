@@ -6,11 +6,6 @@
 
 import { prisma } from '../../lib/prisma.js';
 
-interface EmployeeLoanDeduction {
-  employeeId: string;
-  deduction: number;
-}
-
 /**
  * Get loan deductions for multiple employees in a single batch query
  *
@@ -23,8 +18,8 @@ interface EmployeeLoanDeduction {
 export async function getBatchEmployeeLoanDeductions(
   employeeIds: string[],
   cooperativeId: string,
-  fiscalYear: string,
-  monthBs: number
+  _fiscalYear: string,
+  _monthBs: number
 ): Promise<Map<string, number>> {
   const result = new Map<string, number>();
 

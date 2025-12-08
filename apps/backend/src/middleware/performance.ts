@@ -168,5 +168,5 @@ export function getSlowestRoutes(
   return routes
     .sort((a, b) => b.averageTime - a.averageTime)
     .slice(0, limit)
-    .map(({ errorRate, ...rest }) => rest);
+    .map(({ errorRate: _errorRate, ...rest }) => rest);
 }

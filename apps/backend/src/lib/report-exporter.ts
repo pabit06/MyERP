@@ -1,6 +1,6 @@
 import PDFDocument from 'pdfkit';
 import { Response } from 'express';
-import { ReportResult, ReportConfig } from './report-builder.js';
+import { ReportResult } from './report-builder.js';
 
 export class ReportExporter {
   /**

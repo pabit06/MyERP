@@ -13,7 +13,7 @@ export function registerLoansHooks() {
   hooks.register(
     'LoanProduct',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
     },
     50,
@@ -50,7 +50,7 @@ export function registerLoansHooks() {
   hooks.register(
     'LoanApplication',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
     },
     50,
@@ -89,7 +89,7 @@ export function registerLoansHooks() {
   hooks.register(
     'LoanApplication',
     'onApprove',
-    async (result: any, context: HookContext) => {
+    async (_result: any, _context: HookContext) => {
       // Post-approval logic
       // For example:
       // - Create accounting journal entry for loan disbursement

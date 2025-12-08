@@ -106,7 +106,7 @@ export function calculateFestivalBonus(
   // Parse fiscal year
   const [startYear] = fiscalYear.split('/');
   const fyStartYear = parseInt(startYear);
-  const fyStartDate = new Date(fyStartYear - 57, 6, 16); // Approximate FY start
+  const _fyStartDate = new Date(fyStartYear - 57, 6, 16); // Approximate FY start
 
   // Calculate months of service up to bonus month
   const bonusDate = new Date(fyStartYear - 57, 8 + (bonusMonth - 4), 1); // Approximate

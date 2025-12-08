@@ -35,7 +35,7 @@ function formatDate(date: Date, options: EODReportOptions = {}): string {
     try {
       const bsDate = adToBs(date);
       return formatBsDate(bsDate);
-    } catch (error) {
+    } catch {
       return adDate; // Fallback to AD if conversion fails
     }
   } else {
@@ -44,7 +44,7 @@ function formatDate(date: Date, options: EODReportOptions = {}): string {
       const bsDate = adToBs(date);
       const bsFormatted = formatBsDate(bsDate);
       return `${adDate} (${bsFormatted})`;
-    } catch (error) {
+    } catch {
       return adDate;
     }
   }

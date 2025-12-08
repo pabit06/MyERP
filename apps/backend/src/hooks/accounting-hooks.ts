@@ -19,7 +19,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'ChartOfAccounts',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
       // The controller already handles most validation, but hooks can add domain-specific rules
     },
@@ -34,7 +34,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'ChartOfAccounts',
     'beforeCreate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Pre-creation logic can go here
     },
     100,
@@ -138,7 +138,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'ChartOfAccounts',
     'beforeDelete',
-    async (account: any, context: HookContext) => {
+    async (_account: any, _context: HookContext) => {
       // Additional validation can be added here
       // Controller already validates no children and no transactions
     },
@@ -184,7 +184,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'JournalEntry',
     'onValidate',
-    async (data: any, context: HookContext) => {
+    async (_data: any, _context: HookContext) => {
       // Additional validation can be added here
       // Controller already validates double-entry
     },
@@ -313,7 +313,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'JournalEntry',
     'onSubmit',
-    async (result: any, context: HookContext) => {
+    async (_result: any, _context: HookContext) => {
       // Post-submission logic
       // For example:
       // - Send notifications
@@ -331,7 +331,7 @@ export function registerAccountingHooks() {
   hooks.register(
     'JournalEntry',
     'onCancel',
-    async (journalEntry: any, context: HookContext) => {
+    async (_journalEntry: any, _context: HookContext) => {
       // Future: Implement cancellation logic
       // This would create reversing entries
       throw new Error('Journal entry cancellation not yet implemented');

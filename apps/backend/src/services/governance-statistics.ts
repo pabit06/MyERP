@@ -91,9 +91,9 @@ export async function getCommitteeMeetingStats(
  * For now, returning placeholder
  */
 export async function getMemberComplaints(
-  cooperativeId: string,
-  monthStart: Date,
-  monthEnd: Date
+  _cooperativeId: string,
+  _monthStart: Date,
+  _monthEnd: Date
 ): Promise<{
   totalComplaints: number;
   resolved: number;
@@ -123,9 +123,9 @@ export async function getMemberComplaints(
  * For now, returning placeholder
  */
 export async function getRegulatoryCirculars(
-  cooperativeId: string,
-  monthStart: Date,
-  monthEnd: Date
+  _cooperativeId: string,
+  _monthStart: Date,
+  _monthEnd: Date
 ): Promise<{
   totalCirculars: number;
   circulars: Array<{

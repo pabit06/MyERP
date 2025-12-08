@@ -30,7 +30,7 @@ import {
   getRegulatoryCirculars,
   getPolicyChanges,
 } from './governance-statistics.js';
-import { getBsMonthDates, getEnglishMonthName } from '../lib/nepali-date.js';
+import { getBsMonthDates } from '../lib/nepali-date.js';
 
 /**
  * Get Nepali month names in order

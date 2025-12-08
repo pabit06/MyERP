@@ -234,7 +234,7 @@ router.put(
           );
         }
       }
-    } catch (accountingError) {
+    } catch {
       // Don't fail the request if accounting posting fails
       // This is intentionally caught and ignored - accounting errors are non-critical here
     }

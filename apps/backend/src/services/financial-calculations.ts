@@ -1,5 +1,4 @@
 import { prisma } from '../lib/prisma.js';
-import { Prisma } from '@prisma/client';
 
 /**
  * Calculate Balance Sheet from Chart of Accounts/Ledger
@@ -304,7 +303,7 @@ export async function calculatePEARLSRatios(
  */
 export async function calculateSpreadRate(
   cooperativeId: string,
-  asOfDate: Date = new Date()
+  _asOfDate: Date = new Date()
 ): Promise<{
   avgSavingsRate: number;
   avgLoanRate: number;
@@ -360,9 +359,9 @@ export async function calculateSpreadRate(
  * Note: Budget table may not exist yet - this is a placeholder
  */
 export async function calculateBudgetVariance(
-  cooperativeId: string,
-  fiscalYear: string,
-  month: string
+  _cooperativeId: string,
+  _fiscalYear: string,
+  _month: string
 ): Promise<{
   budgetedExpenses: number;
   actualExpenses: number;

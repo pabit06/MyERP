@@ -1,4 +1,4 @@
-import { BaseController, HookContext } from './BaseController.js';
+import { BaseController } from './BaseController.js';
 import { hooks } from '../lib/hooks.js';
 import { amlEvents, AML_EVENTS } from '../lib/events.js';
 import { SavingsService } from '../services/savings.service.js';

@@ -3,7 +3,6 @@
  * Provides conversion between Nepali (Bikram Sambat) and Gregorian (AD) dates
  */
 
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
 
 /**
@@ -15,7 +14,6 @@ export function adToBs(adDate: Date | string): string {
     if (isNaN(date.getTime())) {
       throw new Error('Invalid date');
     }
-    // @ts-ignore
     const nepaliDate = new NepaliDate(date);
     const year = nepaliDate.getYear();
     const month = String(nepaliDate.getMonth() + 1).padStart(2, '0');
@@ -36,9 +34,7 @@ export function bsToAd(bsDate: string): Date {
     if (!year || !month || !day) {
       throw new Error('Invalid BS date format. Expected YYYY-MM-DD');
     }
-    // @ts-ignore - NepaliDate constructor expects month to be 0-indexed
     const nepaliDate = new NepaliDate(year, month - 1, day);
-    // @ts-ignore
     return nepaliDate.toJsDate();
   } catch (error) {
     console.error('Error converting BS to AD:', error);
@@ -134,19 +130,15 @@ export function getBsMonthDates(
 } {
   try {
     // First day of the month
-    // @ts-ignore
     const startNepaliDate = new NepaliDate(bsYear, bsMonth - 1, 1);
-    // @ts-ignore
     const monthStart = startNepaliDate.toJsDate();
 
     // Get the number of days in the month
-    // @ts-ignore
+    // @ts-expect-error - getDaysInMonth method exists but not in TypeScript types
     const daysInMonth = startNepaliDate.getDaysInMonth();
 
     // Last day of the month
-    // @ts-ignore
     const endNepaliDate = new NepaliDate(bsYear, bsMonth - 1, daysInMonth);
-    // @ts-ignore
     const monthEnd = endNepaliDate.toJsDate();
     monthEnd.setHours(23, 59, 59, 999);
 
@@ -174,9 +166,7 @@ export function parseBsDate(bsDate: string): { year: number; month: number; day:
  */
 export function getBaisakh1Date(bsYear: number): Date {
   try {
-    // @ts-ignore - Baisakh is month 0 (0-indexed), day 1
     const baisakh1 = new NepaliDate(bsYear, 0, 1);
-    // @ts-ignore
     return baisakh1.toJsDate();
   } catch (error) {
     console.error('Error getting Baisakh 1 date:', error);
@@ -190,12 +180,9 @@ export function getBaisakh1Date(bsYear: number): Date {
  */
 export function getCurrentNepaliFiscalYear(): { bsYear: number; fiscalYearStart: Date } {
   const now = new Date();
-  // @ts-ignore
   const currentBsDate = new NepaliDate(now);
-  // @ts-ignore
   const currentBsYear = currentBsDate.getYear();
-  // @ts-ignore
-  const currentBsMonth = currentBsDate.getMonth() + 1; // Convert to 1-indexed
+  const _currentBsMonth = currentBsDate.getMonth() + 1; // Convert to 1-indexed
 
   let fiscalYearBsYear: number;
   let fiscalYearStart: Date;
