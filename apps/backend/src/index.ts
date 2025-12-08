@@ -26,6 +26,7 @@ import notificationsRoutes from './routes/notifications.js';
 import systemAdminRoutes from './routes/system-admin.js';
 import healthRoutes from './routes/health.js';
 import swaggerRoutes from './routes/swagger.js';
+import dashboardRoutes from './routes/dashboard.js';
 import { initializeAmlMonitoring } from './services/aml/monitor.js';
 import { registerAccountingHooks } from './hooks/accounting-hooks.js';
 import { registerLoansHooks } from './hooks/loans-hooks.js';
@@ -115,6 +116,7 @@ app.use(`${API_PREFIX}/cbs/day-book`, apiLimiter, dayBookRoutes);
 app.use(`${API_PREFIX}/reports`, apiLimiter, reportsRoutes);
 app.use(`${API_PREFIX}/workflow`, apiLimiter, workflowRoutes);
 app.use(`${API_PREFIX}/notifications`, apiLimiter, notificationsRoutes);
+app.use(`${API_PREFIX}/dashboard`, apiLimiter, dashboardRoutes);
 app.use(`${API_PREFIX}/system-admin`, apiLimiter, systemAdminRoutes);
 
 // Sentry error handler is handled automatically via expressIntegration() in sentry.ts

@@ -11,7 +11,7 @@ import {
   NotificationQueryOptions,
 } from '../lib/notifications.js';
 import { NotificationChannel, NotificationStatus } from '@prisma/client';
-import { validateParams, validateQuery } from '../middleware/validate.js';
+import { validate, validateParams, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { idSchema, paginationSchema } from '../validators/common.js';
 import { createPaginatedResponse } from '../lib/pagination.js';
@@ -165,6 +165,79 @@ router.delete(
     await deleteNotification(id, userId, cooperativeId);
 
     res.json({ message: 'Notification deleted' });
+  })
+);
+
+
+
+/**
+ * POST /api/notifications/bulk
+ * Send bulk notifications to members
+ */
+router.post(
+  '/bulk',
+  validate(
+    z.object({
+      channel: z.enum(['SMS', 'EMAIL', 'IN_APP', 'PUSH']),
+      target: z.enum(['ALL_MEMBERS', 'SPECIFIC_MEMBERS']),
+      memberIds: z.array(z.string()).optional(), // Required if target is SPECIFIC_MEMBERS
+      title: z.string().min(1),
+      message: z.string().min(1),
+    })
+  ),
+  asyncHandler(async (req: Request, res: Response) => {
+    const cooperativeId = req.user!.tenantId;
+    if (!cooperativeId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { channel, target, memberIds, title, message } = req.validated!;
+    const { prisma } = await import('../lib/prisma.js'); // Import prisma if not available in scope or use req.prisma if available
+    const { sendBulkNotification } = await import('../lib/notifications.js');
+
+    // 1. Fetch Recipients
+    let recipients: Array<{ userId?: string; phone?: string; email?: string; name?: string }> = [];
+
+    if (target === 'ALL_MEMBERS') {
+      const members = await prisma.member.findMany({
+        where: { cooperativeId, isActive: true },
+        select: { id: true, phone: true, email: true, fullName: true },
+      });
+
+      // Map members to recipient format
+      recipients = members.map(m => ({
+        // userId: undefined, // Members don't have direct User accounts yet
+        phone: m.phone || undefined,
+        email: m.email || undefined,
+        name: m.fullName || undefined
+      }));
+    } else if (target === 'SPECIFIC_MEMBERS' && memberIds && memberIds.length > 0) {
+      const members = await prisma.member.findMany({
+        where: { cooperativeId, id: { in: memberIds } },
+        select: { id: true, phone: true, email: true, fullName: true },
+      });
+      recipients = members.map(m => ({
+        phone: m.phone || undefined,
+        email: m.email || undefined,
+        name: m.fullName || undefined
+      }));
+    } else {
+      res.status(400).json({ error: 'Invalid target or missing memberIds' });
+      return;
+    }
+
+    if (recipients.length === 0) {
+      res.status(400).json({ error: 'No valid recipients found' });
+      return;
+    }
+
+    // 2. Send Bulk
+    const result = await sendBulkNotification(cooperativeId, channel as any, recipients, title, message);
+
+    res.json({
+      message: 'Bulk notification process completed',
+      details: result,
+    });
   })
 );
 

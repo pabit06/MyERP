@@ -288,10 +288,10 @@ async function getFCMAdmin() {
         ? admin.credential.cert(fcmPrivateKeyPath)
         : fcmPrivateKey && fcmClientEmail
           ? admin.credential.cert({
-              projectId: fcmProjectId,
-              privateKey: fcmPrivateKey.replace(/\\n/g, '\n'),
-              clientEmail: fcmClientEmail,
-            })
+            projectId: fcmProjectId,
+            privateKey: fcmPrivateKey.replace(/\\n/g, '\n'),
+            clientEmail: fcmClientEmail,
+          })
           : null;
 
       if (credential) {
@@ -610,6 +610,61 @@ export async function deleteNotification(
   await prisma.notification.delete({
     where: { id: notificationId },
   });
+}
+
+/**
+ * Send bulk notification to multiple recipients
+ * Returns summary of successful and failed sends
+ */
+export async function sendBulkNotification(
+  cooperativeId: string,
+  channel: 'SMS' | 'EMAIL' | 'IN_APP' | 'PUSH',
+  recipients: Array<{ userId?: string; phone?: string; email?: string; name?: string }>,
+  title: string,
+  message: string,
+  metadata?: Record<string, any>
+): Promise<{ success: number; failed: number; errors: any[] }> {
+  let successCount = 0;
+  let failedCount = 0;
+  const errors: any[] = [];
+
+  // Process in chunks to avoid overwhelming providers
+  const CHUNK_SIZE = 50;
+  for (let i = 0; i < recipients.length; i += CHUNK_SIZE) {
+    const chunk = recipients.slice(i, i + CHUNK_SIZE);
+
+    await Promise.all(
+      chunk.map(async (recipient) => {
+        try {
+          // Skip if missing required contact info for channel
+          if (channel === 'SMS' && !recipient.phone) return;
+          if (channel === 'EMAIL' && !recipient.email) return;
+          if ((channel === 'IN_APP' || channel === 'PUSH') && !recipient.userId) return;
+
+          await sendNotification({
+            cooperativeId,
+            userId: recipient.userId,
+            phone: recipient.phone,
+            email: recipient.email,
+            type: 'bulk_announcement',
+            title,
+            message, // TODO: Template substitution if needed (e.g. Hello {name})
+            channel,
+            metadata,
+          });
+          successCount++;
+        } catch (error: any) {
+          failedCount++;
+          errors.push({
+            recipient: recipient.userId || recipient.phone || recipient.email,
+            error: error.message,
+          });
+        }
+      })
+    );
+  }
+
+  return { success: successCount, failed: failedCount, errors };
 }
 
 /**

@@ -312,4 +312,50 @@ router.get(
   })
 );
 
+/**
+ * POST /api/reports/configs/:name/export
+ * Export a predefined report configuration to CSV or PDF
+ */
+router.post(
+  '/configs/:name/export',
+  validateAll({
+    params: z.object({ name: z.string().min(1) }),
+    body: z.object({
+      filters: z.array(z.any()).optional(),
+    }),
+    query: z.object({
+      format: z.enum(['csv', 'pdf']).default('csv'),
+    }),
+  }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const { name } = req.validatedParams!;
+    const { filters } = req.validated!;
+    const { format } = req.validatedQuery!;
+
+    // Lazy load exporter
+    const { ReportExporter } = await import('../lib/report-exporter.js');
+
+    const configKey = name as keyof typeof ReportConfigs;
+
+    if (!ReportConfigs[configKey]) {
+      res.status(404).json({ error: 'Report configuration not found' });
+      return;
+    }
+
+    const customFilters: ReportFilter[] = filters || [];
+    const result = await ReportBuilder.build(
+      tenantId || req.currentCooperativeId!,
+      ReportConfigs[configKey],
+      customFilters
+    );
+
+    if (format === 'csv') {
+      ReportExporter.toCSV(result, res);
+    } else {
+      ReportExporter.toPDF(result, res);
+    }
+  })
+);
+
 export default router;

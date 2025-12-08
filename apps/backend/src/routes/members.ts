@@ -17,7 +17,7 @@ import { NotFoundError, ValidationError, BadRequestError } from '../lib/errors.j
 import { paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { validate, validateAll, validateQuery, validateParams } from '../middleware/validate.js';
+import { validate, validateAll, validateQuery } from '../middleware/validate.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 import { sanitizeText, sanitizeEmail } from '../lib/sanitize.js';
@@ -733,12 +733,33 @@ router.get(
  *   - isActive: Filter by active status (true/false)
  *   - search: Search across member fields
  */
+/**
+ * GET /api/members
+ * Get all members (with optional filters and pagination)
+ * Query parameters:
+ *   - page: Page number (default: 1)
+ *   - limit: Items per page (default: 20, max: 100)
+ *   - isActive: Filter by active status (true/false)
+ *   - search: Search across member fields
+ *   - workflowStatus: Filter by workflow status
+ *   - riskCategory: Filter by risk category
+ *   - province: Filter by permanent province
+ *   - district: Filter by permanent district (municipality/city for fuzzy match)
+ *   - joinedStart: Filter by join date (start)
+ *   - joinedEnd: Filter by join date (end)
+ */
 router.get(
   '/',
   validateQuery(
     paginationWithSearchSchema.extend({
       isActive: z.string().optional(),
       hasMemberNumber: z.string().optional(),
+      workflowStatus: z.string().optional(),
+      riskCategory: z.string().optional(),
+      province: z.string().optional(),
+      district: z.string().optional(),
+      joinedStart: z.string().optional(), // ISO Date string
+      joinedEnd: z.string().optional(), // ISO Date string
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
@@ -747,8 +768,21 @@ router.get(
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { isActive, search, page, limit, hasMemberNumber, sortBy, sortOrder } =
-      req.validatedQuery!;
+    const {
+      isActive,
+      search,
+      page,
+      limit,
+      hasMemberNumber,
+      sortBy,
+      sortOrder,
+      workflowStatus,
+      riskCategory,
+      province,
+      district,
+      joinedStart,
+      joinedEnd,
+    } = req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId!,
@@ -760,6 +794,33 @@ router.get(
 
     if (hasMemberNumber === 'true') {
       where.memberNumber = { not: null };
+    }
+
+    if (workflowStatus) {
+      where.workflowStatus = workflowStatus;
+    }
+
+    if (riskCategory) {
+      where.riskCategory = riskCategory;
+    }
+
+    // Date range filter
+    if (joinedStart || joinedEnd) {
+      where.createdAt = {};
+      if (joinedStart) where.createdAt.gte = new Date(joinedStart);
+      if (joinedEnd) where.createdAt.lte = new Date(joinedEnd);
+    }
+
+    // Location filters (on MemberKYC)
+    if (province || district) {
+      where.kyc = {};
+      if (province) {
+        where.kyc.permanentProvince = province;
+      }
+      if (district) {
+        // Assuming district is part of municipality or we match loosely
+        where.kyc.permanentMunicipality = { contains: district, mode: 'insensitive' };
+      }
     }
 
     if (search) {
@@ -781,6 +842,15 @@ router.get(
           applyPagination(
             {
               where,
+              include: {
+                kyc: {
+                  select: {
+                    permanentProvince: true,
+                    permanentMunicipality: true,
+                    permanentWard: true,
+                  },
+                },
+              },
             },
             { page, limit, sortOrder: sortOrder || 'desc' }
           ),

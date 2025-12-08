@@ -1046,6 +1046,148 @@ export class AccountingController extends BaseController {
   async getCurrentSharePrice(cooperativeId: string, defaultPrice: number = 100): Promise<number> {
     return getCurrentSharePriceUtil(cooperativeId, defaultPrice);
   }
+
+  /**
+   * Reverse Journal Entry
+   */
+  async reverseJournalEntry(
+    cooperativeId: string,
+    journalEntryId: string,
+    userId?: string,
+    remarks?: string
+  ) {
+    await this.validateTenant(cooperativeId);
+
+    return this.handleTransaction(async (tx) => {
+      // 1. Get original entry with ledgers
+      const originalEntry = await tx.journalEntry.findUnique({
+        where: { id: journalEntryId, cooperativeId },
+        include: {
+          ledgers: true,
+        },
+      });
+
+      if (!originalEntry) {
+        throw new Error('Journal entry not found');
+      }
+
+      // Check if already reversed (naive check via description or if we had metadata)
+      // Ideally we should have a 'relatedEntryId' but for now we proceed.
+      // We can check if there's another entry that says "Reversal of {entryNumber}"
+      const potentialReversal = await tx.journalEntry.findFirst({
+        where: {
+          cooperativeId,
+          description: { contains: `Reversal of ${originalEntry.entryNumber}` },
+        },
+      });
+
+      if (potentialReversal) {
+        throw new Error(`Journal entry ${originalEntry.entryNumber} appears to be already reversed by ${potentialReversal.entryNumber}`);
+      }
+
+      // 2. Prepare reversal entries (Swap Debit/Credit)
+      const reversalEntries: Array<{ accountId: string; debit: number; credit: number }> = originalEntry.ledgers.map((ledger: any) => ({
+        accountId: ledger.accountId,
+        debit: Number(ledger.credit), // Swap
+        credit: Number(ledger.debit), // Swap
+      }));
+
+      // 3. Create new Journal Entry
+      const description = `Reversal of ${originalEntry.entryNumber}: ${remarks || originalEntry.description}`;
+
+      // We reuse createJournalEntry logic but contextually it's a reversal
+      // Since createJournalEntry is on 'this', we need to call it. 
+      // However, we are inside a transaction `tx`. handleTransaction wraps everything.
+      // createJournalEntry also calls handleTransaction. We cannot nest handleTransaction if it doesn't support it.
+      // BaseController.handleTransaction usually supports nesting if implemented correctly, OR we just use the logic here.
+      // To be safe and avoid nesting issues if not supported, we implement creation logic directly here using `tx`.
+
+      // Calculate totals
+      const totalDebits = reversalEntries.reduce((sum, e) => sum + e.debit, 0);
+      const totalCredits = reversalEntries.reduce((sum, e) => sum + e.credit, 0);
+
+      // Generate entry number
+      const year = new Date().getFullYear();
+      const entryCount = await tx.journalEntry.count({
+        where: {
+          cooperativeId,
+          date: {
+            gte: new Date(`${year}-01-01`),
+            lt: new Date(`${year + 1}-01-01`),
+          },
+        },
+      });
+      const entryNumber = `JE-${year}-${String(entryCount + 1).padStart(6, '0')}`;
+
+      // Create Reversal JE
+      const journalEntry = await tx.journalEntry.create({
+        data: {
+          cooperativeId,
+          entryNumber,
+          description,
+          date: new Date(),
+        },
+      });
+
+      // Fetch accounts and latest ledgers (for balance calculation)
+      const accountIds = reversalEntries.map((e) => e.accountId);
+      const latestLedgers = await tx.ledger.findMany({
+        where: {
+          accountId: { in: accountIds },
+          cooperativeId,
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const balanceMap = new Map<string, number>();
+      const seenAccounts = new Set<string>();
+      for (const l of latestLedgers) {
+        if (!seenAccounts.has(l.accountId)) {
+          balanceMap.set(l.accountId, Number(l.balance));
+          seenAccounts.add(l.accountId);
+        }
+      }
+
+      // Create Ledger Entries
+      // We also need account types to know increasing/decreasing logic? 
+      // Actually, standard accounting: Debit increases Asset/Expense, Credit increases Liability/Income/Equity.
+      // Balance = Prev + (Debit - Credit) * (IsDebitNormal ? 1 : -1)
+      const accounts = await tx.chartOfAccounts.findMany({
+        where: { id: { in: accountIds } },
+        select: { id: true, type: true },
+      });
+      const accountTypeMap = new Map(accounts.map((a: any) => [a.id, a.type]));
+
+      await Promise.all(
+        reversalEntries.map(async (entry) => {
+          const type = accountTypeMap.get(entry.accountId);
+          const isDebitNormal = type === 'asset' || type === 'expense';
+          const balanceChange = isDebitNormal
+            ? entry.debit - entry.credit
+            : entry.credit - entry.debit;
+
+          const currentBalance = balanceMap.get(entry.accountId) || 0;
+          const newBalance = currentBalance + balanceChange;
+
+          return tx.ledger.create({
+            data: {
+              cooperativeId,
+              accountId: entry.accountId,
+              journalEntryId: journalEntry.id,
+              debit: new Prisma.Decimal(entry.debit),
+              credit: new Prisma.Decimal(entry.credit),
+              balance: new Prisma.Decimal(newBalance),
+            },
+          });
+        })
+      );
+
+      // Add audit log context or hooks?
+      // hooks.execute('JournalEntry', 'onReverse', ...)
+
+      return journalEntry;
+    });
+  }
 }
 
 // Export singleton instance
