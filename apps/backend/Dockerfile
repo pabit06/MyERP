@@ -10,12 +10,15 @@ WORKDIR /app
 
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+# Create directory structure and copy package.json files
+RUN mkdir -p apps/backend packages/db-schema packages/shared-types
 COPY apps/backend/package.json ./apps/backend/
 COPY packages/db-schema/package.json ./packages/db-schema/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod=false
+# Install dependencies (including dev dependencies for build)
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
 FROM base AS build
