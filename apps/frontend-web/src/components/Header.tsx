@@ -74,7 +74,7 @@ export default function Header() {
 
         if (response.ok) {
           const data = await response.json();
-          if (data.status === 'OPEN' && data.date) {
+          if (data.date) {
             const systemDate = new Date(data.date);
             const adDate = systemDate.toLocaleDateString('en-GB', {
               day: '2-digit',
@@ -152,7 +152,7 @@ export default function Header() {
   const breadcrumbs = getBreadcrumbs();
 
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-30 transition-all duration-200">
+    <header className="bg-background/80 backdrop-blur-md border-b border-border sticky top-0 z-30 transition-all duration-200">
       <div className="px-6 py-3">
         <div className="flex items-center justify-between">
           {/* Breadcrumbs and Title */}
@@ -166,13 +166,13 @@ export default function Header() {
               <nav className="flex items-center space-x-1 text-xs text-gray-500 mb-1">
                 {breadcrumbs.map((crumb, index) => (
                   <div key={index} className="flex items-center space-x-1">
-                    {index > 0 && <span className="text-gray-300">/</span>}
+                    {index > 0 && <span className="text-muted-foreground">/</span>}
                     {crumb.href ? (
-                      <Link href={crumb.href} className="hover:text-indigo-600 transition-colors">
+                      <Link href={crumb.href} className="hover:text-primary transition-colors">
                         {crumb.label}
                       </Link>
                     ) : (
-                      <span className="text-gray-700 font-medium">{crumb.label}</span>
+                      <span className="text-foreground font-medium">{crumb.label}</span>
                     )}
                   </div>
                 ))}
@@ -180,16 +180,16 @@ export default function Header() {
             )}
 
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">
+              <h1 className="text-xl font-bold text-foreground tracking-tight truncate">
                 {getPageTitle()}
               </h1>
               {/* Search Bar (Optional/Placeholder for future) */}
               <div className="hidden lg:flex items-center relative group">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 group-focus-within:text-indigo-500 transition-colors" />
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3 group-focus-within:text-primary transition-colors" />
                 <input
                   type="text"
                   placeholder="Search..."
-                  className="pl-9 pr-4 py-1.5 bg-gray-50 border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-indigo-100 transition-all focus:bg-white"
+                  className="pl-9 pr-4 py-1.5 bg-secondary border-none rounded-full text-sm w-64 focus:ring-2 focus:ring-ring transition-all focus:bg-background"
                 />
               </div>
             </div>
@@ -207,6 +207,8 @@ export default function Header() {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
+                  ) : dayStatus?.status === 'CLOSED' ? (
+                    <span className="h-2 w-2 rounded-full bg-red-500" title="Day Closed"></span>
                   ) : (
                     <span className="h-2 w-2 rounded-full bg-yellow-400"></span>
                   )}
@@ -225,7 +227,7 @@ export default function Header() {
             <div className="relative">
               <button
                 onClick={() => setShowUtilities(!showUtilities)}
-                className={`relative p-2 rounded-full transition-all duration-200 ${showUtilities ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                className={`relative p-2 rounded-full transition-all duration-200 ${showUtilities ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-primary hover:bg-accent'}`}
                 title="Calendar"
               >
                 <Calendar className="h-5 w-5" />
@@ -262,7 +264,7 @@ export default function Header() {
             <div className="relative pl-2 border-l border-gray-200">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-1 rounded-full hover:bg-gray-50 transition-all duration-200 ring-offset-2 focus:ring-2 focus:ring-indigo-500"
+                className="flex items-center space-x-3 p-1 rounded-full hover:bg-accent transition-all duration-200 ring-offset-2 focus:ring-2 focus:ring-ring"
               >
                 <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-md text-white">
                   <span className="font-bold text-sm">

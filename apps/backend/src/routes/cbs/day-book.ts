@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { authenticate } from '../../middleware/auth.js';
 import { requireTenant } from '../../middleware/tenant.js';
 import { isModuleEnabled } from '../../middleware/module.js';
@@ -64,6 +65,51 @@ router.get('/status', async (req: Request, res: Response) => {
     });
 
     if (!activeDay) {
+      // If no active day, find the last closed day to show as system date
+      const lastDay = await prisma.dayBook.findFirst({
+        where: {
+          cooperativeId: cooperativeId!,
+        },
+        orderBy: {
+          date: 'desc',
+        },
+        include: {
+          dayBeginByUser: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      if (lastDay) {
+        return res.json({
+          status: lastDay.status,
+          date: lastDay.date,
+          openingCash: lastDay.openingCash,
+          dayBeginBy: lastDay.dayBeginBy,
+          dayBeginByUser: lastDay.dayBeginByUser,
+          dayBeginAt: lastDay.createdAt,
+        });
+      }
+
+      // If no day book exists at all, use subscription start date
+      const subscription = await prisma.subscription.findUnique({
+        where: { cooperativeId: cooperativeId! },
+        select: { startDate: true },
+      });
+
+      if (subscription?.startDate) {
+        return res.json({
+          status: 'NO_DAY_OPEN',
+          date: subscription.startDate,
+          message: 'System ready. Please start the day.',
+        });
+      }
+
       return res.json({
         status: 'NO_DAY_OPEN',
         message: 'No active day found. Please start the day first.',
@@ -78,9 +124,10 @@ router.get('/status', async (req: Request, res: Response) => {
       dayBeginByUser: activeDay.dayBeginByUser,
       dayBeginAt: activeDay.createdAt,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get day status error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get day status' });
+    const message = error instanceof Error ? error.message : 'Failed to get day status';
+    res.status(500).json({ error: message });
   }
 });
 
@@ -147,9 +194,10 @@ router.post('/settle/preview', async (req: Request, res: Response) => {
       denominationData
     );
     res.json(preview);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Preview settlement error:', error);
-    res.status(400).json({ error: error.message || 'Failed to preview settlement' });
+    const message = error instanceof Error ? error.message : 'Failed to preview settlement';
+    res.status(400).json({ error: message });
   }
 });
 
@@ -358,9 +406,10 @@ router.post('/reopen', requireRole('Manager'), async (req: Request, res: Respons
       message: 'Day reopened successfully',
       dayBook,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Reopen day error:', error);
-    res.status(400).json({ error: error.message || 'Failed to reopen day' });
+    const message = error instanceof Error ? error.message : 'Failed to reopen day';
+    res.status(400).json({ error: message });
   }
 });
 
@@ -381,7 +430,7 @@ router.get(
     const cooperativeId = req.user!.tenantId;
     const { page, limit, sortBy, sortOrder, day, tellerId, status } = req.validatedQuery!;
 
-    const where: any = {
+    const where: Prisma.TellerSettlementWhereInput = {
       cooperativeId: cooperativeId!, // Direct query using cooperativeId for better performance
     };
 
@@ -555,6 +604,7 @@ router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Res
     }
 
     // Fetch journal entries if requested
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let journalEntries: any[] | undefined;
     if (options.includeTransactions) {
       journalEntries = await fetchJournalEntriesForDay(cooperativeId, dayDate);
@@ -579,6 +629,7 @@ router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Res
           openingCash: dayBook.openingCash,
           closingCash: dayBook.closingCash,
           transactionsCount: dayBook.transactionsCount,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           settlementsCount: (dayBook as any).settlements?.length || 0,
           journalEntriesCount: journalEntries?.length || 0,
         },
@@ -605,9 +656,10 @@ router.get('/reports/eod', requireRole('Manager'), async (req: Request, res: Res
         error: 'Invalid format. Supported formats: json, csv, pdf',
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get EOD report error:', error);
-    res.status(500).json({ error: error.message || 'Failed to get EOD report' });
+    const message = error instanceof Error ? error.message : 'Failed to get EOD report';
+    res.status(500).json({ error: message });
   }
 });
 

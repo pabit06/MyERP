@@ -11,7 +11,6 @@ import {
   MapPin,
   Globe,
   Phone,
-
 } from 'lucide-react';
 
 interface WizardStep {
@@ -148,10 +147,11 @@ export default function OnboardingWizard() {
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center flex-1">
                 <div
-                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${index <= currentStep
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
-                    : 'bg-white border-slate-300 text-slate-400'
-                    } transition-colors duration-200`}
+                  className={`flex items-center justify-center w-8 h-8 rounded-full border-2 ${
+                    index <= currentStep
+                      ? 'bg-indigo-600 border-indigo-600 text-white'
+                      : 'bg-white border-slate-300 text-slate-400'
+                  } transition-colors duration-200`}
                 >
                   {index < currentStep ? <CheckCircle2 className="w-5 h-5" /> : step.icon}
                 </div>
@@ -260,8 +260,8 @@ export default function OnboardingWizard() {
                 <h3 className="text-lg font-medium text-slate-900">Operational Setup</h3>
                 <p className="text-sm text-slate-600">
                   Select the date from which you want to start recording operations in this system.
-                  This is typically the start of your current fiscal year or today&apos;s date so that
-                  accounting entries have a logical starting point.
+                  This is typically the start of your current fiscal year or today&apos;s date so
+                  that accounting entries have a logical starting point.
                 </p>
 
                 <div>

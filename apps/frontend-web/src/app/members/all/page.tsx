@@ -1,12 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
+
 import Link from 'next/link';
 import { removeDuplication } from '@/lib/utils';
+import { DataTable } from '@/components/ui/data-table';
+import { ColumnDef } from '@tanstack/react-table';
+import { Button } from '@/components/ui/button';
+import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -32,23 +45,17 @@ export default function AllMembersPage() {
   const { token } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchMembers();
-  }, [token, searchTerm]);
+  }, [fetchMembers]);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!token) return;
 
     setIsLoading(true);
     try {
-      const url = new URL(`${API_URL}/members`);
-      if (searchTerm) url.searchParams.append('search', searchTerm);
-      url.searchParams.append('hasMemberNumber', 'true');
-
-      const response = await fetch(url.toString(), {
+      const response = await fetch(`${API_URL}/members?hasMemberNumber=true`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -56,24 +63,23 @@ export default function AllMembersPage() {
         const data = await response.json();
         setMembers(data.members || []);
       } else {
-        setError('Failed to load members');
+        toast.error('Failed to load members');
       }
-    } catch (err) {
-      setError('Error loading members');
+    } catch (error) {
+      console.error(error);
+      toast.error('Error loading members');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token]);
 
   const handleToggleActive = async (member: Member) => {
     if (!token) return;
-    if (
-      !confirm(
-        `Are you sure you want to ${member.isActive ? 'deactivate' : 'activate'} this member?`
-      )
-    ) {
-      return;
-    }
+
+    // Optimistic update
+    const previousMembers = [...members];
+    const updatedMember = { ...member, isActive: !member.isActive };
+    setMembers(members.map((m) => (m.id === member.id ? updatedMember : m)));
 
     try {
       const response = await fetch(`${API_URL}/members/${member.id}`, {
@@ -85,15 +91,161 @@ export default function AllMembersPage() {
         body: JSON.stringify({ isActive: !member.isActive }),
       });
 
-      if (response.ok) {
-        fetchMembers();
-      } else {
-        alert('Failed to update member');
+      if (!response.ok) {
+        throw new Error('Failed to update');
       }
-    } catch (err) {
-      alert('Error updating member');
+      toast.success(`Member ${updatedMember.isActive ? 'activated' : 'deactivated'}`);
+    } catch (error) {
+      console.error(error);
+      setMembers(previousMembers); // Revert
+      toast.error('Error updating member status');
     }
   };
+
+  const columns: ColumnDef<Member>[] = [
+    {
+      accessorKey: 'memberNumber',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            Member #
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => (
+        <div className="font-medium ml-4">
+          {row.getValue('memberNumber') || <span className="text-gray-400 italic">Pending</span>}
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'fullName',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            Name
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        const member = row.original;
+        const name = removeDuplication(
+          member.memberType === 'INSTITUTION'
+            ? member.institutionName || member.fullName || member.firstName || 'Unknown'
+            : member.fullName ||
+                `${member.firstName || ''} ${member.middleName || ''} ${member.lastName || ''}`.trim() ||
+                'Unknown'
+        );
+        return (
+          <div className="ml-4">
+            <div className="font-medium">{name}</div>
+            {member.fullNameNepali && (
+              <div className="text-xs text-muted-foreground font-nepali">
+                {member.fullNameNepali}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'email',
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
+          >
+            Email
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div className="lowercase ml-4">{row.getValue('email') || '-'}</div>,
+    },
+    {
+      accessorKey: 'phone',
+      header: 'Phone',
+      cell: ({ row }) => <div>{row.getValue('phone') || '-'}</div>,
+    },
+    {
+      accessorKey: 'workflowStatus',
+      header: 'Workflow',
+      cell: ({ row }) => {
+        const status = row.getValue('workflowStatus') as string;
+        if (!status) return <span className="text-muted-foreground">-</span>;
+
+        let colorClass = 'bg-gray-100 text-gray-800';
+        if (status === 'active' || status === 'approved')
+          colorClass = 'bg-green-100 text-green-800';
+        else if (status === 'under_review') colorClass = 'bg-yellow-100 text-yellow-800';
+        else if (status === 'bod_pending') colorClass = 'bg-purple-100 text-purple-800';
+        else if (status === 'rejected') colorClass = 'bg-red-100 text-red-800';
+
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}
+          >
+            {status.replace(/_/g, ' ').toUpperCase()}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'isActive',
+      header: 'Status',
+      cell: ({ row }) => {
+        const isActive = row.getValue('isActive') as boolean;
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}
+          >
+            {isActive ? 'Active' : 'Inactive'}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      cell: ({ row }) => {
+        const member = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => navigator.clipboard.writeText(member.id)}>
+                Copy Member ID
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <Link href={`/members/${member.id}`} passHref>
+                <DropdownMenuItem>View Details</DropdownMenuItem>
+              </Link>
+              <DropdownMenuItem onClick={() => handleToggleActive(member)}>
+                {member.isActive ? 'Deactivate Member' : 'Activate Member'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
 
   return (
     <ProtectedRoute>
@@ -113,169 +265,21 @@ export default function AllMembersPage() {
             <h1 className="text-3xl font-bold text-gray-900">All Members</h1>
             <p className="mt-1 text-sm text-gray-500">Manage cooperative members</p>
           </div>
-          <button
+          <Button
             onClick={() => router.push('/members/new')}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="bg-indigo-600 hover:bg-indigo-700"
           >
             + Add Member
-          </button>
+          </Button>
         </div>
 
-        {/* Search */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <input
-            type="text"
-            placeholder="Search by name, member number, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-          />
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-            {error}
-          </div>
-        )}
-
-        {/* Members Table */}
+        {/* Data Table */}
         {isLoading ? (
-          <div className="bg-white shadow rounded-lg p-12 text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Loading members...</p>
-          </div>
-        ) : members.length === 0 ? (
-          <div className="bg-white shadow rounded-lg p-12 text-center">
-            <p className="text-gray-500">No members found</p>
-            <button
-              onClick={() => router.push('/members/new')}
-              className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-            >
-              Add First Member
-            </button>
+          <div className="flex items-center justify-center p-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="bg-white shadow rounded-lg overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Member #
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Workflow Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {members.map((member) => (
-                  <tr key={member.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {member.memberNumber || <span className="text-gray-400 italic">Pending</span>}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div>
-                        <div>
-                          {removeDuplication(
-                            member.memberType === 'INSTITUTION'
-                              ? member.institutionName ||
-                                  member.fullName ||
-                                  member.firstName ||
-                                  'Unknown Member'
-                              : member.fullName ||
-                                  `${member.firstName || ''} ${member.middleName || ''} ${member.lastName || ''}`.trim() ||
-                                  'Unknown Member'
-                          )}
-                        </div>
-                        {member.fullNameNepali && (
-                          <div
-                            className="text-xs text-gray-500 mt-1"
-                            style={{
-                              fontFamily: 'Arial Unicode MS, Noto Sans Devanagari, sans-serif',
-                            }}
-                          >
-                            {member.fullNameNepali}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.email || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {member.phone || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          member.workflowStatus === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : member.workflowStatus === 'application'
-                              ? 'bg-gray-100 text-gray-800'
-                              : member.workflowStatus === 'under_review'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : member.workflowStatus === 'approved'
-                                  ? 'bg-green-100 text-green-800'
-                                  : member.workflowStatus === 'bod_pending'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : member.workflowStatus === 'rejected'
-                                      ? 'bg-red-100 text-red-800'
-                                      : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {member.workflowStatus?.replace(/_/g, ' ').toUpperCase() || 'PENDING'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          member.isActive
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {member.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                      <Link
-                        href={`/members/${member.id}`}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        View
-                      </Link>
-                      <button
-                        onClick={() => handleToggleActive(member)}
-                        className={`${
-                          member.isActive
-                            ? 'text-red-600 hover:text-red-900'
-                            : 'text-green-600 hover:text-green-900'
-                        }`}
-                      >
-                        {member.isActive ? 'Deactivate' : 'Activate'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable columns={columns} data={members} searchKey="fullName" />
         )}
       </div>
     </ProtectedRoute>

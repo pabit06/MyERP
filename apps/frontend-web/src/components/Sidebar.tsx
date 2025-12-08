@@ -355,7 +355,7 @@ export default function Sidebar() {
     <>
       <button
         onClick={() => setIsMobileMenuOpen(true)}
-        className="md:hidden fixed top-3 left-3 z-50 p-2 bg-white rounded-lg shadow-md border border-gray-200 text-gray-600 hover:text-indigo-600 transition-colors"
+        className="md:hidden fixed top-3 left-3 z-50 p-2 bg-background rounded-lg shadow-md border border-border text-foreground hover:text-primary transition-colors"
       >
         <Menu className="w-6 h-6" />
       </button>
@@ -375,7 +375,7 @@ export default function Sidebar() {
       >
         {/* Dark Sidebar Background */}
         <div className="h-20 flex items-center px-6 border-b border-white/10 bg-slate-950">
-          <MyERPLogo size="2xl" variant="dark" />
+          <MyERPLogo size="2xl" />
           <button
             onClick={() => setIsMobileMenuOpen(false)}
             className="md:hidden ml-auto text-gray-400 hover:text-white"
@@ -457,7 +457,7 @@ function SidebarItem({
   const baseLinkClasses = cn(
     'group flex items-center justify-between px-3 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 relative',
     isActive
-      ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30'
+      ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30'
       : 'text-slate-400 hover:bg-white/5 hover:text-white'
   );
 
@@ -493,7 +493,7 @@ function SidebarItem({
             <span>{item.label}</span>
           </div>
           {badgeCount > 0 && (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white shadow-sm ring-2 ring-slate-900">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground shadow-sm ring-2 ring-slate-900">
               {badgeCount}
             </span>
           )}

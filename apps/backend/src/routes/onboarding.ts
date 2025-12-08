@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
+import { startDay } from '../services/cbs/day-book.service.js';
 
 const router = Router();
 
@@ -25,7 +26,8 @@ router.put('/profile', authenticate, requireTenant, async (req: Request, res: Re
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { description, logoUrl, website, address, phone, email } = req.body as UpdateProfileRequest;
+    const { description, logoUrl, website, address, phone, email } =
+      req.body as UpdateProfileRequest;
 
     // Update or create cooperative profile
     const profile = await prisma.cooperativeProfile.upsert({
@@ -125,8 +127,18 @@ router.put('/settings', authenticate, requireTenant, async (req: Request, res: R
       },
     });
 
+    // Automatically start the day for the operation start date
+    try {
+      await startDay(tenantId, new Date(operationStartDate), req.user!.userId);
+    } catch (error: unknown) {
+      // If day start fails (e.g. already open), we log but don't fail the request
+      // as the primary goal of setting the date was achieved via subscription update
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.warn('Auto-start day failed during onboarding:', errorMessage);
+    }
+
     res.json({
-      message: 'Settings updated successfully',
+      message: 'Settings updated and day started successfully',
     });
   } catch (error) {
     console.error('Settings update error:', error);

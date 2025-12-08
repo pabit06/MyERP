@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Building2, User, Mail, Lock, Globe, ArrowRight, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -50,11 +51,18 @@ export default function RegisterPage() {
 
       // Store token and redirect to login
       localStorage.setItem('token', data.token);
+
+      toast.success('Registration successful!', {
+        description: 'Welcome to MyERP. Redirecting to login...',
+      });
+
       router.push('/login');
     } catch (err: unknown) {
       if (err instanceof Error) {
+        toast.error(err.message);
         setError(err.message);
       } else {
+        toast.error('Registration failed. Please try again.');
         setError('Registration failed. Please try again.');
       }
     } finally {

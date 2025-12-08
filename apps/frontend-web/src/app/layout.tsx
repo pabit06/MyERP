@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   description: 'Modular Multi-Tenant SaaS ERP System',
 };
 
+import { Toaster } from '../components/ui/sonner';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
@@ -17,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ErrorBoundaryWrapper>
           <AuthProvider>
             <Layout>{children}</Layout>
+            <Toaster />
           </AuthProvider>
         </ErrorBoundaryWrapper>
       </body>
