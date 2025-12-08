@@ -46,10 +46,6 @@ export default function AllMembersPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchMembers();
-  }, [fetchMembers]);
-
   const fetchMembers = useCallback(async () => {
     if (!token) return;
 
@@ -72,6 +68,10 @@ export default function AllMembersPage() {
       setIsLoading(false);
     }
   }, [token]);
+
+  useEffect(() => {
+    fetchMembers();
+  }, [fetchMembers]);
 
   const handleToggleActive = async (member: Member) => {
     if (!token) return;
