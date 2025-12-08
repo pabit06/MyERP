@@ -179,16 +179,38 @@ export class FixedDepositController {
 
       if (sourceAccountId) {
         // Debit Savings Account
-        // Logic to debit savings is complex (needs ledger check, balance check etc.)
-        // relying on AccountingController might be best but it's not transactional-aware here easily unless we refactor.
-        // For 'Quick Win' + 'MVP', we will just create the Journal Entry directly here using standardized logic.
-        // Or even better, just record the Journal Entry if we trust the inputs.
-        // Fetch source account to get its GL code? Or assumes it's a known savings product.
-        // Simpler: If cash, Debit Cash.
-        // If Savings, Debit Savings GL (Liability decreases).
-        // Skip complex funding logic for this step, just record usage of funds.
-        // This is a simplified implementation.
-        throw new BadRequestError('Savings account funding not yet implemented');
+        const sourceAccount = await tx.savingAccount.findUnique({
+          where: { id: sourceAccountId },
+        });
+
+        if (!sourceAccount) {
+          throw new NotFoundError('Source savings account', sourceAccountId);
+        }
+
+        if (Number(sourceAccount.balance) < amount) {
+          throw new BadRequestError('Insufficient balance in source savings account');
+        }
+
+        await tx.savingAccount.update({
+          where: { id: sourceAccountId },
+          data: { balance: { decrement: amount } },
+        });
+
+        // Create Journal Entry
+        // Note: Ideally we should use the GL code mapped to the specific Saving Product.
+        // For now, using a generic Savings Liability GL.
+        const savingsLiabilityGL = '00-20100-01-00001';
+
+        await accountingController.createJournalEntry(
+          cooperativeId,
+          `FD Opening - Funded by Savings ${sourceAccount.accountNumber}`,
+          [
+            { accountId: savingsLiabilityGL, debit: amount, credit: 0 },
+            { accountId: fdLiabilityGL, debit: 0, credit: amount },
+          ],
+          new Date(),
+          userId
+        );
       } else if (cashAccountCode) {
         // Debit Cash (Asset Increases? No, depositing into FD means Member gave Cash. So Cash Asset Increases (Debit), FD Liability Increases (Credit).
         // Wait. Member gives Cash -> Co-op receives Cash (Debit Asset). Co-op owes FD (Credit Liability).

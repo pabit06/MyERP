@@ -1,5 +1,6 @@
 import express from 'express';
 import { memberAuthController } from '../controllers/MemberAuthController.js';
+import { memberPortalController } from '../controllers/MemberPortalController.js';
 import { authenticateMember } from '../middleware/memberAuth.js';
 import { asyncHandler } from '../lib/asyncHandler.js';
 
@@ -23,8 +24,22 @@ router.post(
   asyncHandler((req, res) => memberAuthController.changePassword(req, res))
 );
 
-// Future routes:
-// router.get('/accounts', authenticateMember, ...);
-// router.get('/loans', authenticateMember, ...);
+router.get(
+  '/dashboard',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getDashboardSummary(req, res))
+);
+
+router.get(
+  '/accounts',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getAccounts(req, res))
+);
+
+router.get(
+  '/loans',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getLoans(req, res))
+);
 
 export const memberPortalRouter = router;
