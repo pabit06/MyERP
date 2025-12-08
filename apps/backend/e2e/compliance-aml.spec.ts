@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { setupTestUser, loginTestUser, cleanupTestData, type TestUser } from './helpers/test-data.js';
+import {
+  setupTestUser,
+  loginTestUser,
+  cleanupTestData,
+  type TestUser,
+} from './helpers/test-data.js';
 
 /**
  * E2E Tests for Compliance/AML Flow
- * 
+ *
  * Critical flows:
  * 1. Get AML TTR queue
  * 2. Get AML cases
@@ -47,7 +52,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();
@@ -67,7 +72,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();
@@ -90,7 +95,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     // All returned cases should have status 'open'
     if (body.data.length > 0) {
@@ -117,7 +122,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(Array.isArray(body.data)).toBeTruthy();
   });
@@ -136,7 +141,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();
@@ -163,7 +168,7 @@ test.describe('Compliance/AML Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(Array.isArray(body.data)).toBeTruthy();
   });

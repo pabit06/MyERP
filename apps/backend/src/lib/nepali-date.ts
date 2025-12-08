@@ -125,7 +125,10 @@ export function getEnglishMonthName(month: number): string {
 /**
  * Get month start and end dates for a given BS year and month
  */
-export function getBsMonthDates(bsYear: number, bsMonth: number): {
+export function getBsMonthDates(
+  bsYear: number,
+  bsMonth: number
+): {
   monthStart: Date;
   monthEnd: Date;
 } {
@@ -218,4 +221,3 @@ export function getCurrentNepaliFiscalYear(): { bsYear: number; fiscalYearStart:
 
   return { bsYear: fiscalYearBsYear, fiscalYearStart };
 }
-

@@ -25,10 +25,7 @@ async function checkMemberNumbers() {
             not: null,
           },
         },
-        orderBy: [
-          { memberNumber: 'asc' },
-          { createdAt: 'asc' },
-        ],
+        orderBy: [{ memberNumber: 'asc' }, { createdAt: 'asc' }],
         select: {
           id: true,
           memberNumber: true,
@@ -79,8 +76,11 @@ async function checkMemberNumbers() {
       }
 
       // Show all approved members
-      const approvedMembers = members.filter((m) => 
-        m.workflowStatus === 'approved' || m.workflowStatus === 'active' || m.workflowStatus === 'bod_pending'
+      const approvedMembers = members.filter(
+        (m) =>
+          m.workflowStatus === 'approved' ||
+          m.workflowStatus === 'active' ||
+          m.workflowStatus === 'bod_pending'
       );
 
       if (approvedMembers.length > 0) {
@@ -114,4 +114,3 @@ checkMemberNumbers()
     console.error('💥 Script failed:', error);
     process.exit(1);
   });
-

@@ -38,11 +38,13 @@ async function checkInstitutionShares() {
     for (const member of institutions) {
       console.log(`Institution: ${member.institutionName || member.fullName}`);
       console.log(`  Status: ${member.workflowStatus}`);
-      
+
       if (member.institutionKyc) {
         console.log(`  Share Amount: Rs. ${member.institutionKyc.initialShareAmount || 0}`);
         console.log(`  Savings Amount: Rs. ${member.institutionKyc.initialSavingsAmount || 0}`);
-        console.log(`  Entry Fee: Rs. ${member.institutionKyc.initialOtherAmount || 0} (${member.institutionKyc.initialOtherSpecify || 'N/A'})`);
+        console.log(
+          `  Entry Fee: Rs. ${member.institutionKyc.initialOtherAmount || 0} (${member.institutionKyc.initialOtherSpecify || 'N/A'})`
+        );
       }
       console.log('');
     }
@@ -59,4 +61,3 @@ checkInstitutionShares()
     console.error(error);
     process.exit(1);
   });
-

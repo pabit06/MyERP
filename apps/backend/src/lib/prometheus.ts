@@ -1,6 +1,6 @@
 /**
  * Prometheus Metrics Export
- * 
+ *
  * Exports metrics in Prometheus format for integration with monitoring systems
  * like Prometheus, Grafana, etc.
  */
@@ -30,9 +30,15 @@ export function exportPrometheusMetrics(): string {
 
   lines.push('# HELP http_request_duration_seconds HTTP request duration in seconds');
   lines.push('# TYPE http_request_duration_seconds summary');
-  lines.push(`http_request_duration_seconds{quantile="0.5"} ${(metrics.averageResponseTime / 1000).toFixed(4)}`);
-  lines.push(`http_request_duration_seconds{quantile="0.95"} ${(metrics.maxResponseTime / 1000).toFixed(4)}`);
-  lines.push(`http_request_duration_seconds{quantile="0.99"} ${(metrics.maxResponseTime / 1000).toFixed(4)}`);
+  lines.push(
+    `http_request_duration_seconds{quantile="0.5"} ${(metrics.averageResponseTime / 1000).toFixed(4)}`
+  );
+  lines.push(
+    `http_request_duration_seconds{quantile="0.95"} ${(metrics.maxResponseTime / 1000).toFixed(4)}`
+  );
+  lines.push(
+    `http_request_duration_seconds{quantile="0.99"} ${(metrics.maxResponseTime / 1000).toFixed(4)}`
+  );
   lines.push(`http_request_duration_seconds_sum ${(metrics.totalResponseTime / 1000).toFixed(4)}`);
   lines.push(`http_request_duration_seconds_count ${metrics.requestCount}`);
 
@@ -70,9 +76,15 @@ export function exportPrometheusMetrics(): string {
 
   lines.push('# HELP database_query_duration_seconds Database query duration in seconds');
   lines.push('# TYPE database_query_duration_seconds summary');
-  lines.push(`database_query_duration_seconds{quantile="0.5"} ${(dbMetrics.averageQueryTime / 1000).toFixed(4)}`);
-  lines.push(`database_query_duration_seconds{quantile="0.95"} ${(dbMetrics.p95QueryTime / 1000).toFixed(4)}`);
-  lines.push(`database_query_duration_seconds{quantile="0.99"} ${(dbMetrics.p99QueryTime / 1000).toFixed(4)}`);
+  lines.push(
+    `database_query_duration_seconds{quantile="0.5"} ${(dbMetrics.averageQueryTime / 1000).toFixed(4)}`
+  );
+  lines.push(
+    `database_query_duration_seconds{quantile="0.95"} ${(dbMetrics.p95QueryTime / 1000).toFixed(4)}`
+  );
+  lines.push(
+    `database_query_duration_seconds{quantile="0.99"} ${(dbMetrics.p99QueryTime / 1000).toFixed(4)}`
+  );
   lines.push(`database_query_duration_seconds_sum ${(dbMetrics.totalQueryTime / 1000).toFixed(4)}`);
   lines.push(`database_query_duration_seconds_count ${dbMetrics.totalQueries}`);
 

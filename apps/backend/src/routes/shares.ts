@@ -51,7 +51,9 @@ router.get(
       search,
       memberId,
     });
-    res.json(createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder }));
+    res.json(
+      createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder })
+    );
   })
 );
 
@@ -103,7 +105,9 @@ router.get(
       sortOrder,
       search,
     });
-    res.json(createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder }));
+    res.json(
+      createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder })
+    );
   })
 );
 
@@ -122,7 +126,8 @@ router.post(
     })
   ),
   asyncHandler(async (req: Request, res: Response) => {
-    const { memberId, kitta, date, paymentMode, bankAccountId, savingAccountId, remarks } = req.validated!;
+    const { memberId, kitta, date, paymentMode, bankAccountId, savingAccountId, remarks } =
+      req.validated!;
     const transaction = await shareController.issueShares(
       {
         cooperativeId: req.user!.tenantId!,
@@ -183,19 +188,21 @@ router.post(
   '/transfer',
   csrfProtection,
   validate(
-    z.object({
-      fromMemberId: z.string().min(1),
-      toMemberId: z.string().min(1),
-      kitta: z.union([
-        z.number().int().positive(),
-        z.string().transform((val) => parseInt(val, 10)),
-      ]),
-      date: z.string().datetime().or(z.date()),
-      remarks: z.string().optional(),
-    }).refine((data) => data.fromMemberId !== data.toMemberId, {
-      message: 'From and to member IDs must be different',
-      path: ['toMemberId'],
-    })
+    z
+      .object({
+        fromMemberId: z.string().min(1),
+        toMemberId: z.string().min(1),
+        kitta: z.union([
+          z.number().int().positive(),
+          z.string().transform((val) => parseInt(val, 10)),
+        ]),
+        date: z.string().datetime().or(z.date()),
+        remarks: z.string().optional(),
+      })
+      .refine((data) => data.fromMemberId !== data.toMemberId, {
+        message: 'From and to member IDs must be different',
+        path: ['toMemberId'],
+      })
   ),
   asyncHandler(async (req: Request, res: Response) => {
     const { fromMemberId, toMemberId, kitta, date, remarks } = req.validated!;
@@ -287,7 +294,9 @@ router.get(
       search,
       memberId,
     });
-    res.json(createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder }));
+    res.json(
+      createPaginatedResponse(result.accounts, result.total, { page, limit, sortBy, sortOrder })
+    );
   })
 );
 

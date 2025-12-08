@@ -1,10 +1,10 @@
 /**
  * Nepali Fiscal Year Utility Functions
- * 
+ *
  * Nepal has two main year cycles:
  * 1. Calendar Year (बैशाख-चैत्र): Baisakh 1 to Chaitra end (mid-April to mid-April)
  * 2. Fiscal Year (श्रावण-आषाढ): Shrawan 1 to Ashad end (mid-July to mid-July)
- * 
+ *
  * This utility provides functions to generate and work with both year cycles.
  */
 
@@ -282,4 +282,3 @@ export function getPreviousCalendarYear(): FiscalYearRange {
   const current = getCurrentNepaliCalendarYear();
   return getCalendarYearRange(current.bsYear - 1);
 }
-

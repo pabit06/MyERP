@@ -54,7 +54,7 @@ router.post(
   '/',
   asyncHandler(async (req: Request, res: Response) => {
     const result = schema.safeParse(req.body);
-    
+
     if (!result.success) {
       throw new ValidationError('Invalid input data', result.error.errors);
     }
@@ -75,9 +75,9 @@ router.post(
   '/transfer',
   asyncHandler(async (req: Request, res: Response) => {
     const { fromAccount, toAccount, amount } = req.body;
-    
+
     const balance = await getAccountBalance(fromAccount);
-    
+
     if (balance < amount) {
       throw new BusinessLogicError('Insufficient funds', {
         currentBalance: balance,
@@ -130,6 +130,7 @@ All errors follow a consistent format:
 ### Example Responses
 
 **404 Not Found:**
+
 ```json
 {
   "error": "Member with identifier '123' not found",
@@ -138,6 +139,7 @@ All errors follow a consistent format:
 ```
 
 **400 Validation Error:**
+
 ```json
 {
   "error": "Invalid input data",
@@ -152,6 +154,7 @@ All errors follow a consistent format:
 ```
 
 **409 Conflict:**
+
 ```json
 {
   "error": "Member with this number already exists",
@@ -180,11 +183,11 @@ Prisma errors are automatically handled by the error middleware:
 router.get('/:id', async (req: Request, res: Response) => {
   try {
     const item = await prisma.item.findUnique({ where: { id: req.params.id } });
-    
+
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    
+
     res.json(item);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
@@ -201,11 +204,11 @@ router.get(
   '/:id',
   asyncHandler(async (req: Request, res: Response) => {
     const item = await prisma.item.findUnique({ where: { id: req.params.id } });
-    
+
     if (!item) {
       throw new NotFoundError('Item', req.params.id);
     }
-    
+
     res.json(item);
   })
 );
@@ -232,6 +235,7 @@ router.get(
 ## Error Middleware
 
 The error middleware (`src/middleware/error-handler.ts`) automatically:
+
 - Handles all AppError instances
 - Handles Prisma errors
 - Logs errors with context (path, method, userId, etc.)
@@ -251,9 +255,7 @@ expect(() => {
 }).toThrow(NotFoundError);
 
 // Or test the response
-const response = await request(app)
-  .get('/items/invalid-id')
-  .expect(404);
+const response = await request(app).get('/items/invalid-id').expect(404);
 
 expect(response.body).toMatchObject({
   error: expect.any(String),
@@ -264,4 +266,3 @@ expect(response.body).toMatchObject({
 ---
 
 **Note:** The error middleware is already configured in `src/index.ts`. All routes will automatically use it.
-

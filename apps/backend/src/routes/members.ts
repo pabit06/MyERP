@@ -747,15 +747,8 @@ router.get(
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const {
-      isActive,
-      search,
-      page,
-      limit,
-      hasMemberNumber,
-      sortBy,
-      sortOrder,
-    } = req.validatedQuery!;
+    const { isActive, search, page, limit, hasMemberNumber, sortBy, sortOrder } =
+      req.validatedQuery!;
 
     const where: any = {
       cooperativeId: tenantId!,
@@ -877,10 +870,10 @@ router.get(
         loanApplications: loanApplications || [],
         shareAccount: shareAccount
           ? {
-            totalKitta: shareAccount.totalKitta,
-            unitPrice: shareAccount.unitPrice,
-            totalAmount: shareAccount.totalAmount,
-          }
+              totalKitta: shareAccount.totalKitta,
+              unitPrice: shareAccount.unitPrice,
+              totalAmount: shareAccount.totalAmount,
+            }
           : null,
       },
     });

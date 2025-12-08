@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
-import { createJournalEntry, getOrCreateAccount } from './accounting.js';
+import { createJournalEntry } from './accounting.js';
 import { amlEvents, AML_EVENTS } from '../lib/events.js';
 
 export const SavingsService = {
@@ -437,7 +437,7 @@ export const SavingsService = {
       postingDate.setHours(0, 0, 0, 0);
 
       // Get accounts to post interest for
-      const whereClause: any = {
+      const whereClause: Prisma.SavingAccountWhereInput = {
         cooperativeId: data.cooperativeId,
         status: 'active',
         interestAccrued: { gt: 0 }, // Only accounts with accrued interest
@@ -466,8 +466,7 @@ export const SavingsService = {
       }
 
       // Get or create GL accounts
-      const interestExpenseCode =
-        data.interestExpenseGLCode || '00-50100-01-00001'; // Default interest expense account
+      const interestExpenseCode = data.interestExpenseGLCode || '00-50100-01-00001'; // Default interest expense account
       const tdsPayableCode = data.tdsPayableGLCode || '00-20200-01-00001'; // Default TDS payable account
 
       const interestExpenseAccount = await tx.chartOfAccounts.findFirst({
@@ -616,4 +615,3 @@ export const SavingsService = {
     });
   },
 };
-

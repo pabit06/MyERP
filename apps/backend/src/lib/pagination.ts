@@ -1,15 +1,14 @@
 /**
  * Pagination Utilities
- * 
+ *
  * Helper functions for implementing pagination in routes
  */
 
-import { Prisma } from '@prisma/client';
 import { PaginatedResponse, PaginationQuery } from '../validators/common.js';
 
 /**
  * Apply pagination to a Prisma query
- * 
+ *
  * @param query - Prisma query object
  * @param pagination - Pagination parameters
  * @returns Query with pagination applied
@@ -30,7 +29,7 @@ export function applyPagination<T>(
 
 /**
  * Create paginated response
- * 
+ *
  * @param data - Array of data items
  * @param total - Total number of items
  * @param pagination - Pagination parameters
@@ -58,7 +57,7 @@ export function createPaginatedResponse<T>(
 
 /**
  * Apply sorting to a Prisma query
- * 
+ *
  * @param query - Prisma query object
  * @param sortBy - Field to sort by
  * @param sortOrder - Sort order (asc/desc)

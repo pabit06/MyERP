@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { setupTestUser, loginTestUser, cleanupTestData, type TestUser } from './helpers/test-data.js';
+import {
+  setupTestUser,
+  loginTestUser,
+  cleanupTestData,
+  type TestUser,
+} from './helpers/test-data.js';
 
 /**
  * E2E Tests for Member Onboarding Flow
- * 
+ *
  * Critical flows:
  * 1. Create new member
  * 2. Update member KYM information
@@ -52,14 +57,14 @@ test.describe('Member Onboarding Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('member');
     expect(body.member).toHaveProperty('id');
     expect(body.member).toHaveProperty('memberNumber');
     expect(body.member.firstName).toBe(memberData.firstName);
     expect(body.member.lastName).toBe(memberData.lastName);
     expect(body.member.status).toBe('application');
-    
+
     createdMemberId = body.member.id;
   });
 
@@ -76,7 +81,7 @@ test.describe('Member Onboarding Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('member');
     expect(body.member.id).toBe(createdMemberId);
     expect(body.member).toHaveProperty('memberNumber');
@@ -114,7 +119,7 @@ test.describe('Member Onboarding Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('citizenshipNumber', kymData.citizenshipNumber);
     expect(body).toHaveProperty('isComplete', true);
   });
@@ -125,21 +130,18 @@ test.describe('Member Onboarding Flow', () => {
     }
 
     // Transition: application -> under_review
-    const response = await request.put(
-      `${API_PREFIX}/members/${createdMemberId}/status`,
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-        data: {
-          status: 'under_review',
-        },
-      }
-    );
+    const response = await request.put(`${API_PREFIX}/members/${createdMemberId}/status`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+      data: {
+        status: 'under_review',
+      },
+    });
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('member');
     expect(body.member.status).toBe('under_review');
   });
@@ -153,7 +155,7 @@ test.describe('Member Onboarding Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(body.pagination).toHaveProperty('page', 1);

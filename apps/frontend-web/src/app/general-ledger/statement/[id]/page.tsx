@@ -6,7 +6,7 @@ import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
 import { ArrowLeft, FileText, Calendar, DollarSign, Download } from 'lucide-react';
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
+
 import NepaliDate from 'nepali-date-converter';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';

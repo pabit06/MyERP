@@ -218,7 +218,9 @@ export function registerAccountingHooks() {
 
       // Block transactions if Day End is in progress
       if (activeDay.status === 'EOD_IN_PROGRESS') {
-        throw new Error('Day End is in progress. Please wait for completion before creating transactions.');
+        throw new Error(
+          'Day End is in progress. Please wait for completion before creating transactions.'
+        );
       }
 
       // Constraint 2: Time Handling - Combine DayBook date with current server time

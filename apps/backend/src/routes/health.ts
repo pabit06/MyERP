@@ -1,6 +1,6 @@
 /**
  * Health Check and Monitoring Routes
- * 
+ *
  * Provides endpoints for health checks, metrics, and system status
  */
 

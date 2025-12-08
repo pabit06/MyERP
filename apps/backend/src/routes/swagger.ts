@@ -1,6 +1,6 @@
 /**
  * Swagger/OpenAPI Documentation Routes
- * 
+ *
  * Serves Swagger UI and OpenAPI JSON specification
  */
 
@@ -19,11 +19,14 @@ const router = Router();
  *     tags: [Documentation]
  */
 router.use('/api-docs', swaggerUi.serve);
-router.get('/api-docs', swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'MyERP API Documentation',
-  customfavIcon: '/favicon.ico',
-}));
+router.get(
+  '/api-docs',
+  swaggerUi.setup(swaggerSpec, {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'MyERP API Documentation',
+    customfavIcon: '/favicon.ico',
+  })
+);
 
 /**
  * @swagger

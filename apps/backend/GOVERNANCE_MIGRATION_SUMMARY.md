@@ -24,11 +24,12 @@ Successfully migrated key governance routes to use validation middleware.
 
 ## 📝 Notes
 
-The governance.ts file is very large (3700+ lines) with many routes. The migration focused on the most critical POST routes that create new entities. 
+The governance.ts file is very large (3700+ lines) with many routes. The migration focused on the most critical POST routes that create new entities.
 
 ### Remaining Routes
 
 Many routes in this file still use manual try-catch blocks. These can be migrated incrementally:
+
 - PUT routes for updating meetings, committees, AGMs, reports
 - POST routes for agenda items, attendees, etc.
 - GET routes can use asyncHandler for consistent error handling

@@ -431,4 +431,3 @@ export class SavingsController extends BaseController {
 
 // Export singleton instance
 export const savingsController = new SavingsController();
-

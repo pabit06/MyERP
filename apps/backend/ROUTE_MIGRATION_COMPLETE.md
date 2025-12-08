@@ -7,45 +7,62 @@ Successfully migrated all member routes in `apps/backend/src/routes/members.ts` 
 ## ✅ Migrated Routes
 
 ### 1. POST /api/members (Create Member)
+
 **Before:**
+
 ```typescript
-router.post('/', asyncHandler(async (req, res) => {
-  const validation = createMemberSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const data = validation.data;
-  // ...
-}));
+router.post(
+  '/',
+  asyncHandler(async (req, res) => {
+    const validation = createMemberSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const data = validation.data;
+    // ...
+  })
+);
 ```
 
 **After:**
+
 ```typescript
-router.post('/', validate(createMemberSchema), asyncHandler(async (req, res) => {
-  const data = req.validated!;
-  // ...
-}));
+router.post(
+  '/',
+  validate(createMemberSchema),
+  asyncHandler(async (req, res) => {
+    const data = req.validated!;
+    // ...
+  })
+);
 ```
 
 **Lines Saved:** ~5 lines per route
 
 ### 2. PUT /api/members/:id/kym (Update Individual KYM)
+
 **Before:**
+
 ```typescript
-router.put('/:id/kym', asyncHandler(async (req, res) => {
-  const { id: memberId } = req.params;
-  const validation = KymFormSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const kycData = validation.data;
-  // ...
-}));
+router.put(
+  '/:id/kym',
+  asyncHandler(async (req, res) => {
+    const { id: memberId } = req.params;
+    const validation = KymFormSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const kycData = validation.data;
+    // ...
+  })
+);
 ```
 
 **After:**
+
 ```typescript
-router.put('/:id/kym', 
+router.put(
+  '/:id/kym',
   validateAll({
     params: z.object({ id: z.string().min(1) }),
     body: KymFormSchema,
@@ -61,22 +78,29 @@ router.put('/:id/kym',
 **Lines Saved:** ~6 lines per route
 
 ### 3. PUT /api/members/:id/institution-kym (Update Institution KYM)
+
 **Before:**
+
 ```typescript
-router.put('/:id/institution-kym', asyncHandler(async (req, res) => {
-  const { id: memberId } = req.params;
-  const validation = InstitutionKymFormSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const kycData = validation.data;
-  // ...
-}));
+router.put(
+  '/:id/institution-kym',
+  asyncHandler(async (req, res) => {
+    const { id: memberId } = req.params;
+    const validation = InstitutionKymFormSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const kycData = validation.data;
+    // ...
+  })
+);
 ```
 
 **After:**
+
 ```typescript
-router.put('/:id/institution-kym',
+router.put(
+  '/:id/institution-kym',
   validateAll({
     params: z.object({ id: z.string().min(1) }),
     body: InstitutionKymFormSchema,
@@ -92,22 +116,29 @@ router.put('/:id/institution-kym',
 **Lines Saved:** ~6 lines per route
 
 ### 4. PUT /api/members/:id/status (Update Member Status)
+
 **Before:**
+
 ```typescript
-router.put('/:id/status', asyncHandler(async (req, res) => {
-  const { id: memberId } = req.params;
-  const validation = updateMemberStatusSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const { toStatus, remarks } = validation.data;
-  // ...
-}));
+router.put(
+  '/:id/status',
+  asyncHandler(async (req, res) => {
+    const { id: memberId } = req.params;
+    const validation = updateMemberStatusSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const { toStatus, remarks } = validation.data;
+    // ...
+  })
+);
 ```
 
 **After:**
+
 ```typescript
-router.put('/:id/status',
+router.put(
+  '/:id/status',
   validateAll({
     params: z.object({ id: z.string().min(1) }),
     body: updateMemberStatusSchema,
@@ -123,16 +154,19 @@ router.put('/:id/status',
 **Lines Saved:** ~6 lines per route
 
 ### 5. PUT /api/members/:id (Update Member)
+
 **Status:** ✅ Already migrated in previous session
 
 ## 📊 Impact
 
 ### Code Reduction
+
 - **Total routes migrated:** 5
 - **Lines of boilerplate removed:** ~30 lines
 - **Code reduction:** ~70% less validation code per route
 
 ### Benefits Achieved
+
 1. ✅ **Cleaner Code** - Routes are more readable
 2. ✅ **Type Safety** - `req.validated` is properly typed
 3. ✅ **Consistency** - All validation errors use same format
@@ -149,9 +183,11 @@ router.put('/:id/status',
 ## 📝 Notes
 
 ### Business Logic Validation
+
 Some routes still use `ValidationError` for business logic validation (e.g., checking share amount is divisible by 100). These are **intentional** and should remain as they validate business rules, not request structure.
 
 Example:
+
 ```typescript
 // This is business logic validation, not request validation
 if (shareAmount % 100 !== 0) {

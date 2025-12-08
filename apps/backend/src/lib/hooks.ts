@@ -25,10 +25,7 @@ export type HookType =
 /**
  * Hook handler function signature
  */
-export type HookHandler<T = any> = (
-  data: T,
-  context: HookContext
-) => Promise<void | T> | void | T;
+export type HookHandler<T = any> = (data: T, context: HookContext) => Promise<void | T> | void | T;
 
 /**
  * Registered hook with priority
@@ -187,4 +184,3 @@ export const hooks = {
    */
   getHooks: (model: string, hookType: HookType) => registry.getHooks(model, hookType),
 };
-

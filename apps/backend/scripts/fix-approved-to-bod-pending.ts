@@ -92,7 +92,8 @@ async function fixApprovedToBodPending() {
               toStatus: 'bod_pending',
               action: 'sent_to_agenda',
               performedBy: lastApproval?.performedBy || 'system',
-              remarks: 'Automatically added to pending agenda for BOD approval after manager approval (retroactive fix)',
+              remarks:
+                'Automatically added to pending agenda for BOD approval after manager approval (retroactive fix)',
             },
           });
         }
@@ -116,4 +117,3 @@ fixApprovedToBodPending()
     console.error('💥 Script failed:', error);
     process.exit(1);
   });
-

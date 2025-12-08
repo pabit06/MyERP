@@ -16,12 +16,14 @@ This document describes the implementation of rate limiting and security middlew
 ### 1. Rate Limiting
 
 #### General API Rate Limiter (`apiLimiter`)
+
 - **Limit:** 100 requests per 15 minutes per IP
 - **Applied to:** All API routes except `/health` and `/auth`
 - **Purpose:** Prevent DDoS attacks and API abuse
 - **Response:** 429 Too Many Requests with error message
 
 #### Authentication Rate Limiter (`authLimiter`)
+
 - **Limit:** 5 requests per 15 minutes per IP
 - **Applied to:** `/api/auth/*` routes
 - **Special Feature:** Only counts failed requests (`skipSuccessfulRequests: true`)
@@ -29,6 +31,7 @@ This document describes the implementation of rate limiting and security middlew
 - **Response:** 429 Too Many Requests with error message
 
 #### Password Reset Rate Limiter (`passwordResetLimiter`)
+
 - **Limit:** 3 requests per hour per IP
 - **Applied to:** Password reset endpoints (when implemented)
 - **Purpose:** Prevent abuse of password reset functionality
@@ -61,7 +64,9 @@ The following security headers are configured:
 ## Files Created
 
 ### `apps/backend/src/middleware/security.ts`
+
 Contains all security middleware configurations:
+
 - Rate limiters (apiLimiter, authLimiter, passwordResetLimiter)
 - Helmet configuration
 - Request size limits
@@ -72,6 +77,7 @@ Contains all security middleware configurations:
 ## Files Modified
 
 ### `apps/backend/src/index.ts`
+
 - Added security middleware imports
 - Integrated helmet (security headers) early in middleware chain
 - Added trust proxy configuration
@@ -80,6 +86,7 @@ Contains all security middleware configurations:
 - Applied `authLimiter` to auth routes
 
 ### `apps/backend/package.json`
+
 - Added `express-rate-limit@8.2.1`
 - Added `helmet@8.1.0`
 
@@ -169,6 +176,7 @@ export const customLimiter = rateLimit({
 ### Test Rate Limiting
 
 1. **Test General API Rate Limiter:**
+
    ```bash
    # Make 101 requests quickly
    for i in {1..101}; do curl http://localhost:3001/api/members; done
@@ -217,12 +225,13 @@ Monitor these logs to identify potential attacks or legitimate users hitting lim
 
 1. **Trust Proxy:** Ensure `NODE_ENV=production` is set so trust proxy is enabled
 2. **Rate Limit Storage:** By default, rate limits are stored in memory. For distributed systems, consider using Redis:
+
    ```typescript
    import RedisStore from 'rate-limit-redis';
    import Redis from 'ioredis';
-   
+
    const redis = new Redis(process.env.REDIS_URL);
-   
+
    export const apiLimiter = rateLimit({
      store: new RedisStore({
        client: redis,
@@ -230,6 +239,7 @@ Monitor these logs to identify potential attacks or legitimate users hitting lim
      // ... other options
    });
    ```
+
 3. **CSP Adjustments:** Adjust Content Security Policy based on your frontend requirements
 4. **Rate Limit Tuning:** Monitor and adjust rate limits based on actual usage patterns
 
@@ -241,7 +251,7 @@ Monitor these logs to identify potential attacks or legitimate users hitting lim
 ✅ **Brute Force Protection:** Limits login attempts to prevent password guessing  
 ✅ **Security Headers:** Protects against common web vulnerabilities (XSS, clickjacking, etc.)  
 ✅ **Request Size Limits:** Prevents oversized payload attacks  
-✅ **Production Ready:** Works correctly behind reverse proxies  
+✅ **Production Ready:** Works correctly behind reverse proxies
 
 ---
 
@@ -254,4 +264,3 @@ Monitor these logs to identify potential attacks or legitimate users hitting lim
 ---
 
 **Status:** ✅ Complete and production-ready
-

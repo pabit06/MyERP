@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 async function checkMemberStatus() {
   try {
     const memberId = 'cmiacj9eq0025kmqgi9fow2lv';
-    
+
     const member = await prisma.member.findUnique({
       where: { id: memberId },
       select: {
@@ -63,4 +63,3 @@ checkMemberStatus()
     console.error(error);
     process.exit(1);
   });
-

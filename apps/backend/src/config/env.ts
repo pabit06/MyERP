@@ -47,12 +47,7 @@ const envSchema = z.object({
   FCM_CLIENT_EMAIL: z.string().email().optional(),
 
   // File Upload Configuration - Optional
-  UPLOAD_MAX_SIZE: z
-    .string()
-    .regex(/^\d+$/)
-    .transform(Number)
-    .optional()
-    .default('10485760'),
+  UPLOAD_MAX_SIZE: z.string().regex(/^\d+$/).transform(Number).optional().default('10485760'),
   UPLOAD_DIR: z.string().optional().default('./uploads'),
 
   // Error Tracking & Monitoring (Sentry) - Optional
@@ -88,4 +83,3 @@ export const env = validateEnv();
 
 // Export type for use in other files
 export type Env = typeof env;
-

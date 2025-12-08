@@ -5,10 +5,10 @@
  * - All member numbers
  * - All related data (savings, loans, shares, KYC, documents, etc.)
  * - All related journal entries and ledger entries
- * 
+ *
  * Usage: pnpm --filter @myerp/backend delete:members [cooperativeId] [--all-journals]
  * Or: tsx apps/backend/scripts/delete-all-members.ts [cooperativeId] [--all-journals]
- * 
+ *
  * If --all-journals flag is provided, it will delete ALL journal entries for the cooperative
  * (useful for a complete fresh start, but use with caution!)
  */
@@ -106,18 +106,20 @@ async function deleteAllMembers(cooperativeIdentifier?: string) {
       .map((st) => st.journalId)
       .filter((id): id is string => id !== null && id !== undefined);
 
-    console.log(`Found ${shareJournalIds.length} journal entry/entries related to share transactions`);
+    console.log(
+      `Found ${shareJournalIds.length} journal entry/entries related to share transactions`
+    );
 
     // Step 3: Find journal entries related to members by description (entry fees, advance payments, etc.)
     // These entries have member IDs or member numbers in their descriptions
     const orConditions: any[] = [];
-    
+
     // Match by member ID in description
     memberIds.forEach((memberId) => {
       orConditions.push({ description: { contains: memberId } });
       orConditions.push({ description: { contains: `Member ID: ${memberId}` } });
     });
-    
+
     // Match by member number in description (e.g., "member 000001" or "member 000001 -")
     memberNumbers.forEach((memberNumber) => {
       orConditions.push({ description: { contains: `member ${memberNumber}` } });
@@ -126,21 +128,24 @@ async function deleteAllMembers(cooperativeIdentifier?: string) {
       orConditions.push({ description: { contains: `Member ${memberNumber} -` } });
       orConditions.push({ description: { contains: `applicant: ${memberNumber}` } });
     });
-    
-    const memberRelatedJournalEntries = orConditions.length > 0
-      ? await prisma.journalEntry.findMany({
-          where: {
-            cooperativeId: cooperativeId || undefined,
-            OR: orConditions,
-          },
-          select: {
-            id: true,
-          },
-        })
-      : [];
+
+    const memberRelatedJournalEntries =
+      orConditions.length > 0
+        ? await prisma.journalEntry.findMany({
+            where: {
+              cooperativeId: cooperativeId || undefined,
+              OR: orConditions,
+            },
+            select: {
+              id: true,
+            },
+          })
+        : [];
 
     const memberRelatedJournalIds = memberRelatedJournalEntries.map((je) => je.id);
-    console.log(`Found ${memberRelatedJournalIds.length} journal entry/entries related to members (by description)`);
+    console.log(
+      `Found ${memberRelatedJournalIds.length} journal entry/entries related to members (by description)`
+    );
 
     // Combine all journal entry IDs
     const allJournalIds = [...new Set([...shareJournalIds, ...memberRelatedJournalIds])];
@@ -170,8 +175,10 @@ async function deleteAllMembers(cooperativeIdentifier?: string) {
 
     // Step 6: If --all-journals flag is set, delete ALL journal entries for fresh start
     if (deleteAllJournals && cooperativeId) {
-      console.log('\n⚠️  --all-journals flag detected: Deleting ALL journal entries for this cooperative...');
-      
+      console.log(
+        '\n⚠️  --all-journals flag detected: Deleting ALL journal entries for this cooperative...'
+      );
+
       // First delete all ledger entries
       const allLedgers = await prisma.ledger.deleteMany({
         where: {
@@ -179,7 +186,7 @@ async function deleteAllMembers(cooperativeIdentifier?: string) {
         },
       });
       console.log(`✅ Deleted ${allLedgers.count} ledger entry/entries`);
-      
+
       // Then delete all journal entries
       const allJournals = await prisma.journalEntry.deleteMany({
         where: {
@@ -197,7 +204,7 @@ async function deleteAllMembers(cooperativeIdentifier?: string) {
           select: { id: true },
         });
         const remainingJournalIdList = remainingJournalIds.map((j) => j.id);
-        
+
         // Delete ledger entries that don't have a valid journal entry
         const orphanedLedgers = await prisma.ledger.deleteMany({
           where: {
@@ -271,9 +278,13 @@ if (cooperativeIdentifier) {
       process.exit(1);
     });
 } else {
-  console.log('⚠️  WARNING: No cooperative ID provided. This will delete ALL members from ALL cooperatives!');
+  console.log(
+    '⚠️  WARNING: No cooperative ID provided. This will delete ALL members from ALL cooperatives!'
+  );
   console.log('Usage: npx tsx apps/backend/scripts/delete-all-members.ts [cooperativeId]');
-  console.log('\nIf you want to delete all members, run without arguments (not recommended for production)');
+  console.log(
+    '\nIf you want to delete all members, run without arguments (not recommended for production)'
+  );
   console.log('Press Ctrl+C to cancel, or wait 5 seconds to continue...\n');
 
   setTimeout(() => {
@@ -288,4 +299,3 @@ if (cooperativeIdentifier) {
       });
   }, 5000);
 }
-

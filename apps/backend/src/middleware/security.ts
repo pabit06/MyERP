@@ -1,6 +1,6 @@
 /**
  * Security Middleware
- * 
+ *
  * Provides rate limiting and security headers for the application.
  * - Rate limiting to prevent DDoS and brute force attacks
  * - Security headers via Helmet
@@ -140,4 +140,3 @@ export const requestSizeLimit = {
  * Set TRUST_PROXY=true in production when behind nginx/cloudflare/etc.
  */
 export const trustProxy = env.NODE_ENV === 'production';
-

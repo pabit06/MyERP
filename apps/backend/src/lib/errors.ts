@@ -1,6 +1,6 @@
 /**
  * Custom Error Classes for Application
- * 
+ *
  * Provides structured error handling with proper status codes,
  * error codes, and details for better debugging and user experience.
  */
@@ -125,4 +125,3 @@ export class BusinessLogicError extends AppError {
     super(message, 422, 'BUSINESS_LOGIC_ERROR', details);
   }
 }
-

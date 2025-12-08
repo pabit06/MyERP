@@ -9,15 +9,18 @@ Comprehensive security enhancements have been implemented for the MyERP backend,
 ### 1. CSRF Protection ✅
 
 **File Created:**
+
 - `apps/backend/src/middleware/csrf.ts` - CSRF protection middleware
 
 **Features:**
+
 - Token-based CSRF protection for state-changing operations
 - Automatic token generation and validation
 - Session-based token storage
 - Optional protection (can be disabled via environment variable)
 
 **Usage:**
+
 ```typescript
 import { csrfProtection, getCsrfToken } from './middleware/csrf.js';
 
@@ -29,18 +32,22 @@ router.get('/csrf-token', getCsrfToken);
 ```
 
 **Client Usage:**
+
 1. Get CSRF token: `GET /api/csrf-token`
 2. Include in requests: `X-CSRF-Token: <token>`
 
 **Configuration:**
+
 - Set `ENABLE_CSRF_PROTECTION=false` to disable (default: enabled)
 
 ### 2. Input Sanitization ✅
 
 **File Created:**
+
 - `apps/backend/src/lib/sanitize.ts` - Input sanitization utilities
 
 **Functions:**
+
 - `sanitizeHtml()` - Sanitize HTML to prevent XSS
 - `sanitizeText()` - Sanitize plain text
 - `sanitizeFilename()` - Sanitize filenames
@@ -50,6 +57,7 @@ router.get('/csrf-token', getCsrfToken);
 - `sanitizeObject()` - Recursively sanitize objects
 
 **Usage:**
+
 ```typescript
 import { sanitizeHtml, sanitizeText, sanitizeObject } from '../lib/sanitize.js';
 
@@ -67,20 +75,24 @@ const cleanData = sanitizeObject(userData, {
 ```
 
 **Dependencies:**
+
 - `isomorphic-dompurify` - For HTML sanitization (needs to be installed)
 
 ### 3. Audit Logging ✅
 
 **File Created:**
+
 - `apps/backend/src/lib/audit-log.ts` - Audit logging system
 
 **Features:**
+
 - Comprehensive audit logging for sensitive operations
 - Automatic logging to database and Winston
 - Sentry integration for critical actions
 - Query interface for audit logs
 
 **Audit Actions:**
+
 - Authentication (login, logout, password changes)
 - User management (create, update, delete)
 - Permission changes
@@ -90,6 +102,7 @@ const cleanData = sanitizeObject(userData, {
 - Compliance operations
 
 **Usage:**
+
 ```typescript
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 
@@ -116,9 +129,11 @@ const logs = await getAuditLogs({
 ### 4. Enhanced Security Headers ✅
 
 **File Modified:**
+
 - `apps/backend/src/middleware/security.ts` - Enhanced Helmet configuration
 
 **New Headers:**
+
 - `X-Content-Type-Options: nosniff` - Prevent MIME type sniffing
 - `X-Frame-Options: DENY` - Prevent clickjacking
 - `Referrer-Policy: strict-origin-when-cross-origin` - Control referrer information
@@ -132,6 +147,7 @@ Already configured via Helmet middleware.
 ### 1. Add CSRF Token Endpoint
 
 Add to your routes:
+
 ```typescript
 import { getCsrfToken } from '../middleware/csrf.js';
 
@@ -141,6 +157,7 @@ router.get('/csrf-token', getCsrfToken);
 ### 2. Apply CSRF Protection
 
 Apply to state-changing routes:
+
 ```typescript
 import { csrfProtection } from '../middleware/csrf.js';
 
@@ -152,6 +169,7 @@ router.delete('/members/:id', csrfProtection, deleteMember);
 ### 3. Use Input Sanitization
 
 Sanitize user inputs in routes:
+
 ```typescript
 import { sanitizeHtml, sanitizeText } from '../lib/sanitize.js';
 
@@ -164,6 +182,7 @@ router.post('/content', async (req, res) => {
 ### 4. Add Audit Logging
 
 Log sensitive operations:
+
 ```typescript
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 
@@ -183,9 +202,11 @@ await createAuditLog({
 ## Dependencies
 
 ### Required
+
 - `isomorphic-dompurify` - For HTML sanitization
 
 Install:
+
 ```bash
 pnpm add isomorphic-dompurify
 ```
@@ -209,6 +230,7 @@ ENABLE_CSRF_PROTECTION=true
 ## Testing
 
 ### Test CSRF Protection
+
 ```bash
 # Get CSRF token
 curl http://localhost:4000/api/csrf-token
@@ -221,6 +243,7 @@ curl -X POST http://localhost:4000/api/members \
 ```
 
 ### Test Input Sanitization
+
 ```typescript
 import { sanitizeHtml } from './lib/sanitize.js';
 
@@ -229,6 +252,7 @@ const safe = sanitizeHtml(malicious); // Returns empty string or sanitized HTML
 ```
 
 ### Test Audit Logging
+
 ```typescript
 import { getAuditLogs, AuditAction } from './lib/audit-log.js';
 

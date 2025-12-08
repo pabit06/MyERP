@@ -9,12 +9,14 @@ Comprehensive monitoring and error tracking has been implemented for the MyERP b
 ### 1. Sentry Error Tracking ✅
 
 **Files Created/Modified:**
+
 - `apps/backend/src/config/sentry.ts` - Sentry configuration and utilities
 - `apps/backend/src/middleware/error-handler.ts` - Enhanced with Sentry integration
 - `apps/backend/src/index.ts` - Sentry initialization and middleware
 - `apps/backend/src/config/env.ts` - Added Sentry environment variables
 
 **Features:**
+
 - Automatic error capture from Express error handler
 - Performance monitoring with transaction tracing
 - User context tracking (userId, email, tenantId)
@@ -23,6 +25,7 @@ Comprehensive monitoring and error tracking has been implemented for the MyERP b
 - Filters out health check endpoints from tracking
 
 **Environment Variables:**
+
 ```env
 SENTRY_DSN=https://your-dsn@sentry.io/project-id  # Optional
 SENTRY_ENVIRONMENT=production  # Optional, defaults to NODE_ENV
@@ -32,9 +35,11 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # Optional, defaults to 1.0
 ### 2. Health Check Endpoints ✅
 
 **File Created:**
+
 - `apps/backend/src/routes/health.ts` - Comprehensive health check routes
 
 **Endpoints:**
+
 - `GET /health` - Basic health check
 - `GET /health/detailed` - Detailed health with database connectivity, memory, uptime
 - `GET /health/ready` - Readiness probe (for Kubernetes/Docker)
@@ -42,6 +47,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # Optional, defaults to 1.0
 - `GET /health/metrics` - Application metrics
 
 **Features:**
+
 - Database connectivity checks
 - Memory usage reporting
 - Uptime tracking
@@ -51,9 +57,11 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # Optional, defaults to 1.0
 ### 3. Metrics Collection ✅
 
 **File Created:**
+
 - `apps/backend/src/middleware/metrics.ts` - Request metrics middleware
 
 **Metrics Collected:**
+
 - Total request count
 - Error count (4xx and 5xx responses)
 - Response times (min, max, average)
@@ -62,6 +70,7 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # Optional, defaults to 1.0
 - Error rate percentage
 
 **Features:**
+
 - Automatic tracking for all requests
 - Slow request detection (> 1 second logged as warnings)
 - Sentry breadcrumb integration
@@ -70,9 +79,11 @@ SENTRY_TRACES_SAMPLE_RATE=0.1  # Optional, defaults to 1.0
 ### 4. Enhanced Error Handling ✅
 
 **File Modified:**
+
 - `apps/backend/src/middleware/error-handler.ts`
 
 **Enhancements:**
+
 - Sentry integration for server errors (5xx)
 - User context setting for Sentry
 - Improved error logging with context
@@ -231,6 +242,7 @@ For enhanced monitoring, consider:
 ## Testing
 
 1. **Test Health Endpoints**:
+
    ```bash
    curl http://localhost:3001/health
    curl http://localhost:3001/health/detailed

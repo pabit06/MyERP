@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useAuth } from '../contexts/AuthContext';
+import OnboardingWizard from './onboarding/OnboardingWizard';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -30,6 +31,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="p-6">{children}</div>
         </main>
       </div>
+      <OnboardingWizard />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /**
  * Database Performance Metrics
- * 
+ *
  * Tracks database query performance including:
  * - Query counts
  * - Query durations

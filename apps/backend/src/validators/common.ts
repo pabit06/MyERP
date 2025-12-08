@@ -1,6 +1,6 @@
 /**
  * Common Validation Schemas
- * 
+ *
  * Reusable Zod schemas for common validation patterns:
  * - Pagination
  * - Date ranges
@@ -12,7 +12,7 @@ import { z } from 'zod';
 
 /**
  * Pagination schema for query parameters
- * 
+ *
  * @example
  * router.get('/members', validateQuery(paginationSchema), getMembers);
  */
@@ -35,7 +35,7 @@ export type PaginationQuery = z.infer<typeof paginationSchema>;
 
 /**
  * ID parameter schema
- * 
+ *
  * @example
  * router.get('/members/:id', validateParams(idSchema), getMember);
  */
@@ -46,31 +46,33 @@ export const idSchema = z.object({
 /**
  * Date range schema for filtering
  */
-export const dateRangeSchema = z.object({
-  startDate: z
-    .string()
-    .datetime()
-    .or(z.date())
-    .optional()
-    .transform((val) => (val ? new Date(val) : undefined)),
-  endDate: z
-    .string()
-    .datetime()
-    .or(z.date())
-    .optional()
-    .transform((val) => (val ? new Date(val) : undefined)),
-}).refine(
-  (data) => {
-    if (data.startDate && data.endDate) {
-      return data.endDate >= data.startDate;
+export const dateRangeSchema = z
+  .object({
+    startDate: z
+      .string()
+      .datetime()
+      .or(z.date())
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+    endDate: z
+      .string()
+      .datetime()
+      .or(z.date())
+      .optional()
+      .transform((val) => (val ? new Date(val) : undefined)),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return data.endDate >= data.startDate;
+      }
+      return true;
+    },
+    {
+      message: 'End date must be after or equal to start date',
+      path: ['endDate'],
     }
-    return true;
-  },
-  {
-    message: 'End date must be after or equal to start date',
-    path: ['endDate'],
-  }
-);
+  );
 
 /**
  * Search/filter schema

@@ -5,6 +5,7 @@ This directory contains end-to-end tests for critical user flows in the MyERP ba
 ## Overview
 
 E2E tests verify that critical business flows work correctly from start to finish, testing the entire system including:
+
 - API endpoints
 - Authentication & authorization
 - Database operations
@@ -14,14 +15,18 @@ E2E tests verify that critical business flows work correctly from start to finis
 ## Test Files
 
 ### `auth.spec.ts`
+
 Tests authentication flow:
+
 - User login with valid/invalid credentials
 - Token validation
 - Get current user info
 - Error handling for unauthorized requests
 
 ### `member-onboarding.spec.ts`
+
 Tests member onboarding workflow:
+
 - Create new member
 - Update member KYM (Know Your Member) information
 - Update member status through workflow transitions
@@ -29,7 +34,9 @@ Tests member onboarding workflow:
 - Validation and error handling
 
 ### `loan-application.spec.ts`
+
 Tests loan application flow:
+
 - Create loan product
 - Create loan application
 - Approve loan application
@@ -42,6 +49,7 @@ Tests loan application flow:
 ### Prerequisites
 
 1. **Start the backend server:**
+
    ```bash
    cd apps/backend
    pnpm dev
@@ -117,20 +125,21 @@ When adding new E2E tests:
 
 1. **Create a new test file** in `e2e/` directory
 2. **Follow the existing pattern**:
+
    ```typescript
    import { test, expect } from '@playwright/test';
-   
+
    test.describe('Feature Name', () => {
      let authToken: string;
-     
+
      test.beforeAll(async ({ request }) => {
        // Setup: Login, create test data, etc.
      });
-     
+
      test('should do something', async ({ request }) => {
        // Test implementation
      });
-     
+
      test.afterAll(async ({ request }) => {
        // Cleanup: Delete test data
      });
@@ -167,14 +176,17 @@ To run E2E tests in CI/CD:
 ## Troubleshooting
 
 ### Tests fail with connection errors
+
 - Ensure the backend server is running on the expected port
 - Check `API_BASE_URL` environment variable
 
 ### Tests fail with authentication errors
+
 - Verify test user credentials exist in the database
 - Check that the test user has the necessary permissions
 
 ### Tests are slow
+
 - Use parallel execution (already configured)
 - Consider using a faster test database
 - Optimize test data setup/teardown

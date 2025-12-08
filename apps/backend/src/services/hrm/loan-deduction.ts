@@ -1,6 +1,6 @@
 /**
  * Loan Deduction Service for Payroll
- * 
+ *
  * This service calculates loan deductions for employees from their active loans.
  * Employees can have loans if they are also members (linked via userId -> User -> Member).
  */
@@ -10,7 +10,7 @@ import { getBsMonthDates } from '../../lib/nepali-date.js';
 
 /**
  * Get total loan deduction amount for an employee for a specific month
- * 
+ *
  * @param employeeId - Employee ID
  * @param cooperativeId - Cooperative ID
  * @param fiscalYear - Fiscal year (e.g., "2081/82")

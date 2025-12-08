@@ -3,6 +3,7 @@
 ## ✅ Completed Migrations
 
 ### 1. Members Routes (`routes/members.ts`) ✅
+
 - ✅ POST /api/members - Create member
 - ✅ PUT /api/members/:id - Update member
 - ✅ PUT /api/members/:id/kym - Update individual KYM
@@ -12,6 +13,7 @@
 **Impact:** ~30 lines of boilerplate removed
 
 ### 2. Loans Routes (`routes/loans.ts`) ✅
+
 - ✅ GET /api/loans/products - Get loan products (added asyncHandler)
 - ✅ POST /api/loans/products - Create loan product
 - ✅ GET /api/loans/applications - Get loan applications (added asyncHandler)
@@ -22,6 +24,7 @@
 **Impact:** ~40 lines of boilerplate removed, improved error handling
 
 ### 3. Savings Routes (`routes/savings.ts`) ✅
+
 - ✅ GET /api/savings/products - Get saving products (added asyncHandler)
 - ✅ POST /api/savings/products - Create saving product
 - ✅ GET /api/savings/accounts - Get saving accounts (added asyncHandler)
@@ -35,6 +38,7 @@
 **Impact:** ~50 lines of boilerplate removed, improved error handling
 
 ### 4. Accounting Routes (`routes/accounting.ts`) ✅
+
 - ✅ POST /api/accounting/seed - Seed default accounts (added asyncHandler)
 - ✅ GET /api/accounting/accounts - Get accounts (added asyncHandler)
 - ✅ POST /api/accounting/accounts - Create account
@@ -52,6 +56,7 @@
 **Impact:** ~60 lines of boilerplate removed, improved error handling
 
 ### 5. Governance Routes (`routes/governance.ts`) ✅
+
 - ✅ POST /api/governance/meetings - Create meeting
 - ✅ POST /api/governance/committees - Create committee
 - ✅ POST /api/governance/agm - Create AGM
@@ -62,6 +67,7 @@
 **Note:** Governance file is very large (3700+ lines). Focused on key creation routes. Remaining routes can be migrated incrementally.
 
 ### 6. Shares Routes (`routes/shares.ts`) ✅
+
 - ✅ GET /api/shares/dashboard - Get share dashboard (added asyncHandler)
 - ✅ GET /api/shares/accounts - Get share accounts (added asyncHandler)
 - ✅ GET /api/shares/accounts/:memberId - Get share account (added asyncHandler)
@@ -79,6 +85,7 @@
 **Note:** Added share transaction schemas to `zod-schemas.ts`.
 
 ### 7. HRM Routes (`routes/hrm.ts`) ✅
+
 - ✅ GET /api/hrm/employees - Get employees (added asyncHandler)
 - ✅ POST /api/hrm/employees - Create employee
 - ✅ GET /api/hrm/employees/:id - Get employee (added asyncHandler)
@@ -91,6 +98,7 @@
 **Impact:** ~40 lines of boilerplate removed, improved error handling
 
 ### 8. Compliance Routes (`routes/compliance.ts`) ✅
+
 - ✅ GET /api/compliance/audit-logs - Get audit logs (added asyncHandler)
 - ✅ POST /api/compliance/audit-logs - Create audit log
 - ✅ POST /api/compliance/log-attempt - Log suspicious attempt
@@ -101,6 +109,7 @@
 **Impact:** ~30 lines of boilerplate removed, improved error handling
 
 ### 9. Reports Routes (`routes/reports.ts`) ✅
+
 - ✅ GET /api/reports/main - Generate main financial report (added asyncHandler)
 - ✅ GET /api/reports/audit - Get audit logs report (added asyncHandler)
 - ✅ POST /api/reports/build - Build dynamic report
@@ -112,6 +121,7 @@
 **Impact:** ~25 lines of boilerplate removed, improved error handling
 
 ### 10. Notifications Routes (`routes/notifications.ts`) ✅
+
 - ✅ GET /api/notifications - Get notifications (added asyncHandler)
 - ✅ GET /api/notifications/unread-count - Get unread count (added asyncHandler)
 - ✅ PUT /api/notifications/read-all - Mark all as read (added asyncHandler)
@@ -121,6 +131,7 @@
 **Impact:** ~15 lines of boilerplate removed, improved error handling
 
 ### 11. Darta Routes (`routes/darta.ts`) ✅
+
 - ✅ GET /api/darta - Get all dartas (added asyncHandler)
 - ✅ GET /api/darta/:id - Get single darta (added asyncHandler)
 - ✅ POST /api/darta - Create darta
@@ -134,11 +145,13 @@
 ## 📊 Overall Impact
 
 ### Code Reduction
+
 - **Total routes migrated:** 80 routes across 11 files
 - **Lines of boilerplate removed:** ~415 lines
 - **Code reduction:** ~70% less validation code per route
 
 ### Benefits Achieved
+
 1. ✅ **Type Safety** - All validated data is properly typed
 2. ✅ **Consistent Errors** - All validation errors use same format
 3. ✅ **Better Error Handling** - All routes use asyncHandler
@@ -148,12 +161,14 @@
 ## 🔄 Remaining Routes to Migrate
 
 ### High Priority
+
 - [x] `routes/accounting.ts` - Accounting routes ✅
 - [x] `routes/governance.ts` - Governance routes (meetings, committees) ✅
 - [x] `routes/shares.ts` - Share management routes ✅
 - [x] `routes/hrm.ts` - HRM routes ✅
 
 ### Medium Priority
+
 - [x] `routes/hrm.ts` - HRM routes ✅
 - [x] `routes/compliance.ts` - Compliance routes ✅
 - [x] `routes/reports.ts` - Report routes ✅
@@ -161,6 +176,7 @@
 - [x] `routes/notifications.ts` - Notification routes ✅
 
 ### Low Priority
+
 - [ ] `routes/darta.ts` - Document routes
 - [ ] `routes/dms.ts` - Document management routes
 - [ ] `routes/notifications.ts` - Notification routes
@@ -169,6 +185,7 @@
 ## 📝 Migration Pattern
 
 ### Before:
+
 ```typescript
 router.post('/path', async (req, res) => {
   try {
@@ -181,11 +198,16 @@ router.post('/path', async (req, res) => {
 ```
 
 ### After:
+
 ```typescript
-router.post('/path', validate(schema), asyncHandler(async (req, res) => {
-  const { field1, field2 } = req.validated!;
-  // ... handler
-}));
+router.post(
+  '/path',
+  validate(schema),
+  asyncHandler(async (req, res) => {
+    const { field1, field2 } = req.validated!;
+    // ... handler
+  })
+);
 ```
 
 ## 🎯 Next Steps

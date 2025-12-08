@@ -46,15 +46,19 @@ async function verifySeededMembers() {
       console.log(`Member: ${name}`);
       console.log(`  Type: ${member.memberType}`);
       console.log(`  Status: ${member.workflowStatus}`);
-      
+
       if (member.kyc) {
         console.log(`  Share Amount: Rs. ${member.kyc.initialShareAmount || 0}`);
         console.log(`  Savings Amount: Rs. ${member.kyc.initialSavingsAmount || 0}`);
-        console.log(`  Entry Fee: Rs. ${member.kyc.initialOtherAmount || 0} (${member.kyc.initialOtherSpecify || 'N/A'})`);
+        console.log(
+          `  Entry Fee: Rs. ${member.kyc.initialOtherAmount || 0} (${member.kyc.initialOtherSpecify || 'N/A'})`
+        );
       } else if (member.institutionKyc) {
         console.log(`  Share Amount: Rs. ${member.institutionKyc.initialShareAmount || 0}`);
         console.log(`  Savings Amount: Rs. ${member.institutionKyc.initialSavingsAmount || 0}`);
-        console.log(`  Entry Fee: Rs. ${member.institutionKyc.initialOtherAmount || 0} (${member.institutionKyc.initialOtherSpecify || 'N/A'})`);
+        console.log(
+          `  Entry Fee: Rs. ${member.institutionKyc.initialOtherAmount || 0} (${member.institutionKyc.initialOtherSpecify || 'N/A'})`
+        );
       }
       console.log('');
     }
@@ -100,7 +104,9 @@ async function verifySeededMembers() {
 
     console.log(`  Individual Members with Share Amount > 0: ${individualMembersWithShares}`);
     console.log(`  Institution Members with Share Amount > 0: ${institutionMembersWithShares}`);
-    console.log(`  Total Members with Share Amount > 0: ${individualMembersWithShares + institutionMembersWithShares}`);
+    console.log(
+      `  Total Members with Share Amount > 0: ${individualMembersWithShares + institutionMembersWithShares}`
+    );
   } catch (error) {
     console.error('❌ Error:', error);
   } finally {
@@ -114,4 +120,3 @@ verifySeededMembers()
     console.error(error);
     process.exit(1);
   });
-

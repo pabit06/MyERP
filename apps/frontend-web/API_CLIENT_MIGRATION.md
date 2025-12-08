@@ -21,6 +21,7 @@ This guide helps you migrate from scattered `fetch()` calls to the centralized A
 ## 🔄 Migration Pattern
 
 ### Before (Old Pattern)
+
 ```typescript
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -41,6 +42,7 @@ const fetchData = async () => {
 ```
 
 ### After (New Pattern)
+
 ```typescript
 import { apiClient } from '@/lib/api';
 
@@ -59,12 +61,14 @@ const fetchData = async () => {
 ## 📝 Step-by-Step Migration
 
 ### Step 1: Remove API_URL constant
+
 ```typescript
 // ❌ Remove this
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 ```
 
 ### Step 2: Import API client
+
 ```typescript
 // ✅ Add this
 import { apiClient } from '@/lib/api';
@@ -73,6 +77,7 @@ import { apiClient } from '@/lib/api';
 ### Step 3: Replace fetch calls
 
 #### GET Request
+
 ```typescript
 // ❌ Old
 const response = await fetch(`${API_URL}/members`, {
@@ -85,6 +90,7 @@ const data = await apiClient.get('/members');
 ```
 
 #### POST Request
+
 ```typescript
 // ❌ Old
 const response = await fetch(`${API_URL}/members`, {
@@ -102,6 +108,7 @@ const data = await apiClient.post('/members', memberData);
 ```
 
 #### PUT/PATCH Request
+
 ```typescript
 // ✅ New
 const data = await apiClient.put('/members/123', memberData);
@@ -109,12 +116,14 @@ const data = await apiClient.patch('/members/123', { status: 'active' });
 ```
 
 #### DELETE Request
+
 ```typescript
 // ✅ New
 await apiClient.delete('/members/123');
 ```
 
 #### File Upload
+
 ```typescript
 // ❌ Old
 const formData = new FormData();
@@ -134,10 +143,12 @@ const data = await apiClient.upload('/upload', formData);
 ### Step 4: Handle Response Types
 
 The API client automatically handles both response formats:
+
 - `{ data: T }` - Returns `T`
 - Direct `T` - Returns `T`
 
 If you need to access other response properties:
+
 ```typescript
 // If backend returns { data: members, meta: { total: 100 } }
 const response = await apiClient.get<{ data: Member[]; meta: { total: number } }>('/members');
@@ -147,6 +158,7 @@ const response = await apiClient.get<{ data: Member[]; meta: { total: number } }
 ### Step 5: Error Handling
 
 #### Default Behavior (Recommended)
+
 ```typescript
 // Errors are automatically:
 // - Shown as toast notifications
@@ -164,6 +176,7 @@ try {
 ```
 
 #### Skip Error Toast
+
 ```typescript
 // For optional/background requests
 const data = await apiClient.get('/optional-endpoint', {
@@ -172,6 +185,7 @@ const data = await apiClient.get('/optional-endpoint', {
 ```
 
 #### Skip Auth Token
+
 ```typescript
 // For public endpoints
 const data = await apiClient.get('/public/data', {
@@ -182,6 +196,7 @@ const data = await apiClient.get('/public/data', {
 ## 🎯 Common Patterns
 
 ### Loading States
+
 ```typescript
 const [loading, setLoading] = useState(false);
 const [data, setData] = useState(null);
@@ -200,6 +215,7 @@ const fetchData = async () => {
 ```
 
 ### Multiple Parallel Requests
+
 ```typescript
 const fetchAll = async () => {
   try {
@@ -216,10 +232,11 @@ const fetchAll = async () => {
 ```
 
 ### Conditional Requests
+
 ```typescript
 const fetchIfEnabled = async () => {
   if (!hasModule('cbs')) return;
-  
+
   try {
     const data = await apiClient.get('/cbs/data', {
       skipErrorToast: true, // Optional endpoint
@@ -233,6 +250,7 @@ const fetchIfEnabled = async () => {
 ## 📋 Files to Migrate
 
 ### High Priority (Frequently Used)
+
 - [ ] `app/documents/page.tsx` ✅ (partially done)
 - [ ] `app/members/[id]/page.tsx`
 - [ ] `app/savings/page.tsx`
@@ -241,18 +259,21 @@ const fetchIfEnabled = async () => {
 - [ ] `app/hrm/**/*.tsx`
 
 ### Medium Priority
+
 - [ ] All files in `app/general-ledger/`
 - [ ] All files in `app/reports/`
 - [ ] All files in `app/shares/`
 - [ ] Feature components in `features/`
 
 ### Low Priority
+
 - [ ] Test files
 - [ ] Utility files
 
 ## 🔍 Finding Files to Migrate
 
 Search for these patterns:
+
 ```bash
 # Find files with API_URL constant
 grep -r "API_URL.*process.env" apps/frontend-web/src
@@ -275,22 +296,27 @@ grep -r "Authorization.*Bearer" apps/frontend-web/src
 ## 🐛 Troubleshooting
 
 ### "Cannot find module '@/lib/api'"
+
 - Ensure `tsconfig.json` has path alias: `"@/*": ["./src/*"]`
 
 ### "Token not found"
+
 - Ensure `AuthProvider` is wrapping your app
 - Check that `apiClient.setTokenGetter()` is called in `AuthContext`
 
 ### Errors not showing toasts
+
 - Check that `react-hot-toast` is installed and `<Toaster />` is in your layout
 
 ### Type errors
+
 - Use explicit types: `apiClient.get<YourType>('/endpoint')`
 - Check backend response format matches your type
 
 ## ✅ Migration Checklist
 
 For each file:
+
 - [ ] Remove `API_URL` constant
 - [ ] Import `apiClient` from `@/lib/api`
 - [ ] Replace `fetch()` calls with `apiClient` methods
@@ -305,4 +331,3 @@ For each file:
 - See `PROJECT_IMPROVEMENTS.md` for full context
 - API client source: `src/lib/api/client.ts`
 - Example usage: `app/dashboard/page.tsx`
-

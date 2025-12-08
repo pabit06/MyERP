@@ -7,11 +7,13 @@ N+1 query problems have been identified and fixed in critical areas of the codeb
 ## What is N+1 Query Problem?
 
 The N+1 query problem occurs when:
+
 1. You fetch N records (e.g., 100 employees)
 2. Then for each record, you make an additional query (e.g., fetch loan deduction)
 3. Result: 1 initial query + N additional queries = N+1 queries total
 
 **Example (Before Fix):**
+
 ```typescript
 // Fetch 100 employees (1 query)
 const employees = await prisma.employee.findMany({ where });
@@ -27,6 +29,7 @@ const preview = await Promise.all(
 ```
 
 **Example (After Fix):**
+
 ```typescript
 // Fetch 100 employees (1 query)
 const employees = await prisma.employee.findMany({ where });
@@ -46,15 +49,18 @@ const loanDeductionsMap = await getBatchEmployeeLoanDeductions(
 **File:** `apps/backend/src/routes/compliance.ts`
 
 **Problem:**
+
 - Fetching TTR reports (N records)
 - Then fetching SOF declaration for each TTR in a loop (N queries)
 
 **Solution:**
+
 - Batch fetch all SOF declarations for all TTRs in a single query
 - Create a map for O(1) lookup
 - Reduced from N+1 queries to 2 queries
 
 **Before:**
+
 ```typescript
 const reportsWithSof = await Promise.all(
   ttrReports.map(async (ttr) => {
@@ -65,6 +71,7 @@ const reportsWithSof = await Promise.all(
 ```
 
 **After:**
+
 ```typescript
 // Batch fetch all SOF declarations (1 query)
 const allSofDeclarations = await prisma.sourceOfFundsDeclaration.findMany({
@@ -85,16 +92,19 @@ const reportsWithSof = ttrReports.map((ttr) => ({
 ### 2. Payroll Calculations - Loan Deductions ✅
 
 **Files:**
+
 - `apps/backend/src/routes/hrm.ts`
 - `apps/backend/src/services/hrm/loan-deduction-batch.ts` (new)
 
 **Problem:**
+
 - Fetching employees (N records)
 - Then calling `getEmployeeLoanDeduction()` for each employee in a loop
 - Each call makes multiple queries (employee -> user -> member -> loans -> EMIs)
 - Total: 1 + (N × 5) queries = potentially hundreds of queries
 
 **Solution:**
+
 - Created `getBatchEmployeeLoanDeductions()` function
 - Batch fetches all related data in minimal queries:
   1. Fetch all employees with userIds
@@ -105,6 +115,7 @@ const reportsWithSof = ttrReports.map((ttr) => ({
 - Reduced from ~(1 + N × 5) queries to ~5 queries total
 
 **Before:**
+
 ```typescript
 const preview = await Promise.all(
   employees.map(async (emp) => {
@@ -116,6 +127,7 @@ const preview = await Promise.all(
 ```
 
 **After:**
+
 ```typescript
 // Batch fetch all loan deductions (5 queries total)
 const loanDeductionsMap = await getBatchEmployeeLoanDeductions(
@@ -135,6 +147,7 @@ const preview = await Promise.all(
 ```
 
 **Performance Impact:**
+
 - **Before:** 100 employees = ~501 queries (1 + 100 × 5)
 - **After:** 100 employees = ~6 queries (1 + 5)
 - **Improvement:** ~98.8% reduction in queries
@@ -144,6 +157,7 @@ const preview = await Promise.all(
 **File:** `apps/backend/src/routes/governance.ts`
 
 **Status:** Already using `Promise.all()` for batch updates
+
 - Agenda updates: Uses `Promise.all()` with individual updates (acceptable - Prisma doesn't support batch updates with different data)
 - Attendee updates: Uses `Promise.all()` with individual updates (acceptable)
 
@@ -159,16 +173,19 @@ const preview = await Promise.all(
 ## Performance Improvements
 
 ### TTR Reports Endpoint
+
 - **Before:** N+1 queries (N = number of TTR reports)
 - **After:** 2 queries (1 for TTRs, 1 for all SOF declarations)
 - **Improvement:** ~50% reduction for small datasets, ~99% for large datasets
 
 ### Payroll Preview Endpoint
+
 - **Before:** ~(1 + N × 5) queries (N = number of employees)
 - **After:** ~6 queries (1 for employees, 5 for batch loan data)
 - **Improvement:** ~98.8% reduction for 100 employees
 
 ### Payroll Run Creation
+
 - **Before:** ~(1 + N × 5) queries in transaction
 - **After:** ~6 queries (batch fetch before transaction)
 - **Improvement:** Faster transaction execution, reduced database load
@@ -183,23 +200,27 @@ const preview = await Promise.all(
 ### 3. Journal Entry Creation - Account & Balance Lookups ✅
 
 **Files:**
+
 - `apps/backend/src/services/accounting.ts`
 - `apps/backend/src/services/cbs/day-book.service.ts`
 - `apps/backend/src/controllers/AccountingController.ts`
 
 **Problem:**
+
 - Creating journal entries with N ledger entries
 - Fetching account details for each entry (N queries)
 - Fetching latest balance for each account (N queries)
 - Total: 1 + N + N = 2N + 1 queries
 
 **Solution:**
+
 - Batch fetch all accounts in a single query
 - Batch fetch all latest ledger entries in a single query
 - Create maps for O(1) lookups
 - Reduced from 2N + 1 queries to 3 queries total
 
 **Before:**
+
 ```typescript
 const ledgerEntries = await Promise.all(
   entries.map(async (entry) => {
@@ -211,6 +232,7 @@ const ledgerEntries = await Promise.all(
 ```
 
 **After:**
+
 ```typescript
 // Batch fetch all accounts and balances (2 queries)
 const [accounts, latestLedgers] = await Promise.all([
@@ -232,6 +254,7 @@ const ledgerEntries = await Promise.all(
 ```
 
 **Performance Impact:**
+
 - **Before:** 10 entries = 21 queries (1 + 10 + 10)
 - **After:** 10 entries = 3 queries (1 + 1 + 1)
 - **Improvement:** ~85.7% reduction in queries
@@ -254,6 +277,7 @@ While the critical N+1 problems have been fixed, there may be other opportunitie
 To monitor for N+1 problems in the future:
 
 1. Enable Prisma query logging:
+
 ```typescript
 const prisma = new PrismaClient({
   log: ['query', 'info', 'warn', 'error'],
@@ -276,6 +300,7 @@ const prisma = new PrismaClient({
 ## Impact
 
 These optimizations will significantly improve:
+
 - **Response Times:** Faster API responses, especially for large datasets
 - **Database Load:** Reduced database connections and query execution
 - **Scalability:** Better performance as data grows

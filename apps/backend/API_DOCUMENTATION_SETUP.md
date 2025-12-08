@@ -7,11 +7,13 @@ OpenAPI 3.0 API documentation has been set up using Swagger UI and swagger-jsdoc
 ## Accessing the Documentation
 
 ### Swagger UI (Interactive)
+
 - **URL**: `http://localhost:3001/api-docs`
 - Interactive interface for exploring and testing API endpoints
 - Includes "Try it out" functionality
 
 ### OpenAPI JSON Specification
+
 - **URL**: `http://localhost:3001/api-docs.json`
 - Raw OpenAPI 3.0 specification in JSON format
 - Can be imported into Postman, Insomnia, or other API tools
@@ -66,10 +68,12 @@ router.get('/products', ...);
 ## Available Components
 
 ### Common Schemas
+
 - `Error` - Standard error response
 - `PaginatedResponse` - Paginated list response
 
 ### Common Parameters
+
 - `PaginationPage` - Page number parameter
 - `PaginationLimit` - Items per page parameter
 - `PaginationSortBy` - Sort field parameter
@@ -77,11 +81,13 @@ router.get('/products', ...);
 - `SearchQuery` - Search term parameter
 
 ### Security Schemes
+
 - `bearerAuth` - JWT Bearer token authentication
 
 ## Tags
 
 Routes are organized by tags:
+
 - Authentication
 - Members
 - Savings
@@ -98,6 +104,7 @@ Routes are organized by tags:
 ## Example Annotations
 
 ### Authentication Endpoint
+
 ```typescript
 /**
  * @swagger
@@ -123,6 +130,7 @@ Routes are organized by tags:
 ```
 
 ### Paginated Endpoint
+
 ```typescript
 /**
  * @swagger

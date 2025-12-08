@@ -1,6 +1,6 @@
 /**
  * Performance Monitoring Middleware
- * 
+ *
  * Tracks performance metrics for individual routes and operations
  */
 
@@ -116,7 +116,9 @@ export function performanceMiddleware(req: Request, res: Response, next: NextFun
 /**
  * Get performance data for all routes
  */
-export function getRoutePerformance(): Array<RoutePerformance & { averageTime: number; errorRate: number }> {
+export function getRoutePerformance(): Array<
+  RoutePerformance & { averageTime: number; errorRate: number }
+> {
   return Array.from(routePerformance.values()).map((route) => ({
     ...route,
     averageTime: route.count > 0 ? Math.round((route.totalTime / route.count) * 100) / 100 : 0,
@@ -128,10 +130,15 @@ export function getRoutePerformance(): Array<RoutePerformance & { averageTime: n
 /**
  * Get performance data for a specific route
  */
-export function getRoutePerformanceByPath(method: string, path: string): RoutePerformance & {
-  averageTime: number;
-  errorRate: number;
-} | null {
+export function getRoutePerformanceByPath(
+  method: string,
+  path: string
+):
+  | (RoutePerformance & {
+      averageTime: number;
+      errorRate: number;
+    })
+  | null {
   const routeKey = `${method} ${path}`;
   const route = routePerformance.get(routeKey);
   if (!route) return null;
@@ -154,7 +161,9 @@ export function resetRoutePerformance() {
 /**
  * Get slowest routes (top N)
  */
-export function getSlowestRoutes(limit: number = 10): Array<RoutePerformance & { averageTime: number }> {
+export function getSlowestRoutes(
+  limit: number = 10
+): Array<RoutePerformance & { averageTime: number }> {
   const routes = getRoutePerformance();
   return routes
     .sort((a, b) => b.averageTime - a.averageTime)

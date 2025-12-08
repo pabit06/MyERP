@@ -3,7 +3,7 @@ import { setupTestUser, loginTestUser, type TestUser } from './helpers/test-data
 
 /**
  * E2E Tests for Authentication Flow
- * 
+ *
  * Critical flows:
  * 1. User login with valid credentials
  * 2. User login with invalid credentials
@@ -32,12 +32,12 @@ test.describe('Authentication Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('token');
     expect(body).toHaveProperty('user');
     expect(body.user).toHaveProperty('email', testUser.email);
     expect(body.user).toHaveProperty('cooperativeId');
-    
+
     authToken = body.token;
     testUser.token = authToken;
   });
@@ -89,7 +89,7 @@ test.describe('Authentication Flow', () => {
         password: testUser.password,
       },
     });
-    
+
     const loginBody = await loginResponse.json();
     const token = loginBody.token;
 
@@ -102,7 +102,7 @@ test.describe('Authentication Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('user');
     expect(body.user).toHaveProperty('email', testUser.email);
     expect(body.user).toHaveProperty('cooperativeId');

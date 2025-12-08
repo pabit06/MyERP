@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { setupTestUser, loginTestUser, cleanupTestData, type TestUser } from './helpers/test-data.js';
+import {
+  setupTestUser,
+  loginTestUser,
+  cleanupTestData,
+  type TestUser,
+} from './helpers/test-data.js';
 
 /**
  * E2E Tests for Savings Account Flow
- * 
+ *
  * Critical flows:
  * 1. Create saving product
  * 2. Create saving account
@@ -72,12 +77,12 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('product');
     expect(body.product).toHaveProperty('id');
     expect(body.product.name).toBe(productData.name);
     expect(body.product.code).toBe(productData.code);
-    
+
     savingProductId = body.product.id;
   });
 
@@ -90,7 +95,7 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();
@@ -116,13 +121,13 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('account');
     expect(body.account).toHaveProperty('id');
     expect(body.account.memberId).toBe(memberId);
     expect(body.account.productId).toBe(savingProductId);
     expect(body.account).toHaveProperty('accountNumber');
-    
+
     savingAccountId = body.account.id;
   });
 
@@ -139,7 +144,7 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('account');
     expect(body.account.id).toBe(savingAccountId);
     expect(body.account).toHaveProperty('balance');
@@ -168,7 +173,7 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('success', true);
     expect(body).toHaveProperty('transaction');
   });
@@ -196,7 +201,7 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('success', true);
     expect(body).toHaveProperty('transaction');
   });
@@ -210,7 +215,7 @@ test.describe('Savings Account Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();

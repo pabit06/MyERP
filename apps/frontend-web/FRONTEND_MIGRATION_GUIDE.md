@@ -21,11 +21,13 @@ The frontend has been partially migrated to a feature-based structure. This guid
 ### For Pages (app router)
 
 **Before:**
+
 ```tsx
 import SavingsHeader from './components/SavingsHeader';
 ```
 
 **After:**
+
 ```tsx
 import { SavingsHeader } from '@/features/savings';
 ```
@@ -33,11 +35,13 @@ import { SavingsHeader } from '@/features/savings';
 ### For Components
 
 **Before:**
+
 ```tsx
 import ChartWrapper from '../../components/charts/ChartWrapper';
 ```
 
 **After:**
+
 ```tsx
 import { ChartWrapper } from '@/features/dashboard';
 ```
@@ -45,11 +49,13 @@ import { ChartWrapper } from '@/features/dashboard';
 ### For Shared Components
 
 **Before:**
+
 ```tsx
 import NepaliDatePicker from '@/components/NepaliDatePicker';
 ```
 
 **After:**
+
 ```tsx
 import { NepaliDatePicker } from '@/components/shared';
 ```
@@ -59,12 +65,14 @@ import { NepaliDatePicker } from '@/components/shared';
 ### 1. Update Import Statements
 
 Update all import statements in:
+
 - `app/**/*.tsx` files
 - Component files that import from old locations
 
 ### 2. Create Feature API Modules
 
 Create API modules for each feature:
+
 - `features/savings/api/savings.api.ts`
 - `features/members/api/members.api.ts`
 - etc.
@@ -72,6 +80,7 @@ Create API modules for each feature:
 ### 3. Move Feature-Specific Hooks
 
 Move hooks to feature folders:
+
 - `features/savings/hooks/useSavings.ts`
 - `features/members/hooks/useMembers.ts`
 - etc.
@@ -79,6 +88,7 @@ Move hooks to feature folders:
 ### 4. Update tsconfig.json Paths
 
 Add path aliases:
+
 ```json
 {
   "compilerOptions": {
@@ -126,6 +136,7 @@ features/
 ## Static Assets
 
 Static assets have been organized:
+
 ```
 public/
   ├── images/
@@ -144,4 +155,3 @@ public/
 3. Move feature-specific hooks
 4. Test all pages to ensure imports work
 5. Remove old component directories after migration is complete
-

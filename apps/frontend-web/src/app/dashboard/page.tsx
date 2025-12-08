@@ -23,6 +23,7 @@ import {
 import MemberGrowthChart from '@/components/charts/MemberGrowthChart';
 import TrendsChart from '@/components/charts/TrendsChart';
 import { format } from 'date-fns';
+import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
 
 interface Stats {
   members?: number;
@@ -104,13 +105,12 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
+      <OnboardingWizard />
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-              Dashboard
-            </h1>
+            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Dashboard</h1>
             <p className="text-gray-500 mt-1 flex items-center gap-2">
               <Calendar className="w-4 h-4" />
               {currentDate}
@@ -130,20 +130,25 @@ export default function DashboardPage() {
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-pink-500 opacity-20 rounded-full blur-2xl"></div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-2">
-              Good Morning, {user?.firstName}! 👋
-            </h2>
+            <h2 className="text-2xl font-bold mb-2">Good Morning, {user?.firstName}! 👋</h2>
             <p className="text-indigo-100 max-w-xl text-lg">
-              Here is what&apos;s happening in <span className="font-semibold text-white">{cooperative?.name}</span> today.
-              You have {cooperative?.enabledModules?.length || 0} active modules running.
+              Here is what&apos;s happening in{' '}
+              <span className="font-semibold text-white">{cooperative?.name}</span> today. You have{' '}
+              {cooperative?.enabledModules?.length || 0} active modules running.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link href="/members/new" className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium transition-colors border border-white/10">
+              <Link
+                href="/members/new"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium transition-colors border border-white/10"
+              >
                 <UserPlus className="w-4 h-4" />
                 Add Member
               </Link>
-              <Link href="/reports" className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium transition-colors border border-white/10">
+              <Link
+                href="/reports"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-sm rounded-lg text-sm font-medium transition-colors border border-white/10"
+              >
                 <FileText className="w-4 h-4" />
                 View Reports
               </Link>
@@ -236,16 +241,46 @@ export default function DashboardPage() {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h3>
               <div className="grid grid-cols-2 gap-3">
-                <QuickActionButton icon={UserPlus} label="New Member" href="/members/new" color="text-blue-600 bg-blue-50" />
+                <QuickActionButton
+                  icon={UserPlus}
+                  label="New Member"
+                  href="/members/new"
+                  color="text-blue-600 bg-blue-50"
+                />
                 {hasModule('cbs') && (
                   <>
-                    <QuickActionButton icon={Wallet} label="Deposit" href="/savings/deposit" color="text-green-600 bg-green-50" />
-                    <QuickActionButton icon={CreditCard} label="Withdraw" href="/savings/withdraw" color="text-red-600 bg-red-50" />
+                    <QuickActionButton
+                      icon={Wallet}
+                      label="Deposit"
+                      href="/savings/deposit"
+                      color="text-green-600 bg-green-50"
+                    />
+                    <QuickActionButton
+                      icon={CreditCard}
+                      label="Withdraw"
+                      href="/savings/withdraw"
+                      color="text-red-600 bg-red-50"
+                    />
                   </>
                 )}
-                <QuickActionButton icon={FileText} label="Reports" href="/reports" color="text-purple-600 bg-purple-50" />
-                <QuickActionButton icon={Settings} label="Settings" href="/settings" color="text-gray-600 bg-gray-50" />
-                <QuickActionButton icon={HelpCircle} label="Support" href="/support" color="text-indigo-600 bg-indigo-50" />
+                <QuickActionButton
+                  icon={FileText}
+                  label="Reports"
+                  href="/reports"
+                  color="text-purple-600 bg-purple-50"
+                />
+                <QuickActionButton
+                  icon={Settings}
+                  label="Settings"
+                  href="/settings"
+                  color="text-gray-600 bg-gray-50"
+                />
+                <QuickActionButton
+                  icon={HelpCircle}
+                  label="Support"
+                  href="/support"
+                  color="text-indigo-600 bg-indigo-50"
+                />
               </div>
             </div>
 
@@ -253,16 +288,28 @@ export default function DashboardPage() {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-gray-900">Modules</h3>
-                <Link href="/subscription" className="text-sm text-indigo-600 font-medium hover:underline">Manage</Link>
+                <Link
+                  href="/subscription"
+                  className="text-sm text-indigo-600 font-medium hover:underline"
+                >
+                  Manage
+                </Link>
               </div>
               <div className="space-y-3">
                 {cooperative?.enabledModules?.map((mod) => (
-                  <div key={mod} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getModuleColor(mod)}`}>
+                  <div
+                    key={mod}
+                    className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors"
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center ${getModuleColor(mod)}`}
+                    >
                       <Package className="w-4 h-4" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900 capitalize">{getModuleName(mod)}</p>
+                      <p className="text-sm font-semibold text-gray-900 capitalize">
+                        {getModuleName(mod)}
+                      </p>
                       <p className="text-xs text-gray-500">Active</p>
                     </div>
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
@@ -281,7 +328,21 @@ export default function DashboardPage() {
 }
 
 // Sub-components for cleaner code
-function StatsCard({ title, value, label, icon: Icon, color, href }: { title: string; value: string; label: string; icon: ElementType; color: string; href?: string }) {
+function StatsCard({
+  title,
+  value,
+  label,
+  icon: Icon,
+  color,
+  href,
+}: {
+  title: string;
+  value: string;
+  label: string;
+  icon: ElementType;
+  color: string;
+  href?: string;
+}) {
   const colorStyles: Record<string, string> = {
     blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
     green: 'bg-green-50 text-green-600 hover:bg-green-100',
@@ -296,7 +357,9 @@ function StatsCard({ title, value, label, icon: Icon, color, href }: { title: st
         <div className="flex justify-between items-start">
           <div>
             <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{value}</h3>
+            <h3 className="text-2xl font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">
+              {value}
+            </h3>
           </div>
           <div className={`p-3 rounded-xl ${colorStyles[color]} transition-colors`}>
             <Icon className="w-5 h-5" />
@@ -312,13 +375,28 @@ function StatsCard({ title, value, label, icon: Icon, color, href }: { title: st
   );
 }
 
-function QuickActionButton({ icon: Icon, label, href, color }: { icon: ElementType; label: string; href: string; color: string }) {
+function QuickActionButton({
+  icon: Icon,
+  label,
+  href,
+  color,
+}: {
+  icon: ElementType;
+  label: string;
+  href: string;
+  color: string;
+}) {
   return (
-    <Link href={href} className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200 group">
+    <Link
+      href={href}
+      className="flex flex-col items-center justify-center p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-200 group"
+    >
       <div className={`p-3 rounded-lg ${color} mb-2 group-hover:scale-110 transition-transform`}>
         <Icon className="w-5 h-5" />
       </div>
-      <span className="text-xs font-medium text-gray-600 text-center group-hover:text-gray-900">{label}</span>
+      <span className="text-xs font-medium text-gray-600 text-center group-hover:text-gray-900">
+        {label}
+      </span>
     </Link>
   );
 }

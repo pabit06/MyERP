@@ -80,4 +80,3 @@ export function registerSavingsHooks() {
     'audit-saving-account-creation'
   );
 }
-

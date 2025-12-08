@@ -111,19 +111,14 @@ router.get('/cooperatives/:id', async (req: Request, res: Response) => {
  */
 router.get('/stats', async (req: Request, res: Response) => {
   try {
-    const [
-      totalCooperatives,
-      activeSubscriptions,
-      totalUsers,
-      totalMembers,
-      totalTransactions,
-    ] = await Promise.all([
-      prisma.cooperative.count(),
-      prisma.subscription.count({ where: { status: 'active' } }),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.member.count(),
-      prisma.transaction.count(),
-    ]);
+    const [totalCooperatives, activeSubscriptions, totalUsers, totalMembers, totalTransactions] =
+      await Promise.all([
+        prisma.cooperative.count(),
+        prisma.subscription.count({ where: { status: 'active' } }),
+        prisma.user.count({ where: { isActive: true } }),
+        prisma.member.count(),
+        prisma.transaction.count(),
+      ]);
 
     res.json({
       cooperatives: {
@@ -214,7 +209,9 @@ router.post('/plans', async (req: Request, res: Response) => {
     const { name, monthlyPrice, enabledModules } = req.body;
 
     if (!name || !monthlyPrice || !enabledModules) {
-      res.status(400).json({ error: 'Missing required fields: name, monthlyPrice, enabledModules' });
+      res
+        .status(400)
+        .json({ error: 'Missing required fields: name, monthlyPrice, enabledModules' });
       return;
     }
 
@@ -245,7 +242,8 @@ router.put('/plans/:id', async (req: Request, res: Response) => {
     const updateData: any = {};
     if (name) updateData.name = name;
     if (monthlyPrice !== undefined) updateData.monthlyPrice = parseFloat(monthlyPrice);
-    if (enabledModules !== undefined) updateData.enabledModules = Array.isArray(enabledModules) ? enabledModules : [];
+    if (enabledModules !== undefined)
+      updateData.enabledModules = Array.isArray(enabledModules) ? enabledModules : [];
 
     const plan = await prisma.plan.update({
       where: { id },
@@ -260,4 +258,3 @@ router.put('/plans/:id', async (req: Request, res: Response) => {
 });
 
 export default router;
-

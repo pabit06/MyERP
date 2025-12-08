@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma.js';
 
@@ -35,7 +36,16 @@ export interface ReportColumn {
  */
 export interface ReportFilter {
   field: string;
-  operator: 'equals' | 'notEquals' | 'greaterThan' | 'lessThan' | 'between' | 'in' | 'contains' | 'startsWith' | 'endsWith';
+  operator:
+  | 'equals'
+  | 'notEquals'
+  | 'greaterThan'
+  | 'lessThan'
+  | 'between'
+  | 'in'
+  | 'contains'
+  | 'startsWith'
+  | 'endsWith';
   value: string | number | boolean | Date | (string | number | boolean | Date)[];
 }
 
@@ -113,7 +123,6 @@ export class ReportBuilder {
       generatedAt: new Date(),
     };
   }
-
 
   /**
    * Build base query based on configuration
@@ -273,7 +282,8 @@ export class ReportBuilder {
           result[agg.label] = values.reduce((sum, v) => sum + v, 0);
           break;
         case 'avg':
-          result[agg.label] = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
+          result[agg.label] =
+            values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : 0;
           break;
         case 'count':
           result[agg.label] = values.length;
@@ -338,7 +348,13 @@ export const ReportConfigs = {
     columns: [
       { key: 'applicationNumber', label: 'Application #', type: 'string', sortable: true },
       { key: 'member.memberNumber', label: 'Member #', type: 'string' },
-      { key: 'loanAmount', label: 'Loan Amount', type: 'currency', aggregate: 'sum', sortable: true },
+      {
+        key: 'loanAmount',
+        label: 'Loan Amount',
+        type: 'currency',
+        aggregate: 'sum',
+        sortable: true,
+      },
       { key: 'interestRate', label: 'Interest Rate', type: 'percentage', sortable: true },
       { key: 'tenureMonths', label: 'Tenure (Months)', type: 'number', sortable: true },
       { key: 'status', label: 'Status', type: 'string', filterable: true },
@@ -375,4 +391,3 @@ export const ReportConfigs = {
     orderBy: [{ field: 'createdAt', direction: 'desc' }],
   } as ReportConfig,
 };
-

@@ -9,6 +9,7 @@ Provides utilities for managing test data:
 ### `setupTestUser()`
 
 Creates or retrieves a test user for E2E tests. If the user doesn't exist, it will:
+
 1. Create a test cooperative (subdomain: `test-coop`)
 2. Create a default plan if needed
 3. Create an admin role
@@ -21,6 +22,7 @@ Creates or retrieves a test user for E2E tests. If the user doesn't exist, it wi
 Logs in the test user and returns an authentication token.
 
 **Parameters:**
+
 - `request`: Playwright APIRequestContext
 - `user`: TestUser object
 
@@ -29,6 +31,7 @@ Logs in the test user and returns an authentication token.
 ### `cleanupTestData()`
 
 Cleans up test data created during E2E tests:
+
 - Deletes test members
 - Deletes test loan applications
 - Deletes test loan products
@@ -46,7 +49,7 @@ test.describe('My Feature', () => {
   test.beforeAll(async ({ request }) => {
     // Setup test user
     testUser = await setupTestUser();
-    
+
     // Login and get token
     authToken = await loginTestUser(request, testUser);
   });

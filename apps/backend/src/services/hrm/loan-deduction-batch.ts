@@ -1,6 +1,6 @@
 /**
  * Batch Loan Deduction Service for Payroll
- * 
+ *
  * Optimized version that batches queries to avoid N+1 problems
  */
 
@@ -13,7 +13,7 @@ interface EmployeeLoanDeduction {
 
 /**
  * Get loan deductions for multiple employees in a single batch query
- * 
+ *
  * @param employeeIds - Array of employee IDs
  * @param cooperativeId - Cooperative ID
  * @param fiscalYear - Fiscal year (e.g., "2081/82")
@@ -50,9 +50,7 @@ export async function getBatchEmployeeLoanDeductions(
     }
 
     const userIds = employees.map((emp) => emp.userId!);
-    const employeeIdToUserId = new Map(
-      employees.map((emp) => [emp.id, emp.userId!])
-    );
+    const employeeIdToUserId = new Map(employees.map((emp) => [emp.id, emp.userId!]));
 
     // Get all users with emails
     const users = await prisma.user.findMany({

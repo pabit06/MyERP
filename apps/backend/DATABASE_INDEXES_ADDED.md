@@ -7,6 +7,7 @@ Added comprehensive database indexes to improve query performance across frequen
 ## Indexes Added
 
 ### Member Model
+
 - `@@index([cooperativeId, workflowStatus])` - Filter members by status
 - `@@index([cooperativeId, isActive])` - Filter active/inactive members
 - `@@index([cooperativeId, createdAt])` - Sort by creation date
@@ -15,17 +16,20 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([memberNumber])` - Fast lookup by member number
 
 ### Transaction Model
+
 - `@@index([cooperativeId, date])` - Date range queries
 - `@@index([cooperativeId, type])` - Filter by transaction type
 - `@@index([cooperativeId, createdAt])` - Sort by creation
 - `@@index([transactionNumber])` - Fast lookup by transaction number
 
 ### JournalEntry Model
+
 - `@@index([cooperativeId, date])` - Date range queries
 - `@@index([cooperativeId, createdAt])` - Sort by creation
 - `@@index([entryNumber])` - Fast lookup by entry number
 
 ### Ledger Model
+
 - `@@index([cooperativeId, accountId])` - Account balance queries
 - `@@index([cooperativeId, createdAt])` - Sort by creation
 - `@@index([accountId])` - Account-specific queries
@@ -33,6 +37,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([transactionId])` - Link to transactions
 
 ### SavingAccount Model
+
 - `@@index([cooperativeId, memberId])` - Member's accounts
 - `@@index([cooperativeId, status])` - Filter by status
 - `@@index([cooperativeId, productId])` - Filter by product
@@ -40,6 +45,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([accountNumber])` - Fast lookup by account number
 
 ### LoanApplication Model
+
 - `@@index([cooperativeId, memberId])` - Member's loans
 - `@@index([cooperativeId, status])` - Filter by status
 - `@@index([cooperativeId, productId])` - Filter by product
@@ -48,6 +54,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([applicationNumber])` - Fast lookup by application number
 
 ### EMISchedule Model
+
 - `@@index([applicationId])` - Loan-specific schedules
 - `@@index([cooperativeId, dueDate])` - Overdue queries
 - `@@index([cooperativeId, status])` - Filter by payment status
@@ -55,6 +62,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([status])` - Status filtering
 
 ### ShareTransaction Model
+
 - `@@index([cooperativeId, memberId])` - Member's share transactions
 - `@@index([cooperativeId, date])` - Date range queries
 - `@@index([cooperativeId, type])` - Filter by transaction type
@@ -62,6 +70,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([transactionNo])` - Fast lookup by transaction number
 
 ### AuditLog Model
+
 - `@@index([cooperativeId, timestamp])` - Time-based queries
 - `@@index([cooperativeId, action])` - Filter by action type
 - `@@index([cooperativeId, entityType])` - Filter by entity type
@@ -70,6 +79,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([timestamp])` - Global time-based queries
 
 ### Employee Model
+
 - `@@index([cooperativeId, status])` - Filter by employment status
 - `@@index([cooperativeId, departmentId])` - Department queries
 - `@@index([cooperativeId, designationId])` - Designation queries
@@ -77,6 +87,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([code])` - Fast lookup by employee code
 
 ### MemberWorkflowHistory Model
+
 - `@@index([memberId])` - Member's workflow history
 - `@@index([cooperativeId, toStatus])` - Status-based queries
 - `@@index([cooperativeId, action])` - Action-based queries
@@ -84,12 +95,14 @@ Added comprehensive database indexes to improve query performance across frequen
 - `@@index([createdAt])` - Time-based queries
 
 ### AML Models
+
 - **AmlFlag**: Indexes on `cooperativeId, memberId`, `cooperativeId, type`, `cooperativeId, status`, `memberId`
 - **AmlTtrReport**: Indexes on `cooperativeId, memberId`, `cooperativeId, forDate`, `cooperativeId, status`, `memberId`, `forDate`
 - **AmlCase**: Indexes on `cooperativeId, memberId`, `cooperativeId, status`, `cooperativeId, type`, `memberId`
 - **SourceOfFundsDeclaration**: Indexes on `cooperativeId, memberId`, `cooperativeId, transactionId`, `memberId`, `transactionId`
 
 ### HRM Models
+
 - **PayrollLog**: Indexes on `cooperativeId, employeeId`, `cooperativeId, status`, `cooperativeId, payPeriodStart`, `employeeId`
 - **AttendanceLog**: Indexes on `cooperativeId, employeeId`, `cooperativeId, date`, `cooperativeId, status`, `employeeId`
 - **Attendance**: Indexes on `cooperativeId, employeeId`, `cooperativeId, date`, `cooperativeId, status`, `employeeId`
@@ -98,6 +111,7 @@ Added comprehensive database indexes to improve query performance across frequen
 - **PayrollRun**: Indexes on `cooperativeId, status`, `cooperativeId, fiscalYear`
 
 ### Other Models
+
 - **ChartOfAccounts**: Indexes on `cooperativeId, type`, `cooperativeId, isActive`, `cooperativeId, parentId`, `code`
 - **MemberDocument**: Indexes on `cooperativeId, memberId`, `memberId`, `documentType`
 
@@ -115,6 +129,7 @@ These indexes will significantly improve query performance for:
 ## Migration File
 
 The migration file has been created at:
+
 - `packages/db-schema/prisma/migrations/20250125120000_add_performance_indexes/migration.sql`
 
 The migration contains **151 CREATE INDEX statements** covering all the indexes listed above.

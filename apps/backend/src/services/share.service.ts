@@ -61,8 +61,8 @@ export const ShareService = {
           const maxAllowedKitta = Math.floor(maxAllowedAmount / unitPrice);
           throw new Error(
             `Share purchase limit exceeded. Maximum allowed: 20% of total share capital (Rs. ${maxAllowedAmount.toLocaleString()} or ${maxAllowedKitta} kitta). ` +
-            `Current total share capital: Rs. ${totalShareCapital.toLocaleString()}. ` +
-            `After this purchase, you would own Rs. ${memberNewAmount.toLocaleString()} (${memberPercentage.toFixed(2)}%).`
+              `Current total share capital: Rs. ${totalShareCapital.toLocaleString()}. ` +
+              `After this purchase, you would own Rs. ${memberNewAmount.toLocaleString()} (${memberPercentage.toFixed(2)}%).`
           );
         }
       }

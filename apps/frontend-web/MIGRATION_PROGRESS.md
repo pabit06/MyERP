@@ -3,6 +3,7 @@
 ## ✅ Completed (Major Milestone!)
 
 ### Import Path Updates
+
 - ✅ **All app/ pages** - Updated to use `@/features/components/shared` for ProtectedRoute and shared components
 - ✅ **General Ledger** - All pages migrated (day-book, income, expenses, assets, liabilities, equity, journal, statement)
 - ✅ **Members** - All pages migrated (all, new, kyc-approvals, [id]/kyc, [id]/institution-kyc)
@@ -16,11 +17,13 @@
 - ✅ **Subscription** - Page migrated
 
 ### API Client Integration
+
 - ✅ **Dashboard** - Migrated to use `apiClient`
 - ✅ **Members** - Migrated to use `apiClient`
 - ✅ **Documents** - Partially migrated (fetchStatistics, fetchDocuments)
 
 ### Path Aliases
+
 - ✅ **tsconfig.json** - Already configured with `@/*` alias
 - ✅ All imports now use `@/features/components/shared` instead of relative paths
 
@@ -34,6 +37,7 @@
 ## 🔄 Remaining Work
 
 ### Low Priority
+
 1. **API Client Migration** - Migrate remaining `fetch()` calls to `apiClient`
    - See `API_CLIENT_MIGRATION.md` for guide
    - Can be done incrementally as files are touched
@@ -88,4 +92,3 @@
 **Status:** ✅ Major Migration Complete  
 **Date:** 2025-01-27  
 **Next:** API Client Migration & Component Organization
-

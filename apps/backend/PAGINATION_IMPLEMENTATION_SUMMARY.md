@@ -9,10 +9,12 @@ Pagination has been successfully implemented across all major list endpoints in 
 ### 1. Pagination Utilities ✅
 
 **Files:**
+
 - `apps/backend/src/lib/pagination.ts` - Pagination helper functions
 - `apps/backend/src/validators/common.ts` - Pagination validation schemas
 
 **Features:**
+
 - `applyPagination()` - Applies skip/take to Prisma queries
 - `createPaginatedResponse()` - Creates standardized paginated response
 - `applySorting()` - Applies sorting to queries
@@ -22,14 +24,17 @@ Pagination has been successfully implemented across all major list endpoints in 
 ### 2. Routes Updated with Pagination ✅
 
 #### Savings Routes (`apps/backend/src/routes/savings.ts`)
+
 - ✅ `GET /api/savings/products` - Paginated with sorting
 - ✅ `GET /api/savings/accounts` - Paginated with search and filtering
 
 #### Loans Routes (`apps/backend/src/routes/loans.ts`)
+
 - ✅ `GET /api/loans/products` - Paginated with sorting
 - ✅ `GET /api/loans/applications` - Paginated with search and filtering
 
 #### HRM Routes (`apps/backend/src/routes/hrm.ts`)
+
 - ✅ `GET /api/hrm/employees` - Paginated with search and filtering
 - ✅ `GET /api/hrm/departments` - Paginated with search
 - ✅ `GET /api/hrm/designations` - Paginated with search
@@ -42,21 +47,26 @@ Pagination has been successfully implemented across all major list endpoints in 
 - ✅ `GET /api/hrm/payroll/runs` - Paginated with filtering
 
 #### Shares Routes (`apps/backend/src/routes/shares.ts`)
+
 - ✅ `GET /api/shares/accounts` - Paginated with search and filtering
 - ✅ `GET /api/shares/certificates` - Paginated with search
 
 #### Compliance Routes (`apps/backend/src/routes/compliance.ts`)
+
 - ✅ `GET /api/compliance/audit-logs` - Paginated with search and filtering
 - ✅ `GET /api/compliance/aml/ttr` - Paginated with search and date filtering
 - ✅ `GET /api/compliance/aml/cases` - Paginated with search and filtering
 
 #### Accounting Routes (`apps/backend/src/routes/accounting.ts`)
+
 - ✅ `GET /api/accounting/accounts` - Paginated with sorting and type filtering
 
 #### Reports Routes (`apps/backend/src/routes/reports.ts`)
+
 - ✅ `GET /api/reports/audit` - Paginated with search and filtering (preserves summary statistics)
 
 #### Notifications Routes (`apps/backend/src/routes/notifications.ts`)
+
 - ✅ `GET /api/notifications` - Updated to use standardized pagination schema
 
 ## Pagination Query Parameters
@@ -94,6 +104,7 @@ All paginated endpoints return:
 ## Search Functionality
 
 Search is implemented for relevant endpoints and searches across:
+
 - **Members/Employees**: Name, code, email, phone
 - **Accounts**: Account numbers, member names
 - **Applications**: Application numbers, member names

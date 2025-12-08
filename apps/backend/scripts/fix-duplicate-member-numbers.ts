@@ -68,7 +68,9 @@ async function fixDuplicateMemberNumbers() {
       console.log(`  ⚠️  Found ${duplicates.length} duplicate member number(s)`);
 
       for (const [memberNumber, duplicateMembers] of duplicates) {
-        console.log(`\n  🔧 Fixing duplicate: ${memberNumber} (${duplicateMembers.length} members)`);
+        console.log(
+          `\n  🔧 Fixing duplicate: ${memberNumber} (${duplicateMembers.length} members)`
+        );
 
         // Keep the first (oldest) member's number, reassign others
         const [keepMember, ...reassignMembers] = duplicateMembers;
@@ -186,4 +188,3 @@ fixDuplicateMemberNumbers()
     console.error('\n💥 Script failed:', error);
     process.exit(1);
   });
-

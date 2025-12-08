@@ -7,12 +7,14 @@ The request validation middleware has been successfully implemented! This provid
 ## 📚 What Was Created
 
 ### 1. Validation Middleware (`src/middleware/validate.ts`)
+
 - `validate()` - Validates request body
 - `validateQuery()` - Validates query parameters
 - `validateParams()` - Validates route parameters
 - `validateAll()` - Validates multiple parts at once
 
 ### 2. Common Validation Schemas (`src/validators/common.ts`)
+
 - `paginationSchema` - Standard pagination (page, limit, sortBy, sortOrder)
 - `idSchema` - ID parameter validation
 - `dateRangeSchema` - Date range filtering
@@ -20,11 +22,13 @@ The request validation middleware has been successfully implemented! This provid
 - `paginationWithSearchSchema` - Combined pagination + search
 
 ### 3. Pagination Utilities (`src/lib/pagination.ts`)
+
 - `applyPagination()` - Apply pagination to Prisma queries
 - `createPaginatedResponse()` - Create standardized paginated responses
 - `applySorting()` - Apply sorting to queries
 
 ### 4. Updated Express Types (`src/types/express.d.ts`)
+
 - Added `req.validated` - Validated request body
 - Added `req.validatedQuery` - Validated query parameters
 - Added `req.validatedParams` - Validated route parameters
@@ -34,26 +38,35 @@ The request validation middleware has been successfully implemented! This provid
 ### Basic Body Validation
 
 **Before:**
+
 ```typescript
-router.post('/members', asyncHandler(async (req, res) => {
-  const validation = createMemberSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const data = validation.data;
-  // ... rest of handler
-}));
+router.post(
+  '/members',
+  asyncHandler(async (req, res) => {
+    const validation = createMemberSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const data = validation.data;
+    // ... rest of handler
+  })
+);
 ```
 
 **After:**
+
 ```typescript
 import { validate } from '../middleware/validate.js';
 import { createMemberSchema } from '../validators/member.validator.js';
 
-router.post('/members', validate(createMemberSchema), asyncHandler(async (req, res) => {
-  const data = req.validated; // Type-safe validated data!
-  // ... rest of handler
-}));
+router.post(
+  '/members',
+  validate(createMemberSchema),
+  asyncHandler(async (req, res) => {
+    const data = req.validated; // Type-safe validated data!
+    // ... rest of handler
+  })
+);
 ```
 
 ### Query Parameter Validation
@@ -62,10 +75,14 @@ router.post('/members', validate(createMemberSchema), asyncHandler(async (req, r
 import { validateQuery } from '../middleware/validate.js';
 import { paginationSchema } from '../validators/common.js';
 
-router.get('/members', validateQuery(paginationSchema), asyncHandler(async (req, res) => {
-  const { page, limit, sortBy, sortOrder } = req.validatedQuery;
-  // ... use pagination params
-}));
+router.get(
+  '/members',
+  validateQuery(paginationSchema),
+  asyncHandler(async (req, res) => {
+    const { page, limit, sortBy, sortOrder } = req.validatedQuery;
+    // ... use pagination params
+  })
+);
 ```
 
 ### Route Parameter Validation
@@ -74,10 +91,14 @@ router.get('/members', validateQuery(paginationSchema), asyncHandler(async (req,
 import { validateParams } from '../middleware/validate.js';
 import { idSchema } from '../validators/common.js';
 
-router.get('/members/:id', validateParams(idSchema), asyncHandler(async (req, res) => {
-  const { id } = req.validatedParams; // Type-safe!
-  // ... use id
-}));
+router.get(
+  '/members/:id',
+  validateParams(idSchema),
+  asyncHandler(async (req, res) => {
+    const { id } = req.validatedParams; // Type-safe!
+    // ... use id
+  })
+);
 ```
 
 ### Combined Validation
@@ -85,11 +106,12 @@ router.get('/members/:id', validateParams(idSchema), asyncHandler(async (req, re
 ```typescript
 import { validateAll } from '../middleware/validate.js';
 
-router.post('/members/:id/kyc', 
+router.post(
+  '/members/:id/kyc',
   validateAll({
     params: idSchema,
-    body: KymFormSchema
-  }), 
+    body: KymFormSchema,
+  }),
   asyncHandler(async (req, res) => {
     const { id } = req.validatedParams;
     const kycData = req.validated;
@@ -105,34 +127,41 @@ import { validateQuery } from '../middleware/validate.js';
 import { paginationSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse } from '../lib/pagination.js';
 
-router.get('/members', validateQuery(paginationSchema), asyncHandler(async (req, res) => {
-  const tenantId = req.user!.tenantId;
-  const pagination = req.validatedQuery;
-  
-  // Build query with pagination
-  const where = { cooperativeId: tenantId };
-  const query = applyPagination({ where }, pagination);
-  
-  // Execute query
-  const [members, total] = await Promise.all([
-    prisma.member.findMany(query),
-    prisma.member.count({ where }),
-  ]);
-  
-  // Return paginated response
-  res.json(createPaginatedResponse(members, total, pagination));
-}));
+router.get(
+  '/members',
+  validateQuery(paginationSchema),
+  asyncHandler(async (req, res) => {
+    const tenantId = req.user!.tenantId;
+    const pagination = req.validatedQuery;
+
+    // Build query with pagination
+    const where = { cooperativeId: tenantId };
+    const query = applyPagination({ where }, pagination);
+
+    // Execute query
+    const [members, total] = await Promise.all([
+      prisma.member.findMany(query),
+      prisma.member.count({ where }),
+    ]);
+
+    // Return paginated response
+    res.json(createPaginatedResponse(members, total, pagination));
+  })
+);
 ```
 
 ## 📋 Migration Guide
 
 ### Step 1: Import the middleware
+
 ```typescript
 import { validate, validateQuery, validateParams } from '../middleware/validate.js';
 ```
 
 ### Step 2: Replace manual validation
+
 **Find:**
+
 ```typescript
 const validation = schema.safeParse(req.body);
 if (!validation.success) {
@@ -142,6 +171,7 @@ const data = validation.data;
 ```
 
 **Replace with:**
+
 ```typescript
 // Add middleware to route
 router.post('/path', validate(schema), handler);
@@ -151,6 +181,7 @@ const data = req.validated;
 ```
 
 ### Step 3: Update handler
+
 - Remove manual validation code
 - Use `req.validated` instead of `validation.data`
 - Use `req.validatedQuery` for query params
@@ -167,27 +198,36 @@ const data = req.validated;
 ## 📝 Example Migration
 
 ### Before:
+
 ```typescript
-router.post('/members', asyncHandler(async (req, res) => {
-  const tenantId = req.user!.tenantId;
-  
-  const validation = createMemberSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  
-  const { firstName, lastName, email } = validation.data;
-  // ... rest of code
-}));
+router.post(
+  '/members',
+  asyncHandler(async (req, res) => {
+    const tenantId = req.user!.tenantId;
+
+    const validation = createMemberSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+
+    const { firstName, lastName, email } = validation.data;
+    // ... rest of code
+  })
+);
 ```
 
 ### After:
+
 ```typescript
-router.post('/members', validate(createMemberSchema), asyncHandler(async (req, res) => {
-  const tenantId = req.user!.tenantId;
-  const { firstName, lastName, email } = req.validated;
-  // ... rest of code
-}));
+router.post(
+  '/members',
+  validate(createMemberSchema),
+  asyncHandler(async (req, res) => {
+    const tenantId = req.user!.tenantId;
+    const { firstName, lastName, email } = req.validated;
+    // ... rest of code
+  })
+);
 ```
 
 ## 🔍 Type Safety

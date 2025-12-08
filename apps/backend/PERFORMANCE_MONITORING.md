@@ -9,12 +9,15 @@ Enhanced performance monitoring has been implemented for the MyERP backend, incl
 ### 1. Prometheus Metrics Export ✅
 
 **File Created:**
+
 - `apps/backend/src/lib/prometheus.ts` - Prometheus format metrics exporter
 
 **Endpoint:**
+
 - `GET /health/metrics/prometheus` - Returns metrics in Prometheus format
 
 **Metrics Exported:**
+
 - HTTP request metrics (count, errors, duration)
 - Database query metrics (count, duration, slow queries)
 - Memory usage metrics
@@ -22,11 +25,13 @@ Enhanced performance monitoring has been implemented for the MyERP backend, incl
 - Request distribution by method and status
 
 **Usage:**
+
 ```bash
 curl http://localhost:4000/health/metrics/prometheus
 ```
 
 **Integration:**
+
 - Can be scraped by Prometheus
 - Compatible with Grafana dashboards
 - Standard Prometheus format
@@ -34,9 +39,11 @@ curl http://localhost:4000/health/metrics/prometheus
 ### 2. Database Query Performance Tracking ✅
 
 **File Created:**
+
 - `apps/backend/src/lib/database-metrics.ts` - Database performance metrics
 
 **Features:**
+
 - Tracks all database queries
 - Records query duration
 - Detects slow queries (> 1 second)
@@ -44,6 +51,7 @@ curl http://localhost:4000/health/metrics/prometheus
 - Tracks query counts and total query time
 
 **Integration:**
+
 - Automatically tracks all Prisma queries via middleware
 - Logs slow queries to Winston logger
 - Metrics available via `/health/metrics` endpoint
@@ -51,9 +59,11 @@ curl http://localhost:4000/health/metrics/prometheus
 ### 3. Route-Level Performance Monitoring ✅
 
 **File Created:**
+
 - `apps/backend/src/middleware/performance.ts` - Route performance tracking
 
 **Features:**
+
 - Tracks performance per route
 - Identifies slowest routes
 - Monitors error rates per route
@@ -61,15 +71,18 @@ curl http://localhost:4000/health/metrics/prometheus
 - Automatic Sentry breadcrumb integration
 
 **Thresholds:**
+
 - Slow request: > 1 second (warning)
 - Very slow request: > 3 seconds (error)
 
 ### 4. Performance Dashboard ✅
 
 **Endpoint:**
+
 - `GET /health/performance` - Comprehensive performance dashboard
 
 **Data Provided:**
+
 - System summary (uptime, memory)
 - HTTP metrics (requests, errors, response times)
 - Database metrics (queries, slow queries, percentiles)
@@ -79,9 +92,11 @@ curl http://localhost:4000/health/metrics/prometheus
 ### 5. Enhanced Metrics Endpoint ✅
 
 **Endpoint:**
+
 - `GET /health/metrics` - Enhanced with database and route metrics
 
 **New Data:**
+
 - Database query performance
 - Route-level performance data
 - Slowest routes identification
@@ -89,36 +104,45 @@ curl http://localhost:4000/health/metrics/prometheus
 ## Endpoints
 
 ### 1. Prometheus Metrics
+
 ```
 GET /health/metrics/prometheus
 ```
+
 Returns metrics in Prometheus format for scraping.
 
 ### 2. Performance Dashboard
+
 ```
 GET /health/performance
 ```
+
 Returns comprehensive performance data in JSON format.
 
 ### 3. Enhanced Metrics
+
 ```
 GET /health/metrics
 ```
+
 Returns all metrics including HTTP, database, and route performance.
 
 ## Usage Examples
 
 ### View Performance Dashboard
+
 ```bash
 curl http://localhost:4000/health/performance | jq
 ```
 
 ### Get Prometheus Metrics
+
 ```bash
 curl http://localhost:4000/health/metrics/prometheus
 ```
 
 ### Monitor Slow Routes
+
 ```bash
 curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 ```
@@ -126,6 +150,7 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 ## Metrics Collected
 
 ### HTTP Metrics
+
 - Total request count
 - Error count (4xx, 5xx)
 - Response times (min, max, average)
@@ -134,12 +159,14 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 - Error rate percentage
 
 ### Database Metrics
+
 - Total query count
 - Query duration (min, max, average, P95, P99)
 - Slow query count (> 1 second)
 - Total query time
 
 ### Route Metrics
+
 - Performance per route
 - Request count per route
 - Average response time per route
@@ -147,6 +174,7 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 - Slowest routes identification
 
 ### System Metrics
+
 - Memory usage (heap, RSS)
 - Process uptime
 - CPU usage (via process.memoryUsage)
@@ -154,11 +182,13 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 ## Integration with Monitoring Tools
 
 ### Prometheus
+
 1. Configure Prometheus to scrape `/health/metrics/prometheus`
 2. Set scrape interval (e.g., 15 seconds)
 3. Create Grafana dashboards
 
 ### Grafana
+
 1. Connect Grafana to Prometheus data source
 2. Create dashboards for:
    - HTTP request rates
@@ -169,6 +199,7 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
    - Slow routes
 
 ### Sentry
+
 - Slow requests automatically logged as breadcrumbs
 - Very slow requests logged as errors
 - Performance data included in error context
@@ -176,10 +207,13 @@ curl http://localhost:4000/health/performance | jq '.slowestRoutes'
 ## Configuration
 
 ### Environment Variables
+
 No additional environment variables required. All monitoring is enabled by default.
 
 ### Thresholds
+
 You can adjust thresholds in:
+
 - `apps/backend/src/middleware/performance.ts` - Route performance thresholds
 - `apps/backend/src/lib/database-metrics.ts` - Database query thresholds
 
@@ -220,16 +254,19 @@ You can adjust thresholds in:
 ## Testing
 
 ### Test Prometheus Export
+
 ```bash
 curl http://localhost:4000/health/metrics/prometheus
 ```
 
 ### Test Performance Dashboard
+
 ```bash
 curl http://localhost:4000/health/performance
 ```
 
 ### Test Database Metrics
+
 1. Make some API requests that query the database
 2. Check `/health/metrics` for database metrics
 3. Verify slow queries are logged if any exceed 1 second
@@ -246,6 +283,7 @@ curl http://localhost:4000/health/performance
 ## Next Steps
 
 For enhanced monitoring, consider:
+
 1. Export metrics to time-series database (InfluxDB, TimescaleDB)
 2. Set up distributed tracing (OpenTelemetry)
 3. Add custom business metrics

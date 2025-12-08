@@ -70,6 +70,7 @@ Successfully migrated all routes in `src/routes/members.ts` to use the new error
 ## Before vs After
 
 ### Before
+
 ```typescript
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -85,6 +86,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 ```
 
 ### After
+
 ```typescript
 router.get(
   '/:id',
@@ -111,4 +113,3 @@ router.get(
 **Status:** ✅ Complete  
 **Date:** 2025-01-27  
 **Next:** Migrate other route files using the same pattern
-

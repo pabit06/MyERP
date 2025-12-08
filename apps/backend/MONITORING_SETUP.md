@@ -17,6 +17,7 @@ Sentry is integrated for production error tracking and performance monitoring.
 
 2. **Configure Environment Variables**:
    Add to your `.env` file:
+
    ```env
    SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
    SENTRY_ENVIRONMENT=production  # or development, staging
@@ -56,16 +57,21 @@ addBreadcrumb('User performed action', 'user-action', 'info', { action: 'login' 
 Multiple health check endpoints are available for monitoring:
 
 #### Basic Health Check
+
 ```
 GET /health
 ```
+
 Returns basic status information.
 
 #### Detailed Health Check
+
 ```
 GET /health/detailed
 ```
+
 Returns comprehensive health information including:
+
 - Database connectivity
 - Response latency
 - Memory usage
@@ -73,22 +79,29 @@ Returns comprehensive health information including:
 - Service version
 
 #### Readiness Probe
+
 ```
 GET /health/ready
 ```
+
 For Kubernetes/Docker readiness probes. Returns 503 if database is unavailable.
 
 #### Liveness Probe
+
 ```
 GET /health/live
 ```
+
 For Kubernetes/Docker liveness probes. Always returns 200 if service is running.
 
 #### Metrics Endpoint
+
 ```
 GET /health/metrics
 ```
+
 Returns application metrics:
+
 - Request count
 - Error count
 - Average/min/max response times
@@ -106,6 +119,7 @@ Basic metrics are automatically collected for all requests:
 - **Request Distribution**: By HTTP method and status code
 
 Metrics are stored in-memory. For production, consider:
+
 - Exporting to Prometheus
 - Using Redis for distributed metrics
 - Integrating with Datadog, New Relic, or similar services
@@ -113,6 +127,7 @@ Metrics are stored in-memory. For production, consider:
 ### 4. Enhanced Logging
 
 Winston logger is configured with:
+
 - **Structured JSON logging** (production)
 - **Colorized console output** (development)
 - **Automatic sensitive data redaction** (passwords, tokens, etc.)

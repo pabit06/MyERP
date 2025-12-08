@@ -1,6 +1,6 @@
 /**
  * Script to generate and display Nepali Fiscal Years and Calendar Years
- * 
+ *
  * Usage:
  *   tsx scripts/generate-fiscal-years.ts
  *   tsx scripts/generate-fiscal-years.ts --start 2080 --count 5
@@ -25,18 +25,22 @@ function displayYearRange(year: any) {
   console.log(`\n${year.label} (${year.type === 'fiscal' ? 'Fiscal Year' : 'Calendar Year'}):`);
   console.log(`  BS Year: ${year.bsYear}`);
   console.log(`  AD Years: ${year.adYearStart} - ${year.adYearEnd}`);
-  console.log(`  Start: ${formatDate(year.startDate)} (${year.startDate.toLocaleDateString('en-GB')})`);
+  console.log(
+    `  Start: ${formatDate(year.startDate)} (${year.startDate.toLocaleDateString('en-GB')})`
+  );
   console.log(`  End:   ${formatDate(year.endDate)} (${year.endDate.toLocaleDateString('en-GB')})`);
-  console.log(`  Duration: ${Math.ceil((year.endDate.getTime() - year.startDate.getTime()) / (1000 * 60 * 60 * 24))} days`);
+  console.log(
+    `  Duration: ${Math.ceil((year.endDate.getTime() - year.startDate.getTime()) / (1000 * 60 * 60 * 24))} days`
+  );
 }
 
 function main() {
   const args = process.argv.slice(2);
-  const typeArg = args.find(arg => arg.startsWith('--type='))?.split('=')[1] || 
-                  (args.includes('--fiscal') ? 'fiscal' : 
-                   args.includes('--calendar') ? 'calendar' : 'both');
-  const startArg = args.find(arg => arg.startsWith('--start='))?.split('=')[1];
-  const countArg = args.find(arg => arg.startsWith('--count='))?.split('=')[1] || '10';
+  const typeArg =
+    args.find((arg) => arg.startsWith('--type='))?.split('=')[1] ||
+    (args.includes('--fiscal') ? 'fiscal' : args.includes('--calendar') ? 'calendar' : 'both');
+  const startArg = args.find((arg) => arg.startsWith('--start='))?.split('=')[1];
+  const countArg = args.find((arg) => arg.startsWith('--count='))?.split('=')[1] || '10';
 
   console.log('='.repeat(80));
   console.log('Nepali Fiscal Year & Calendar Year Generator');
@@ -109,4 +113,3 @@ function main() {
 }
 
 main();
-

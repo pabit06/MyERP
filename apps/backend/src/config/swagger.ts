@@ -1,6 +1,6 @@
 /**
  * Swagger/OpenAPI Configuration
- * 
+ *
  * Generates OpenAPI 3.0 specification from JSDoc comments
  */
 
@@ -207,11 +207,7 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: [
-    './src/routes/*.ts',
-    './src/routes/**/*.ts',
-    './src/index.ts',
-  ],
+  apis: ['./src/routes/*.ts', './src/routes/**/*.ts', './src/index.ts'],
 };
 
 export const swaggerSpec = swaggerJsdoc(options);

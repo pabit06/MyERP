@@ -63,4 +63,3 @@ if (!email || !password) {
 }
 
 createSystemAdmin({ email, password, firstName, lastName });
-

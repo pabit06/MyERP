@@ -1,9 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { setupTestUser, loginTestUser, cleanupTestData, type TestUser } from './helpers/test-data.js';
+import {
+  setupTestUser,
+  loginTestUser,
+  cleanupTestData,
+  type TestUser,
+} from './helpers/test-data.js';
 
 /**
  * E2E Tests for Loan Application Flow
- * 
+ *
  * Critical flows:
  * 1. Create loan product
  * 2. Create loan application
@@ -76,12 +81,12 @@ test.describe('Loan Application Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('product');
     expect(body.product).toHaveProperty('id');
     expect(body.product.name).toBe(productData.name);
     expect(body.product.code).toBe(productData.code);
-    
+
     loanProductId = body.product.id;
   });
 
@@ -94,7 +99,7 @@ test.describe('Loan Application Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();
@@ -123,13 +128,13 @@ test.describe('Loan Application Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('application');
     expect(body.application).toHaveProperty('id');
     expect(body.application.memberId).toBe(memberId);
     expect(body.application.productId).toBe(loanProductId);
     expect(body.application.status).toBe('pending');
-    
+
     loanApplicationId = body.application.id;
   });
 
@@ -146,7 +151,7 @@ test.describe('Loan Application Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('application');
     expect(body.application.id).toBe(loanApplicationId);
     expect(body.application).toHaveProperty('member');
@@ -173,24 +178,21 @@ test.describe('Loan Application Flow', () => {
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('application');
     expect(body.application.status).toBe('approved');
   });
 
   test('should list loan applications with pagination', async ({ request }) => {
-    const response = await request.get(
-      `${API_PREFIX}/loans/applications?page=1&limit=10`,
-      {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      }
-    );
+    const response = await request.get(`${API_PREFIX}/loans/applications?page=1&limit=10`, {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    });
 
     expect(response.ok()).toBeTruthy();
     const body = await response.json();
-    
+
     expect(body).toHaveProperty('data');
     expect(body).toHaveProperty('pagination');
     expect(Array.isArray(body.data)).toBeTruthy();

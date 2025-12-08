@@ -7,6 +7,7 @@ This document tracks the migration of routes from old error handling patterns to
 ## Migration Pattern
 
 ### Before (Old Pattern)
+
 ```typescript
 router.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -22,6 +23,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 ```
 
 ### After (New Pattern)
+
 ```typescript
 import { NotFoundError } from '../lib/errors.js';
 import { asyncHandler } from '../middleware/error-handler.js';
@@ -43,16 +45,19 @@ router.get(
 ### ✅ Completed Routes
 
 #### `src/routes/members.ts`
+
 - ✅ `GET /:id/kym` - Migrated to use NotFoundError
 - ✅ `PUT /:id/kym` - Migrated to use ValidationError and NotFoundError
 
 #### `src/routes/auth.ts`
+
 - ✅ `POST /login` - Migrated to use BadRequestError and UnauthorizedError
 - ✅ `POST /member-login` - Migrated to use BadRequestError, NotFoundError, and UnauthorizedError
 
 ### ⏳ In Progress
 
 #### `src/routes/members.ts`
+
 - ⏳ ~25 more routes need migration
 - Common patterns to migrate:
   - `res.status(404)` → `throw new NotFoundError()`
@@ -63,12 +68,14 @@ router.get(
 ### ❌ Not Started
 
 #### High Priority Routes
+
 - ❌ `src/routes/accounting.ts` - Critical for financial operations
 - ❌ `src/routes/savings.ts` - Core CBS functionality
 - ❌ `src/routes/loans.ts` - Core CBS functionality
 - ❌ `src/routes/shares.ts` - Core functionality
 
 #### Medium Priority Routes
+
 - ❌ `src/routes/dms.ts` - Document management
 - ❌ `src/routes/hrm.ts` - Human resources
 - ❌ `src/routes/governance.ts` - Governance features
@@ -78,6 +85,7 @@ router.get(
 - ❌ `src/routes/cbs/day-book.ts` - Day book operations
 
 #### Lower Priority Routes
+
 - ❌ `src/routes/darta.ts` - Document routing
 - ❌ `src/routes/patra-chalani.ts` - Document routing
 - ❌ `src/routes/notifications.ts` - Notifications
@@ -96,6 +104,7 @@ router.get(
 1. **ValidationError** (400)
    - Schema validation failures
    - Invalid input data format
+
    ```typescript
    const result = schema.safeParse(req.body);
    if (!result.success) {
@@ -106,6 +115,7 @@ router.get(
 2. **NotFoundError** (404)
    - Resource not found
    - Record doesn't exist
+
    ```typescript
    if (!item) {
      throw new NotFoundError('Item', id);
@@ -115,6 +125,7 @@ router.get(
 3. **UnauthorizedError** (401)
    - Authentication required
    - Invalid credentials
+
    ```typescript
    if (!isValidPassword) {
      throw new UnauthorizedError('Invalid credentials');
@@ -124,6 +135,7 @@ router.get(
 4. **ForbiddenError** (403)
    - Permission denied
    - Insufficient privileges
+
    ```typescript
    if (!hasPermission) {
      throw new ForbiddenError('You do not have permission');
@@ -133,6 +145,7 @@ router.get(
 5. **BadRequestError** (400)
    - General bad requests
    - Missing required fields
+
    ```typescript
    if (!email || !password) {
      throw new BadRequestError('Email and password are required');
@@ -142,6 +155,7 @@ router.get(
 6. **ConflictError** (409)
    - Resource conflicts
    - Duplicate entries
+
    ```typescript
    if (existing) {
      throw new ConflictError('Resource already exists');
@@ -160,6 +174,7 @@ router.get(
 ## Migration Checklist
 
 For each route:
+
 - [ ] Import error classes: `import { NotFoundError, ValidationError, ... } from '../lib/errors.js';`
 - [ ] Import asyncHandler: `import { asyncHandler } from '../middleware/error-handler.js';`
 - [ ] Wrap route handler with `asyncHandler`
@@ -191,4 +206,3 @@ For each route:
 
 **Last Updated:** 2025-01-27  
 **Next Steps:** Continue migrating high-priority routes (accounting, savings, loans)
-

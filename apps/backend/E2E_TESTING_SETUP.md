@@ -21,6 +21,7 @@ End-to-end (E2E) tests have been set up for critical user flows in the MyERP bac
 **File:** `apps/backend/e2e/auth.spec.ts`
 
 Tests cover:
+
 - ✅ User login with valid credentials
 - ✅ User login with invalid email
 - ✅ User login with invalid password
@@ -34,6 +35,7 @@ Tests cover:
 **File:** `apps/backend/e2e/member-onboarding.spec.ts`
 
 Tests cover:
+
 - ✅ Create new member
 - ✅ Get member details
 - ✅ Update member KYM (Know Your Member) information
@@ -46,6 +48,7 @@ Tests cover:
 **File:** `apps/backend/e2e/loan-application.spec.ts`
 
 Tests cover:
+
 - ✅ Create loan product
 - ✅ Get loan products list
 - ✅ Create loan application
@@ -59,6 +62,7 @@ Tests cover:
 **File:** `apps/backend/e2e/README.md`
 
 Comprehensive documentation including:
+
 - Overview of E2E testing approach
 - Instructions for running tests
 - Test data setup requirements
@@ -106,7 +110,7 @@ pnpm test:e2e:report
 
 **Important:** These tests require test data to be set up:
 
-1. **Test User**: 
+1. **Test User**:
    - Email: `test@example.com`
    - Password: `TestPassword123!`
    - Must exist in your database
@@ -141,6 +145,7 @@ pnpm test:e2e:report
 **File:** `apps/backend/e2e/savings-account.spec.ts`
 
 Tests cover:
+
 - ✅ Create saving product
 - ✅ Get saving products list
 - ✅ Create saving account
@@ -155,6 +160,7 @@ Tests cover:
 **File:** `apps/backend/e2e/compliance-aml.spec.ts`
 
 Tests cover:
+
 - ✅ Get AML TTR queue with pagination
 - ✅ Get AML cases with pagination
 - ✅ Filter AML cases by status
@@ -167,6 +173,7 @@ Tests cover:
 **File:** `apps/backend/e2e/helpers/test-data.ts`
 
 Provides:
+
 - ✅ Automatic test user creation
 - ✅ Test cooperative setup
 - ✅ Login helper function

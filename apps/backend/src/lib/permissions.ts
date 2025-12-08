@@ -224,7 +224,10 @@ export async function hasAnyRole(
 /**
  * Get user's permissions
  */
-export async function getUserPermissions(userId: string, tenantId: string | null): Promise<Permission[]> {
+export async function getUserPermissions(
+  userId: string,
+  tenantId: string | null
+): Promise<Permission[]> {
   // System admins have all permissions
   if (await isSystemAdmin(userId)) {
     return ['*'];

@@ -6,7 +6,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import MyERPLogo from './MyERPLogo';
 import NepaliCalendar from './NepaliCalendar';
-import { Calendar, X, Bell, Search, ChevronDown, User, Settings, LogOut, CreditCard } from 'lucide-react';
+import {
+  Calendar,
+  X,
+  Bell,
+  Search,
+  ChevronDown,
+  User,
+  Settings,
+  LogOut,
+  CreditCard,
+} from 'lucide-react';
 import { adToBs, formatBsDate } from '../lib/nepali-date';
 
 const pageTitles: Record<string, string> = {
@@ -170,7 +180,9 @@ export default function Header() {
             )}
 
             <div className="flex items-center gap-4">
-              <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">{getPageTitle()}</h1>
+              <h1 className="text-xl font-bold text-gray-900 tracking-tight truncate">
+                {getPageTitle()}
+              </h1>
               {/* Search Bar (Optional/Placeholder for future) */}
               <div className="hidden lg:flex items-center relative group">
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 group-focus-within:text-indigo-500 transition-colors" />
@@ -185,7 +197,6 @@ export default function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 md:space-x-4">
-
             {/* Day Status Indicator (Prominent) */}
             {currentDate.ad && (
               <div className="hidden md:flex flex-col items-end mr-2">

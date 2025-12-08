@@ -1,6 +1,6 @@
 /**
  * Metrics Middleware
- * 
+ *
  * Collects basic metrics for monitoring:
  * - Request count
  * - Response times

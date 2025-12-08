@@ -25,7 +25,7 @@ router.put('/profile', authenticate, requireTenant, async (req: Request, res: Re
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { description, logoUrl, website, address, phone, email }: UpdateProfileRequest = req.body;
+    const { description, logoUrl, website, address, phone, email } = req.body as UpdateProfileRequest;
 
     // Update or create cooperative profile
     const profile = await prisma.cooperativeProfile.upsert({
@@ -98,3 +98,38 @@ router.get('/profile', authenticate, requireTenant, async (req: Request, res: Re
 });
 
 export default router;
+
+/**
+ * PUT /onboarding/settings
+ * Update cooperative settings (e.g., operation start date)
+ */
+router.put('/settings', authenticate, requireTenant, async (req: Request, res: Response) => {
+  try {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
+      return;
+    }
+    const { operationStartDate } = req.body;
+
+    if (!operationStartDate) {
+      res.status(400).json({ error: 'operationStartDate is required' });
+      return;
+    }
+
+    // Update subscription start date as a proxy for operation start date
+    await prisma.subscription.update({
+      where: { cooperativeId: tenantId },
+      data: {
+        startDate: new Date(operationStartDate),
+      },
+    });
+
+    res.json({
+      message: 'Settings updated successfully',
+    });
+  } catch (error) {
+    console.error('Settings update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});

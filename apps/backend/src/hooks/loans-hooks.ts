@@ -100,4 +100,3 @@ export function registerLoansHooks() {
     'post-approve-loan'
   );
 }
-

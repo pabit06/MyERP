@@ -25,6 +25,7 @@
 The following files need to be copied to their new locations:
 
 **Members Components:**
+
 ```bash
 # From: apps/frontend-web/src/components/
 # To: apps/frontend-web/src/features/members/components/
@@ -34,6 +35,7 @@ The following files need to be copied to their new locations:
 ```
 
 **Dashboard Components:**
+
 ```bash
 # From: apps/frontend-web/src/components/charts/
 # To: apps/frontend-web/src/features/dashboard/components/
@@ -50,12 +52,14 @@ The following files need to be copied to their new locations:
 ### 2. Verify Barrel Exports
 
 Ensure these files export correctly:
+
 - ✅ `features/members/index.ts` - Already exports components
 - ✅ `features/dashboard/index.ts` - Already exports charts
 
 ### 3. Update Any Remaining Imports
 
 Search for and update any remaining old import patterns:
+
 ```bash
 # Search for old patterns:
 - from '@/components/KymForm'
@@ -67,6 +71,7 @@ Search for and update any remaining old import patterns:
 ### 4. Remove Duplicate Components
 
 After verifying everything works, remove duplicates from:
+
 - `apps/frontend-web/src/components/KymForm.tsx`
 - `apps/frontend-web/src/components/KYMInstitutionForm.tsx`
 - `apps/frontend-web/src/components/MemberWorkflow.tsx`
@@ -84,6 +89,7 @@ After verifying everything works, remove duplicates from:
 If automated copying didn't work, manually:
 
 1. **Copy Files:**
+
    ```powershell
    # In apps/frontend-web/src/
    Copy-Item components\KymForm.tsx features\members\components\KymForm.tsx
@@ -96,6 +102,7 @@ If automated copying didn't work, manually:
    - All moved components should use `@/contexts/AuthContext` (not relative paths)
 
 3. **Test:**
+
    ```bash
    pnpm --filter frontend-web type-check
    pnpm --filter frontend-web lint

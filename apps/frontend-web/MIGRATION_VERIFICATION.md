@@ -3,13 +3,15 @@
 ## ✅ Verification Checklist
 
 ### 1. Path Aliases Configuration
+
 - [x] `tsconfig.json` has `@/features/*` alias
-- [x] `tsconfig.json` has `@/components/*` alias  
+- [x] `tsconfig.json` has `@/components/*` alias
 - [x] `tsconfig.json` has `@/lib/*` alias
 
 ### 2. Component Files Status
 
 #### Members Components
+
 - [x] `features/members/components/MemberWorkflow.tsx` - ✅ Created
 - [x] `features/members/components/SourceOfFundsModal.tsx` - ✅ Created
 - [x] `features/members/components/KymForm.test.tsx` - ✅ Created
@@ -17,6 +19,7 @@
 - [ ] `features/members/components/KYMInstitutionForm.tsx` - ⚠️ Needs verification
 
 #### Dashboard Components
+
 - [ ] `features/dashboard/components/ChartWrapper.tsx` - ⚠️ Needs verification
 - [ ] `features/dashboard/components/DemographicChart.tsx` - ⚠️ Needs verification
 - [ ] `features/dashboard/components/GeographicChart.tsx` - ⚠️ Needs verification
@@ -28,6 +31,7 @@
 ### 3. Import Verification
 
 #### ✅ Correct Imports Found:
+
 - `app/members/[id]/kyc/page.tsx` - Uses `@/features/members`
 - `app/members/[id]/institution-kyc/page.tsx` - Uses `@/features/members`
 - `app/members/[id]/page.tsx` - Uses `@/features/members`
@@ -36,6 +40,7 @@
 - `app/layout.tsx` - Uses `@/features/components/shared`
 
 #### ✅ No Old Import Patterns Found:
+
 - No imports from `@/components/KymForm`
 - No imports from `@/components/MemberWorkflow`
 - No imports from `@/components/charts`
@@ -43,25 +48,30 @@
 ### 4. Barrel Exports
 
 #### Members Feature (`features/members/index.ts`)
+
 ```typescript
 export { KymForm } from './components/KymForm'; // Named export
 export { KYMInstitutionForm } from './components/KYMInstitutionForm'; // Named export
 export { default as MemberWorkflow } from './components/MemberWorkflow';
 export { default as SourceOfFundsModal } from './components/SourceOfFundsModal';
 ```
+
 ✅ **Status:** Correctly configured
 
 #### Dashboard Feature (`features/dashboard/index.ts`)
+
 ```typescript
 export { default as ChartWrapper } from './components/ChartWrapper';
 export { default as DemographicChart } from './components/DemographicChart';
 // ... etc
 ```
+
 ✅ **Status:** Correctly configured
 
 ### 5. Component Import Updates
 
 #### ✅ Updated Components:
+
 - `components/KymForm.tsx` - Uses `@/features/components/shared`
 - `components/KYMInstitutionForm.tsx` - Uses `@/features/components/shared`
 - `features/members/components/MemberWorkflow.tsx` - Uses `@/contexts/AuthContext`
@@ -70,9 +80,11 @@ export { default as DemographicChart } from './components/DemographicChart';
 ## ⚠️ Issues Found
 
 ### 1. File Copy Status
-The large component files (KymForm.tsx, KYMInstitutionForm.tsx) and chart components may not have been successfully copied to their new locations. 
+
+The large component files (KymForm.tsx, KYMInstitutionForm.tsx) and chart components may not have been successfully copied to their new locations.
 
 **Action Required:**
+
 ```powershell
 # Verify and copy if needed:
 cd apps/frontend-web/src
@@ -87,7 +99,9 @@ Copy-Item -Path components\charts\* -Destination features\dashboard\components\ 
 ```
 
 ### 2. Export Type Mismatch
+
 The barrel exports expect:
+
 - `KymForm` as named export ✅
 - `KYMInstitutionForm` as named export ✅
 - Chart components as default exports ✅
@@ -105,6 +119,7 @@ The barrel exports expect:
 ## 🔍 Next Steps
 
 1. **Verify File Existence:**
+
    ```bash
    # Check if files exist
    ls apps/frontend-web/src/features/members/components/
@@ -112,17 +127,20 @@ The barrel exports expect:
    ```
 
 2. **Run Type Check:**
+
    ```bash
    cd apps/frontend-web
    pnpm type-check
    ```
 
 3. **Run Linter:**
+
    ```bash
    pnpm lint
    ```
 
 4. **Test Build:**
+
    ```bash
    pnpm build
    ```

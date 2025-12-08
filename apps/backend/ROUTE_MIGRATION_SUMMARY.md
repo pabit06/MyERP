@@ -3,11 +3,13 @@
 ## ✅ Completed Migrations
 
 ### `src/routes/auth.ts` - **100% Complete**
+
 - ✅ `POST /login` - Migrated to use BadRequestError and UnauthorizedError
-- ✅ `POST /member-login` - Migrated to use BadRequestError, NotFoundError, and UnauthorizedError  
+- ✅ `POST /member-login` - Migrated to use BadRequestError, NotFoundError, and UnauthorizedError
 - ✅ `GET /me` - Migrated to use asyncHandler
 
 ### `src/routes/members.ts` - **Partial (2 routes)**
+
 - ✅ `GET /:id/kym` - Migrated to use NotFoundError
 - ✅ `PUT /:id/kym` - Migrated to use ValidationError and NotFoundError
 - ⏳ ~25 more routes remaining
@@ -17,12 +19,19 @@
 The migration pattern is now clear and can be applied to remaining routes:
 
 1. **Import error classes and asyncHandler**
+
    ```typescript
-   import { NotFoundError, ValidationError, BadRequestError, UnauthorizedError } from '../lib/errors.js';
+   import {
+     NotFoundError,
+     ValidationError,
+     BadRequestError,
+     UnauthorizedError,
+   } from '../lib/errors.js';
    import { asyncHandler } from '../middleware/error-handler.js';
    ```
 
 2. **Wrap route handlers with asyncHandler**
+
    ```typescript
    router.get(
      '/:id',
@@ -65,4 +74,3 @@ The migration pattern is now clear and can be applied to remaining routes:
 ---
 
 **Status:** Foundation established, ready for incremental migration
-
