@@ -61,6 +61,29 @@ vi.mock('../../src/lib/audit-log.js', () => ({
   },
 }));
 
+// Mock config to avoid environment variable validation
+vi.mock('../../src/config/env.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+}));
+
+vi.mock('../../src/config/index.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe('AuthController Integration', () => {
   let authController: AuthController;
   let mockReq: Partial<Request>;

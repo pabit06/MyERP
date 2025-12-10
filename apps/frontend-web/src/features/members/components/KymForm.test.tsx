@@ -4,15 +4,19 @@ import { KymForm } from '@/components/KymForm';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock components that might cause issues in tests
-vi.mock('@/features/components/shared', () => ({
-  DatePicker: ({ value, onChange }: any) => (
-    <input
-      data-testid="date-picker"
-      value={value ? (value instanceof Date ? value.toISOString() : value) : ''}
-      onChange={(e) => onChange(new Date(e.target.value))}
-    />
-  ),
-}));
+vi.mock('@/features/components/shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/components/shared')>();
+  return {
+    ...actual,
+    DatePicker: ({ value, onChange }: any) => (
+      <input
+        data-testid="date-picker"
+        value={value ? (value instanceof Date ? value.toISOString() : value) : ''}
+        onChange={(e) => onChange(new Date(e.target.value))}
+      />
+    ),
+  };
+});
 
 describe('KymForm', () => {
   const mockOnSubmit = vi.fn();

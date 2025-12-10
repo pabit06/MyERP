@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => {
         findMany: vi.fn(),
         findUnique: vi.fn(),
       },
+      cooperative: {
+        findUnique: vi.fn(),
+      },
       $transaction: vi.fn((callback) => callback(mocks.prisma)),
     },
     shareService: {
@@ -38,9 +41,11 @@ const mocks = vi.hoisted(() => {
 });
 
 // Mock modules
-vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: mocks.prisma,
-}));
+vi.mock('../../src/lib/prisma.js', () => {
+  return {
+    prisma: mocks.prisma,
+  };
+});
 
 vi.mock('../../src/services/share.service.js', () => ({
   ShareService: mocks.shareService,
@@ -55,13 +60,36 @@ vi.mock('../../src/lib/permissions.js', () => ({
   hasAnyPermission: vi.fn().mockResolvedValue(true),
 }));
 
+// Mock config to avoid environment variable validation
+vi.mock('../../src/config/env.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+}));
+
+vi.mock('../../src/config/index.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe('ShareController', () => {
   let shareController: ShareController;
 
   beforeEach(() => {
     vi.clearAllMocks();
     shareController = new ShareController();
-    // Inject mock prisma manually as BaseController uses imported prisma
+    // Always override prisma with mock to ensure it's used
     (shareController as any).prisma = mocks.prisma;
   });
 
@@ -69,6 +97,7 @@ describe('ShareController', () => {
     it('should return correct stats', async () => {
       const cooperativeId = 'coop-1';
 
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: cooperativeId });
       mocks.prisma.shareAccount.count.mockResolvedValue(50);
       mocks.prisma.shareAccount.aggregate
         .mockResolvedValueOnce({ _sum: { totalKitta: 5000 } }) // first call for kitta
@@ -91,6 +120,7 @@ describe('ShareController', () => {
     it('should return paginated accounts and handle migration logic', async () => {
       const cooperativeId = 'coop-1';
 
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: cooperativeId });
       // Mock migration logic: No active members without accounts
       mocks.prisma.member.findMany.mockResolvedValue([]);
       mocks.prisma.shareAccount.findMany.mockResolvedValue([]); // for finding existing account IDs

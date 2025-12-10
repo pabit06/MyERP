@@ -54,19 +54,21 @@ COPY --from=dependencies /app/apps/backend/package.json ./apps/backend/
 COPY --from=dependencies /app/packages/db-schema/package.json ./packages/db-schema/
 COPY --from=dependencies /app/packages/shared-types/package.json ./packages/shared-types/
 
-# Copy Prisma schema (needed for postinstall script during prod install)
-COPY --from=dependencies /app/packages/db-schema/prisma ./packages/db-schema/prisma
+# Install production dependencies only (skip scripts since prisma CLI is not available in prod)
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Copy Prisma schema (needed for generate step)
+COPY --from=build /app/packages/db-schema/prisma ./packages/db-schema/prisma
 
 # Copy built application
 COPY --from=build /app/apps/backend/dist ./apps/backend/dist
 COPY --from=build /app/packages/db-schema ./packages/db-schema
 COPY --from=build /app/packages/shared-types/dist ./packages/shared-types/dist
 
-# Generate Prisma Client in production
-RUN pnpm --filter @myerp/db-schema generate
+# Install prisma CLI temporarily to generate Prisma Client, then remove it
+RUN pnpm add -D prisma@^6.19.0 --filter @myerp/db-schema && \
+    pnpm --filter @myerp/db-schema generate && \
+    pnpm remove prisma --filter @myerp/db-schema
 
 # Set environment
 ENV NODE_ENV=production

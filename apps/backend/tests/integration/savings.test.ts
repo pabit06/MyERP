@@ -21,6 +21,9 @@ const mocks = vi.hoisted(() => {
       member: {
         findUnique: vi.fn(),
       },
+      cooperative: {
+        findUnique: vi.fn(),
+      },
       $transaction: vi.fn((callback) => callback(mocks.prisma)),
     },
     savingsService: {
@@ -36,9 +39,11 @@ const mocks = vi.hoisted(() => {
 });
 
 // Mock modules
-vi.mock('../../src/lib/prisma.js', () => ({
-  prisma: mocks.prisma,
-}));
+vi.mock('../../src/lib/prisma.js', () => {
+  return {
+    prisma: mocks.prisma,
+  };
+});
 
 vi.mock('../../src/services/savings.service.js', () => ({
   SavingsService: mocks.savingsService,
@@ -53,12 +58,37 @@ vi.mock('../../src/lib/permissions.js', () => ({
   hasAnyPermission: vi.fn().mockResolvedValue(true),
 }));
 
+// Mock config to avoid environment variable validation
+vi.mock('../../src/config/env.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+}));
+
+vi.mock('../../src/config/index.js', () => ({
+  env: {
+    DATABASE_URL: 'postgresql://test:test@localhost:5432/test',
+    JWT_SECRET: 'test-jwt-secret',
+    NODE_ENV: 'test',
+  },
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  },
+}));
+
 describe('SavingsController', () => {
   let savingsController: SavingsController;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // Create controller
     savingsController = new SavingsController();
+    // Always override prisma with mock to ensure it's used
     (savingsController as any).prisma = mocks.prisma;
   });
 
@@ -67,6 +97,7 @@ describe('SavingsController', () => {
       const cooperativeId = 'coop-1';
       const mockProducts = [{ id: 'prod-1', name: 'Saving' }];
 
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: cooperativeId });
       mocks.prisma.savingProduct.findMany.mockResolvedValue(mockProducts);
       mocks.prisma.savingProduct.count.mockResolvedValue(1);
 
@@ -92,6 +123,7 @@ describe('SavingsController', () => {
         interestRate: 5,
       };
 
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: data.cooperativeId });
       mocks.prisma.savingProduct.findUnique.mockResolvedValue(null); // No existing code
       mocks.prisma.savingProduct.create.mockResolvedValue({ id: 'prod-1', ...data });
 
@@ -114,6 +146,7 @@ describe('SavingsController', () => {
     });
 
     it('should fail if code exists', async () => {
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: 'coop-1' });
       mocks.prisma.savingProduct.findUnique.mockResolvedValue({ id: 'existing' });
 
       await expect(
@@ -135,6 +168,7 @@ describe('SavingsController', () => {
         cooperativeId: 'coop-1',
       };
 
+      mocks.prisma.cooperative.findUnique.mockResolvedValue({ id: data.cooperativeId });
       mocks.savingsService.deposit.mockResolvedValue({ id: 'tx-1' });
 
       await savingsController.deposit(data, 'user-1');

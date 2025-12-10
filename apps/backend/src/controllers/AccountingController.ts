@@ -283,6 +283,17 @@ export class AccountingController extends BaseController {
         throw new Error('Account not found');
       }
 
+      // Prevent changing account code if it has transactions
+      if (data.code && data.code !== originalAccount.code) {
+        const transactionCount = await tx.ledger.count({
+          where: { accountId: id },
+        });
+
+        if (transactionCount > 0) {
+          throw new Error('Cannot change account code');
+        }
+      }
+
       // Validate code uniqueness if updating code
       if (data.code) {
         const existing = await tx.chartOfAccounts.findFirst({
