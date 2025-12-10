@@ -17,6 +17,9 @@ COPY apps/backend/package.json ./apps/backend/
 COPY packages/db-schema/package.json ./packages/db-schema/
 COPY packages/shared-types/package.json ./packages/shared-types/
 
+# Copy Prisma schema (needed for postinstall script)
+COPY packages/db-schema/prisma ./packages/db-schema/prisma
+
 # Install dependencies (including dev dependencies for build)
 RUN pnpm install --frozen-lockfile
 
@@ -50,6 +53,9 @@ COPY --from=dependencies /app/pnpm-workspace.yaml ./
 COPY --from=dependencies /app/apps/backend/package.json ./apps/backend/
 COPY --from=dependencies /app/packages/db-schema/package.json ./packages/db-schema/
 COPY --from=dependencies /app/packages/shared-types/package.json ./packages/shared-types/
+
+# Copy Prisma schema (needed for postinstall script during prod install)
+COPY --from=dependencies /app/packages/db-schema/prisma ./packages/db-schema/prisma
 
 # Install production dependencies only
 RUN pnpm install --frozen-lockfile --prod
