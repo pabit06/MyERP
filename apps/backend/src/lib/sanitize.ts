@@ -175,7 +175,7 @@ export function sanitizeObject<T extends Record<string, unknown>>(
     return obj;
   }
 
-  const sanitized = Array.isArray(obj) ? ([...obj] as T) : ({ ...obj } as T);
+  const sanitized = Array.isArray(obj) ? ([...obj] as unknown as T) : ({ ...obj } as T);
 
   for (const key in sanitized) {
     if (Object.prototype.hasOwnProperty.call(sanitized, key)) {

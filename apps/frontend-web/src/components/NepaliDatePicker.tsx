@@ -267,7 +267,7 @@ export default function NepaliDatePicker({
         strategy="lazyOnload"
         onLoad={() => {
           if (typeof window !== 'undefined') {
-            (window as Record<string, unknown>).nepaliDatePickerLoaded = true;
+            (window as unknown as Record<string, unknown>).nepaliDatePickerLoaded = true;
           }
         }}
       />

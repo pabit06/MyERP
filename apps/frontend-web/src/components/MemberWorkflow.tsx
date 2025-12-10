@@ -538,12 +538,14 @@ export default function MemberWorkflow({
                 {kym.monthlyIncome ? `$${Number(kym.monthlyIncome).toFixed(2)}` : '-'}
               </p>
             </div>
-            {kym.remarks && (
-              <div className="md:col-span-2">
-                <p className="text-sm text-gray-500">Remarks</p>
-                <p className="text-lg font-medium text-gray-900">{kym.remarks}</p>
-              </div>
-            )}
+            {kym.remarks !== undefined &&
+              kym.remarks !== null &&
+              typeof kym.remarks === 'string' && (
+                <div className="md:col-span-2">
+                  <p className="text-sm text-gray-500">Remarks</p>
+                  <p className="text-lg font-medium text-gray-900">{kym.remarks}</p>
+                </div>
+              )}
           </div>
         </div>
       )}

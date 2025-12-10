@@ -47,6 +47,40 @@ interface Borrower {
 
 type TabType = 'financial' | 'members' | 'loans' | 'liquidity' | 'governance';
 
+// Helper functions to safely access nested properties from Record<string, unknown>
+function getNestedValue(obj: Record<string, unknown> | null | undefined, path: string): unknown {
+  if (!obj) return undefined;
+  const keys = path.split('.');
+  let current: unknown = obj;
+  for (const key of keys) {
+    if (current && typeof current === 'object' && key in current) {
+      current = (current as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return current;
+}
+
+function getNumber(value: unknown): number | undefined {
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? undefined : parsed;
+  }
+  return undefined;
+}
+
+function getString(value: unknown): string | undefined {
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  return undefined;
+}
+
+function isArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 export default function ReportDetailPage() {
   const params = useParams();
   const { hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -307,7 +341,7 @@ export default function ReportDetailPage() {
                 {report.financialData ? (
                   <div className="space-y-4">
                     {/* Balance Sheet */}
-                    {report.financialData.balanceSheet && (
+                    {getNestedValue(report.financialData, 'balanceSheet') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">Balance Sheet</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -315,18 +349,32 @@ export default function ReportDetailPage() {
                             <h4 className="font-medium mb-2">Assets</h4>
                             <div className="text-sm text-gray-600">
                               Total:{' '}
-                              {report.financialData.balanceSheet.totalAssets?.toLocaleString() || 0}
+                              {(
+                                getNumber(
+                                  getNestedValue(report.financialData, 'balanceSheet.totalAssets')
+                                ) || 0
+                              ).toLocaleString()}
                             </div>
                           </div>
                           <div>
                             <h4 className="font-medium mb-2">Liabilities & Equity</h4>
                             <div className="text-sm text-gray-600">
                               Liabilities:{' '}
-                              {report.financialData.balanceSheet.totalLiabilities?.toLocaleString() ||
-                                0}
+                              {(
+                                getNumber(
+                                  getNestedValue(
+                                    report.financialData,
+                                    'balanceSheet.totalLiabilities'
+                                  )
+                                ) || 0
+                              ).toLocaleString()}
                               <br />
                               Equity:{' '}
-                              {report.financialData.balanceSheet.totalEquity?.toLocaleString() || 0}
+                              {(
+                                getNumber(
+                                  getNestedValue(report.financialData, 'balanceSheet.totalEquity')
+                                ) || 0
+                              ).toLocaleString()}
                             </div>
                           </div>
                         </div>
@@ -334,7 +382,7 @@ export default function ReportDetailPage() {
                     )}
 
                     {/* Income Statement */}
-                    {report.financialData.incomeStatement && (
+                    {getNestedValue(report.financialData, 'incomeStatement') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">Income Statement</h3>
                         <div className="grid grid-cols-2 gap-4">
@@ -342,20 +390,35 @@ export default function ReportDetailPage() {
                             <h4 className="font-medium mb-2">Revenue</h4>
                             <div className="text-sm text-gray-600">
                               Total:{' '}
-                              {report.financialData.incomeStatement.totalRevenue?.toLocaleString() ||
-                                0}
+                              {(
+                                getNumber(
+                                  getNestedValue(
+                                    report.financialData,
+                                    'incomeStatement.totalRevenue'
+                                  )
+                                ) || 0
+                              ).toLocaleString()}
                             </div>
                           </div>
                           <div>
                             <h4 className="font-medium mb-2">Expenses</h4>
                             <div className="text-sm text-gray-600">
                               Total:{' '}
-                              {report.financialData.incomeStatement.totalExpenses?.toLocaleString() ||
-                                0}
+                              {(
+                                getNumber(
+                                  getNestedValue(
+                                    report.financialData,
+                                    'incomeStatement.totalExpenses'
+                                  )
+                                ) || 0
+                              ).toLocaleString()}
                               <br />
                               Net Income:{' '}
-                              {report.financialData.incomeStatement.netIncome?.toLocaleString() ||
-                                0}
+                              {(
+                                getNumber(
+                                  getNestedValue(report.financialData, 'incomeStatement.netIncome')
+                                ) || 0
+                              ).toLocaleString()}
                             </div>
                           </div>
                         </div>
@@ -363,32 +426,89 @@ export default function ReportDetailPage() {
                     )}
 
                     {/* PEARLS Analysis */}
-                    {report.financialData.pearlsRatios && (
+                    {getNestedValue(report.financialData, 'pearlsRatios') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">PEARLS Analysis</h3>
                         <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>P1: {report.financialData.pearlsRatios.P1?.toFixed(2) || 0}%</div>
-                          <div>E1: {report.financialData.pearlsRatios.E1?.toFixed(2) || 0}%</div>
-                          <div>A1: {report.financialData.pearlsRatios.A1?.toFixed(2) || 0}%</div>
-                          <div>L1: {report.financialData.pearlsRatios.L1?.toFixed(2) || 0}%</div>
-                          <div>R9: {report.financialData.pearlsRatios.R9?.toFixed(2) || 0}%</div>
-                          <div>S10: {report.financialData.pearlsRatios.S10?.toFixed(2) || 0}%</div>
+                          <div>
+                            P1:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.P1')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
+                          <div>
+                            E1:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.E1')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
+                          <div>
+                            A1:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.A1')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
+                          <div>
+                            L1:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.L1')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
+                          <div>
+                            R9:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.R9')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
+                          <div>
+                            S10:{' '}
+                            {(
+                              getNumber(getNestedValue(report.financialData, 'pearlsRatios.S10')) ||
+                              0
+                            ).toFixed(2)}
+                            %
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {/* Spread Rate */}
-                    {report.financialData.spreadRate && (
+                    {getNestedValue(report.financialData, 'spreadRate') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">Spread Rate Analysis</h3>
                         <div className="text-sm">
                           Avg Savings Rate:{' '}
-                          {report.financialData.spreadRate.avgSavingsRate?.toFixed(2) || 0}%
+                          {(
+                            getNumber(
+                              getNestedValue(report.financialData, 'spreadRate.avgSavingsRate')
+                            ) || 0
+                          ).toFixed(2)}
+                          %
                           <br />
                           Avg Loan Rate:{' '}
-                          {report.financialData.spreadRate.avgLoanRate?.toFixed(2) || 0}%
+                          {(
+                            getNumber(
+                              getNestedValue(report.financialData, 'spreadRate.avgLoanRate')
+                            ) || 0
+                          ).toFixed(2)}
+                          %
                           <br />
-                          Spread Rate: {report.financialData.spreadRate.spreadRate?.toFixed(2) || 0}
+                          Spread Rate:{' '}
+                          {(
+                            getNumber(
+                              getNestedValue(report.financialData, 'spreadRate.spreadRate')
+                            ) || 0
+                          ).toFixed(2)}
                           %
                         </div>
                       </div>
@@ -410,50 +530,71 @@ export default function ReportDetailPage() {
                 </h2>
                 {report.memberData ? (
                   <div className="space-y-4">
-                    {report.memberData.statistics && (
+                    {getNestedValue(report.memberData, 'statistics') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">Member Statistics</h3>
                         <div className="grid grid-cols-2 gap-4 text-sm">
-                          <div>Total Members: {report.memberData.statistics.totalMembers || 0}</div>
                           <div>
-                            Active Members: {report.memberData.statistics.activeMembers || 0}
+                            Total Members:{' '}
+                            {getNumber(
+                              getNestedValue(report.memberData, 'statistics.totalMembers')
+                            ) || 0}
                           </div>
-                          <div>New Members: {report.memberData.statistics.newMembers || 0}</div>
                           <div>
-                            Closed Members: {report.memberData.statistics.closedMembers || 0}
+                            Active Members:{' '}
+                            {getNumber(
+                              getNestedValue(report.memberData, 'statistics.activeMembers')
+                            ) || 0}
+                          </div>
+                          <div>
+                            New Members:{' '}
+                            {getNumber(
+                              getNestedValue(report.memberData, 'statistics.newMembers')
+                            ) || 0}
+                          </div>
+                          <div>
+                            Closed Members:{' '}
+                            {getNumber(
+                              getNestedValue(report.memberData, 'statistics.closedMembers')
+                            ) || 0}
                           </div>
                         </div>
                       </div>
                     )}
 
-                    {report.memberData.top20Depositors &&
-                      report.memberData.top20Depositors.length > 0 && (
-                        <div className="border rounded-lg p-4">
-                          <h3 className="font-semibold mb-2">Top 20 Depositors</h3>
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                              <thead>
-                                <tr>
-                                  <th className="text-left">Member</th>
-                                  <th className="text-right">Balance</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(report.memberData?.top20Depositors as Depositor[] | undefined)
-                                  ?.slice(0, 20)
-                                  .map((dep: Depositor, idx: number) => (
-                                    <tr key={idx}>
-                                      <td>{dep.memberName}</td>
-                                      <td className="text-right">
-                                        {dep.balance?.toLocaleString() || 0}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
+                    {(() => {
+                      const top20Depositors = getNestedValue(report.memberData, 'top20Depositors');
+                      return (
+                        isArray(top20Depositors) &&
+                        top20Depositors.length > 0 && (
+                          <div className="border rounded-lg p-4">
+                            <h3 className="font-semibold mb-2">Top 20 Depositors</h3>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-sm">
+                                <thead>
+                                  <tr>
+                                    <th className="text-left">Member</th>
+                                    <th className="text-right">Balance</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(top20Depositors as Depositor[])
+                                    .slice(0, 20)
+                                    .map((dep: Depositor, idx: number) => (
+                                      <tr key={idx}>
+                                        <td>{getString(dep.memberName) || '-'}</td>
+                                        <td className="text-right">
+                                          {(getNumber(dep.balance) || 0).toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-500">
@@ -471,35 +612,73 @@ export default function ReportDetailPage() {
                 </h2>
                 {report.loanData ? (
                   <div className="space-y-4">
-                    {report.loanData.approvalsByLevel && (
+                    {getNestedValue(report.loanData, 'approvalsByLevel') !== undefined && (
                       <div className="border rounded-lg p-4">
                         <h3 className="font-semibold mb-2">Loan Approvals by Level</h3>
                         <div className="text-sm">
-                          Manager: {report.loanData.approvalsByLevel.managerApproved?.count || 0}{' '}
+                          Manager:{' '}
+                          {getNumber(
+                            getNestedValue(
+                              report.loanData,
+                              'approvalsByLevel.managerApproved.count'
+                            )
+                          ) || 0}{' '}
                           loans,{' '}
-                          {report.loanData.approvalsByLevel.managerApproved?.totalAmount?.toLocaleString() ||
-                            0}
+                          {(
+                            getNumber(
+                              getNestedValue(
+                                report.loanData,
+                                'approvalsByLevel.managerApproved.totalAmount'
+                              )
+                            ) || 0
+                          ).toLocaleString()}
                           <br />
                           Committee:{' '}
-                          {report.loanData.approvalsByLevel.committeeApproved?.count ||
-                            0} loans,{' '}
-                          {report.loanData.approvalsByLevel.committeeApproved?.totalAmount?.toLocaleString() ||
-                            0}
+                          {getNumber(
+                            getNestedValue(
+                              report.loanData,
+                              'approvalsByLevel.committeeApproved.count'
+                            )
+                          ) || 0}{' '}
+                          loans,{' '}
+                          {(
+                            getNumber(
+                              getNestedValue(
+                                report.loanData,
+                                'approvalsByLevel.committeeApproved.totalAmount'
+                              )
+                            ) || 0
+                          ).toLocaleString()}
                           <br />
-                          Board: {report.loanData.approvalsByLevel.boardApproved?.count ||
-                            0} loans,{' '}
-                          {report.loanData.approvalsByLevel.boardApproved?.totalAmount?.toLocaleString() ||
-                            0}
+                          Board:{' '}
+                          {getNumber(
+                            getNestedValue(report.loanData, 'approvalsByLevel.boardApproved.count')
+                          ) || 0}{' '}
+                          loans,{' '}
+                          {(
+                            getNumber(
+                              getNestedValue(
+                                report.loanData,
+                                'approvalsByLevel.boardApproved.totalAmount'
+                              )
+                            ) || 0
+                          ).toLocaleString()}
                         </div>
                       </div>
                     )}
 
-                    {report.loanData.overdueLoans && report.loanData.overdueLoans.length > 0 && (
-                      <div className="border rounded-lg p-4">
-                        <h3 className="font-semibold mb-2">Overdue Loans (31+ days)</h3>
-                        <div className="text-sm">Count: {report.loanData.overdueLoans.length}</div>
-                      </div>
-                    )}
+                    {(() => {
+                      const overdueLoans = getNestedValue(report.loanData, 'overdueLoans');
+                      return (
+                        isArray(overdueLoans) &&
+                        overdueLoans.length > 0 && (
+                          <div className="border rounded-lg p-4">
+                            <h3 className="font-semibold mb-2">Overdue Loans (31+ days)</h3>
+                            <div className="text-sm">Count: {overdueLoans.length}</div>
+                          </div>
+                        )
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-500">
@@ -517,34 +696,41 @@ export default function ReportDetailPage() {
                 </h2>
                 {report.liquidityData ? (
                   <div className="space-y-4">
-                    {report.liquidityData.top20Borrowers &&
-                      report.liquidityData.top20Borrowers.length > 0 && (
-                        <div className="border rounded-lg p-4">
-                          <h3 className="font-semibold mb-2">Top 20 Borrowers</h3>
-                          <div className="overflow-x-auto">
-                            <table className="min-w-full text-sm">
-                              <thead>
-                                <tr>
-                                  <th className="text-left">Member</th>
-                                  <th className="text-right">Outstanding</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {(report.liquidityData?.top20Borrowers as Borrower[] | undefined)
-                                  ?.slice(0, 20)
-                                  .map((borrower: Borrower, idx: number) => (
-                                    <tr key={idx}>
-                                      <td>{borrower.memberName}</td>
-                                      <td className="text-right">
-                                        {borrower.outstandingAmount?.toLocaleString() || 0}
-                                      </td>
-                                    </tr>
-                                  ))}
-                              </tbody>
-                            </table>
+                    {(() => {
+                      const top20Borrowers = getNestedValue(report.liquidityData, 'top20Borrowers');
+                      return (
+                        isArray(top20Borrowers) &&
+                        top20Borrowers.length > 0 && (
+                          <div className="border rounded-lg p-4">
+                            <h3 className="font-semibold mb-2">Top 20 Borrowers</h3>
+                            <div className="overflow-x-auto">
+                              <table className="min-w-full text-sm">
+                                <thead>
+                                  <tr>
+                                    <th className="text-left">Member</th>
+                                    <th className="text-right">Outstanding</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {(top20Borrowers as Borrower[])
+                                    .slice(0, 20)
+                                    .map((borrower: Borrower, idx: number) => (
+                                      <tr key={idx}>
+                                        <td>{getString(borrower.memberName) || '-'}</td>
+                                        <td className="text-right">
+                                          {(
+                                            getNumber(borrower.outstandingAmount) || 0
+                                          ).toLocaleString()}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-500">
@@ -617,7 +803,10 @@ export default function ReportDetailPage() {
                   <div className="border rounded-lg p-4">
                     <h3 className="font-semibold mb-2">Committee Meetings</h3>
                     <div className="text-sm">
-                      Total Meetings: {report.governanceData.committeeMeetings?.totalMeetings || 0}
+                      Total Meetings:{' '}
+                      {getNumber(
+                        getNestedValue(report.governanceData, 'committeeMeetings.totalMeetings')
+                      ) || 0}
                     </div>
                   </div>
                 )}
