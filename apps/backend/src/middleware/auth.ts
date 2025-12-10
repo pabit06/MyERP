@@ -12,12 +12,31 @@ export const authenticate = async (
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    // Validate that authorization header exists and is a string
+    // This prevents type confusion attacks
+    if (!authHeader || typeof authHeader !== 'string') {
       res.status(401).json({ error: 'No token provided' });
       return;
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // Validate token format - must start with 'Bearer ' prefix
+    // The actual security comes from cryptographic verification in verifyToken
+    const BEARER_PREFIX = 'Bearer ';
+    if (!authHeader.startsWith(BEARER_PREFIX)) {
+      res.status(401).json({ error: 'Invalid token format' });
+      return;
+    }
+
+    // Extract token - use the constant length to prevent manipulation
+    const token = authHeader.substring(BEARER_PREFIX.length);
+
+    // Validate token is not empty after removing prefix
+    if (!token || token.trim().length === 0) {
+      res.status(401).json({ error: 'Token is required' });
+      return;
+    }
+
+    // Cryptographically verify the token - this is the actual security check
     const payload = verifyToken(token);
 
     // Verify user still exists and is active
@@ -35,6 +54,14 @@ export const authenticate = async (
 
     if (!user || !user.isActive) {
       res.status(401).json({ error: 'User not found or inactive' });
+      return;
+    }
+
+    // Security check: Validate that the cooperativeId in the token matches the user's cooperativeId
+    // This prevents token reuse if a user is moved between cooperatives
+    // Exception: System admins may have null cooperativeId, so we allow that case
+    if (!user.isSystemAdmin && payload.cooperativeId !== user.cooperativeId) {
+      res.status(401).json({ error: 'Token is not valid for this user' });
       return;
     }
 

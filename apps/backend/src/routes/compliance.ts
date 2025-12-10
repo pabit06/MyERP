@@ -11,6 +11,7 @@ import { updateMemberRisk } from '../services/aml/risk.js';
 import { saveUploadedFile, deleteFile } from '../lib/upload.js';
 import multer from 'multer';
 import * as fs from 'fs/promises';
+import path from 'path';
 import { validate, validateAll, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
 import { paginationWithSearchSchema } from '../validators/common.js';
@@ -395,6 +396,16 @@ router.get(
 
       if (!ttr || !ttr.xmlPath) {
         res.status(404).json({ error: 'XML file not found' });
+        return;
+      }
+
+      // Validate that the path is within the uploads directory to prevent path traversal
+      const uploadsRoot = path.join(process.cwd(), 'uploads');
+      const resolvedPath = path.resolve(ttr.xmlPath);
+      const resolvedRoot = path.resolve(uploadsRoot);
+
+      if (!resolvedPath.startsWith(resolvedRoot)) {
+        res.status(403).json({ error: 'Invalid file path: path must be within uploads directory' });
         return;
       }
 

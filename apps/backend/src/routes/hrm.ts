@@ -1173,13 +1173,39 @@ router.post('/leave/requests/:id/approve', async (req: Request, res: Response) =
   }
 });
 
-router.get('/leave/balances', async (req: Request, res: Response) => {
+// Changed from GET to POST to avoid sensitive data in query parameters (employeeId)
+// GET requests with query parameters can be logged in server logs, browser history, and URLs
+router.post('/leave/balances', async (req: Request, res: Response) => {
   try {
-    const { employeeId, fiscalYear } = req.query;
-    if (!employeeId || !fiscalYear) {
-      res.status(400).json({ error: 'Missing required query params: employeeId, fiscalYear' });
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) {
+      res.status(403).json({ error: 'Tenant context required' });
       return;
     }
+
+    const { employeeId, fiscalYear } = req.body;
+    if (!employeeId || !fiscalYear) {
+      res.status(400).json({ error: 'Missing required fields: employeeId, fiscalYear' });
+      return;
+    }
+
+    // Verify that the employee belongs to the tenant and exists
+    // This ensures users can only access employees within their cooperative
+    const employee = await prisma.employee.findFirst({
+      where: {
+        id: employeeId as string,
+        cooperativeId: tenantId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!employee) {
+      res.status(404).json({ error: 'Employee not found' });
+      return;
+    }
+
     const balances = await getEmployeeLeaveBalances(employeeId as string, fiscalYear as string);
     res.json({ balances });
   } catch (error) {

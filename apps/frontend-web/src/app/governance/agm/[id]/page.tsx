@@ -42,7 +42,9 @@ export default function AGMDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<AGM>>({});
 
-  const agmId = params.id as string;
+  // Handle params.id which can be string or string[] in Next.js
+  // For single dynamic routes like [id], it's always a string, but we handle both cases
+  const agmId = Array.isArray(params.id) ? params.id[0] : params.id;
 
   useEffect(() => {
     if (!authLoading && isAuthenticated && token && agmId) {

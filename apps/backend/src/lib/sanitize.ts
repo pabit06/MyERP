@@ -51,8 +51,13 @@ export function sanitizeText(text: string): string {
   if (!text || typeof text !== 'string') {
     return '';
   }
-  // Remove HTML tags
-  const withoutTags = text.replace(/<[^>]*>/g, '');
+  // Remove HTML tags - loop until no more tags exist to handle nested/malformed tags
+  let withoutTags = text;
+  let previousLength = 0;
+  while (withoutTags.length !== previousLength) {
+    previousLength = withoutTags.length;
+    withoutTags = withoutTags.replace(/<[^>]*>/g, '');
+  }
   // Encode special characters - must handle ampersand FIRST to avoid double encoding
   return withoutTags
     .replace(/&/g, '&amp;')
@@ -75,8 +80,15 @@ export function sanitizeFilename(input: string, allowSpaces: boolean = false): s
   if (!input || typeof input !== 'string') {
     return '';
   }
-  // Remove path traversal attempts
-  let sanitized = input.replace(/\.\./g, '').replace(/[/\\]/g, '');
+  // Remove path traversal attempts - loop until no more .. patterns exist
+  let sanitized = input;
+  let previousLength = 0;
+  while (sanitized.length !== previousLength) {
+    previousLength = sanitized.length;
+    sanitized = sanitized.replace(/\.\./g, '');
+  }
+  // Remove path separators
+  sanitized = sanitized.replace(/[/\\]/g, '');
   // Remove special characters except allowed ones
   const pattern = allowSpaces ? /[^a-zA-Z0-9\s\-_]/g : /[^a-zA-Z0-9\-_]/g;
   sanitized = sanitized.replace(pattern, '');
@@ -143,11 +155,20 @@ export function sanitizeSqlPattern(input: string): string {
     return '';
   }
   // Remove common SQL injection patterns
-  return input
-    .replace(/('|(\\')|(;)|(\\)|(%))/gi, '')
-    .replace(/--/g, '')
-    .replace(/\/\*/g, '')
-    .replace(/\*\//g, '');
+  // Handle each pattern separately to ensure complete sanitization
+  let sanitized = input;
+  // Remove SQL comment patterns first (multi-character patterns)
+  sanitized = sanitized.replace(/--/g, '');
+  sanitized = sanitized.replace(/\/\*/g, '');
+  sanitized = sanitized.replace(/\*\//g, '');
+  // Remove single quotes and escaped quotes
+  sanitized = sanitized.replace(/\\'/g, '');
+  sanitized = sanitized.replace(/'/g, '');
+  // Remove semicolons, backslashes, and percent signs
+  sanitized = sanitized.replace(/;/g, '');
+  sanitized = sanitized.replace(/\\/g, '');
+  sanitized = sanitized.replace(/%/g, '');
+  return sanitized;
 }
 
 /**

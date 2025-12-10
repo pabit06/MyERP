@@ -210,7 +210,16 @@ export async function sendEmail(data: NotificationData): Promise<Notification> {
         to: data.email,
         subject: data.title,
         html: data.message,
-        text: data.message.replace(/<[^>]*>/g, ''), // Strip HTML for plain text version
+        text: (() => {
+          // Strip HTML tags - loop until no more tags exist to handle nested/malformed tags
+          let sanitized = data.message;
+          let previousLength = 0;
+          while (sanitized.length !== previousLength) {
+            previousLength = sanitized.length;
+            sanitized = sanitized.replace(/<[^>]*>/g, '');
+          }
+          return sanitized;
+        })(), // Strip HTML for plain text version
       });
 
       console.log(`[Email Notification] Sent via SMTP. Message ID: ${info.messageId}`);

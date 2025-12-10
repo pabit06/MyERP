@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { sanitizeFilename } from './sanitize.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,7 +25,15 @@ export async function saveUploadedFile(
   subdirectory: string,
   cooperativeId: string
 ): Promise<{ filePath: string; fileName: string; fileSize: number; mimeType: string }> {
-  const uploadsDir = path.join(process.cwd(), 'uploads', subdirectory, cooperativeId);
+  // Sanitize subdirectory and cooperativeId to prevent path traversal attacks
+  const sanitizedSubdirectory = sanitizeFilename(subdirectory);
+  const sanitizedCooperativeId = sanitizeFilename(cooperativeId);
+  const uploadsDir = path.join(
+    process.cwd(),
+    'uploads',
+    sanitizedSubdirectory,
+    sanitizedCooperativeId
+  );
   await fs.mkdir(uploadsDir, { recursive: true });
 
   // Generate unique filename
@@ -36,8 +45,8 @@ export async function saveUploadedFile(
   // Write file to disk
   await fs.writeFile(filePath, file.buffer);
 
-  // Return relative path for storage in database
-  const relativePath = `/uploads/${subdirectory}/${cooperativeId}/${fileName}`;
+  // Return relative path for storage in database (use sanitized values)
+  const relativePath = `/uploads/${sanitizedSubdirectory}/${sanitizedCooperativeId}/${fileName}`;
 
   return {
     filePath: relativePath,
@@ -55,6 +64,16 @@ export async function deleteFile(filePath: string): Promise<void> {
     // Remove leading slash if present
     const cleanPath = filePath.startsWith('/') ? filePath.slice(1) : filePath;
     const fullPath = path.join(process.cwd(), cleanPath);
+
+    // Validate that the path is within the uploads directory to prevent path traversal
+    const uploadsRoot = path.join(process.cwd(), 'uploads');
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedRoot = path.resolve(uploadsRoot);
+
+    if (!resolvedPath.startsWith(resolvedRoot)) {
+      throw new Error('Invalid file path: path must be within uploads directory');
+    }
+
     await fs.unlink(fullPath);
   } catch (error: any) {
     // File might not exist, ignore error
@@ -69,5 +88,16 @@ export async function deleteFile(filePath: string): Promise<void> {
  */
 export function getFullFilePath(relativePath: string): string {
   const cleanPath = relativePath.startsWith('/') ? relativePath.slice(1) : relativePath;
-  return path.join(process.cwd(), cleanPath);
+  const fullPath = path.join(process.cwd(), cleanPath);
+
+  // Validate that the path is within the uploads directory to prevent path traversal
+  const uploadsRoot = path.join(process.cwd(), 'uploads');
+  const resolvedPath = path.resolve(fullPath);
+  const resolvedRoot = path.resolve(uploadsRoot);
+
+  if (!resolvedPath.startsWith(resolvedRoot)) {
+    throw new Error('Invalid file path: path must be within uploads directory');
+  }
+
+  return fullPath;
 }

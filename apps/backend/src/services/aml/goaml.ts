@@ -2,6 +2,7 @@ import { create } from 'xmlbuilder2';
 import { prisma } from '../../lib/prisma.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { sanitizeFilename } from '../../lib/sanitize.js';
 
 const GOAML_VERSION = '5.0.1';
 
@@ -142,7 +143,9 @@ export async function generateTtrXml(ttrId: string): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'uploads', 'goaml');
   await fs.mkdir(uploadsDir, { recursive: true });
 
-  const fileName = `ttr_${ttrId}_${Date.now()}.xml`;
+  // Sanitize ttrId to prevent path traversal attacks
+  const sanitizedTtrId = sanitizeFilename(ttrId);
+  const fileName = `ttr_${sanitizedTtrId}_${Date.now()}.xml`;
   const filePath = path.join(uploadsDir, fileName);
 
   await fs.writeFile(filePath, xml, 'utf-8');
@@ -260,7 +263,9 @@ export async function generateStrXml(caseId: string): Promise<string> {
   const uploadsDir = path.join(process.cwd(), 'uploads', 'goaml');
   await fs.mkdir(uploadsDir, { recursive: true });
 
-  const fileName = `str_${caseId}_${Date.now()}.xml`;
+  // Sanitize caseId to prevent path traversal attacks
+  const sanitizedCaseId = sanitizeFilename(caseId);
+  const fileName = `str_${sanitizedCaseId}_${Date.now()}.xml`;
   const filePath = path.join(uploadsDir, fileName);
 
   await fs.writeFile(filePath, xml, 'utf-8');

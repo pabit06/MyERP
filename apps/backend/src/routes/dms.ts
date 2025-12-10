@@ -826,6 +826,16 @@ router.get('/documents/:id/download', async (req: Request, res: Response) => {
       : document.filePath;
     const fullPath = path.join(process.cwd(), cleanPath);
 
+    // Validate that the path is within the uploads directory to prevent path traversal
+    const uploadsRoot = path.join(process.cwd(), 'uploads');
+    const resolvedPath = path.resolve(fullPath);
+    const resolvedRoot = path.resolve(uploadsRoot);
+
+    if (!resolvedPath.startsWith(resolvedRoot)) {
+      res.status(403).json({ error: 'Invalid file path: path must be within uploads directory' });
+      return;
+    }
+
     // Check if file exists
     try {
       await fs.access(fullPath);

@@ -661,7 +661,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
 
           if (existingShares) {
             console.log(
-              `[Member Approval] Share account created for member ${memberId}:`,
+              '[Member Approval] Share account created for member:',
+              memberId,
+              'Account ID:',
               existingShares.id
             );
           } else {
@@ -740,13 +742,18 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
 
           if (!existingEntryFee) {
             console.log(
-              `[Member Approval] Posting entry fee for member ${memberNumber}: ${entryFeeAmount}`
+              '[Member Approval] Posting entry fee for member:',
+              memberNumber,
+              'Amount:',
+              entryFeeAmount
             );
             await postEntryFee(tenantId!, entryFeeAmount, memberId, memberNumber, new Date());
             console.log(`[Member Approval] Entry fee posted successfully`);
           } else {
             console.log(
-              `[Member Approval] Entry fee already posted for member ${memberNumber}, skipping`
+              '[Member Approval] Entry fee already posted for member:',
+              memberNumber,
+              'skipping'
             );
           }
         }
@@ -807,14 +814,19 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
 
           if (!existingAdvancePayment) {
             console.log(
-              `[Member Approval] Posting advance payment for member ${memberNumber}: ${advanceAmount}`
+              '[Member Approval] Posting advance payment for member:',
+              memberNumber,
+              'Amount:',
+              advanceAmount
             );
             await postAdvancePayment(tenantId!, advanceAmount, memberId, memberName, new Date());
             console.log(`[Member Approval] Advance payment posted successfully`);
             advancePaymentPosted = true;
           } else {
             console.log(
-              `[Member Approval] Advance payment already posted for member ${memberNumber}, skipping`
+              '[Member Approval] Advance payment already posted for member:',
+              memberNumber,
+              'skipping'
             );
             advancePaymentPosted = true; // Already exists, so we can proceed with share issuance
           }
@@ -842,7 +854,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
             : 0;
           const advanceAmount = initialShareAmount + initialSavingsAmount;
 
-          console.log(`[Member Approval] Processing shares for member ${memberId}:`, {
+          console.log('[Member Approval] Processing shares for member:', memberId, {
             initialShareAmount,
             initialSavingsAmount,
             advanceAmount,
@@ -893,7 +905,9 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
                 }
               } else {
                 console.log(
-                  `[Member Approval] Shares already issued for member ${memberId}, skipping duplicate issuance`
+                  '[Member Approval] Shares already issued for member:',
+                  memberId,
+                  'skipping duplicate issuance'
                 );
               }
             }

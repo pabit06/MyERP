@@ -112,7 +112,16 @@ const consoleFormat = winston.format.combine(
   redactFormat,
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    let msg = `${timestamp} [${level}]: ${message}`;
+    // Safely handle message - convert to string and escape format specifiers
+    // This prevents format string injection attacks when using printf-style formatting
+    let safeMessage: string;
+    if (typeof message === 'string') {
+      // Escape any printf-style format specifiers to prevent format string injection
+      safeMessage = message.replace(/%/g, '%%');
+    } else {
+      safeMessage = JSON.stringify(message);
+    }
+    let msg = `${timestamp} [${level}]: ${safeMessage}`;
     if (Object.keys(meta).length > 0) {
       msg += ` ${JSON.stringify(redactSensitiveData(meta))}`;
     }
