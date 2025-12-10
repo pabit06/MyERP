@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import { ArrowDown, ChevronRight, ChevronDown, Folder, FileText } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -64,7 +63,7 @@ export default function ExpensesPage() {
       } else {
         setError('Error loading accounts');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading accounts');
     } finally {
       setIsLoading(false);

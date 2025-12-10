@@ -270,7 +270,7 @@ class ApiClient {
     }
 
     // Don't set Content-Type for FormData (browser will set it with boundary)
-    const { skipAuth, skipErrorToast, ...fetchOptions } = options || {};
+    const { skipAuth: _skipAuth, skipErrorToast, ...fetchOptions } = options || {};
     const fetchHeaders = fetchOptions.headers as Record<string, string> | undefined;
     if (fetchHeaders && 'Content-Type' in fetchHeaders) {
       delete fetchHeaders['Content-Type'];

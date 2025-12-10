@@ -1,6 +1,7 @@
 import { BaseController } from './BaseController.js';
 import { hooks } from '../lib/hooks.js';
 import { generateEMISchedule } from '../lib/emi.js';
+import crypto from 'crypto';
 
 /**
  * Loans Controller
@@ -217,9 +218,10 @@ export class LoansController extends BaseController {
       }
 
       // Generate application number if not provided
+      // Use cryptographically secure random number generator for security-sensitive identifiers
       const appNumber =
         data.applicationNumber ||
-        `LOAN-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+        `LOAN-${new Date().getFullYear()}-${String(crypto.randomInt(0, 10000)).padStart(4, '0')}`;
 
       // Check if application number already exists
       const existing = await tx.loanApplication.findUnique({

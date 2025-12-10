@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import { ArrowLeft, Printer, Search } from 'lucide-react';
 import Link from 'next/link';
 
@@ -67,7 +66,7 @@ export default function CertificatesPage() {
       } else {
         setError('Failed to load certificates');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading certificates');
     } finally {
       setIsLoading(false);

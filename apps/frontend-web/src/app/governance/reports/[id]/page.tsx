@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ProtectedRoute, RichTextEditor, ConfirmModal } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiClient } from '@/lib/api';
@@ -16,12 +16,12 @@ interface ManagerReport {
   status: 'DRAFT' | 'FINALIZED';
   finalizedAt: string | null;
   finalizedBy: string | null;
-  financialData: any;
-  previousMonthData: any;
-  memberData: any;
-  loanData: any;
-  liquidityData: any;
-  governanceData: any;
+  financialData: Record<string, unknown> | null;
+  previousMonthData: Record<string, unknown> | null;
+  memberData: Record<string, unknown> | null;
+  loanData: Record<string, unknown> | null;
+  liquidityData: Record<string, unknown> | null;
+  governanceData: Record<string, unknown> | null;
   description: string | null;
   challenges: string | null;
   plans: string | null;
@@ -31,6 +31,18 @@ interface ManagerReport {
     title: string;
     meetingNo: number | null;
   } | null;
+}
+
+interface Depositor {
+  memberName: string;
+  balance?: number;
+  [key: string]: unknown;
+}
+
+interface Borrower {
+  memberName: string;
+  outstandingAmount?: number;
+  [key: string]: unknown;
 }
 
 type TabType = 'financial' | 'members' | 'loans' | 'liquidity' | 'governance';
@@ -54,11 +66,28 @@ export default function ReportDetailPage() {
   const [plans, setPlans] = useState('');
   const [suggestions, setSuggestions] = useState('');
 
+  const fetchReportDetails = useCallback(async () => {
+    if (!params.id) return;
+    try {
+      setLoading(true);
+      const data = await apiClient.get<{ report: ManagerReport }>(
+        `/governance/reports/${params.id}`
+      );
+      setReport(data.report);
+      setError(null);
+    } catch (error: unknown) {
+      console.error('Error fetching report details:', error);
+      setError(error instanceof Error ? error.message : 'Failed to fetch report details');
+    } finally {
+      setLoading(false);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     if (!authLoading && isAuthenticated && params.id) {
       fetchReportDetails();
     }
-  }, [authLoading, isAuthenticated, params.id]);
+  }, [authLoading, isAuthenticated, params.id, fetchReportDetails]);
 
   useEffect(() => {
     if (report) {
@@ -69,23 +98,6 @@ export default function ReportDetailPage() {
     }
   }, [report]);
 
-  const fetchReportDetails = async () => {
-    if (!params.id) return;
-    try {
-      setLoading(true);
-      const data = await apiClient.get<{ report: ManagerReport }>(
-        `/governance/reports/${params.id}`
-      );
-      setReport(data.report);
-      setError(null);
-    } catch (error: any) {
-      console.error('Error fetching report details:', error);
-      setError(error.message || 'Failed to fetch report details');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleFetchData = async () => {
     if (!params.id) return;
     setFetchingData(true);
@@ -93,8 +105,8 @@ export default function ReportDetailPage() {
       await apiClient.post(`/governance/reports/${params.id}/fetch-data`);
       await fetchReportDetails();
       alert('Data fetched successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Error fetching data');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error fetching data');
     } finally {
       setFetchingData(false);
       setShowFetchConfirm(false);
@@ -113,8 +125,8 @@ export default function ReportDetailPage() {
       });
       await fetchReportDetails();
       alert('Report saved successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Error saving report');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error saving report');
     } finally {
       setSaving(false);
     }
@@ -127,8 +139,8 @@ export default function ReportDetailPage() {
       await apiClient.post(`/governance/reports/${params.id}/finalize`);
       await fetchReportDetails();
       alert('Report finalized successfully!');
-    } catch (error: any) {
-      alert(error.message || 'Error finalizing report');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error finalizing report');
     } finally {
       setFinalizing(false);
       setShowFinalizeConfirm(false);
@@ -384,7 +396,7 @@ export default function ReportDetailPage() {
                   </div>
                 ) : (
                   <p className="text-gray-500">
-                    No financial data available. Click "Auto-Fetch Data" to load.
+                    No financial data available. Click &quot;Auto-Fetch Data&quot; to load.
                   </p>
                 )}
               </div>
@@ -427,9 +439,9 @@ export default function ReportDetailPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {report.memberData.top20Depositors
-                                  .slice(0, 20)
-                                  .map((dep: any, idx: number) => (
+                                {(report.memberData?.top20Depositors as Depositor[] | undefined)
+                                  ?.slice(0, 20)
+                                  .map((dep: Depositor, idx: number) => (
                                     <tr key={idx}>
                                       <td>{dep.memberName}</td>
                                       <td className="text-right">
@@ -445,7 +457,7 @@ export default function ReportDetailPage() {
                   </div>
                 ) : (
                   <p className="text-gray-500">
-                    No member data available. Click "Auto-Fetch Data" to load.
+                    No member data available. Click &quot;Auto-Fetch Data&quot; to load.
                   </p>
                 )}
               </div>
@@ -491,7 +503,7 @@ export default function ReportDetailPage() {
                   </div>
                 ) : (
                   <p className="text-gray-500">
-                    No loan data available. Click "Auto-Fetch Data" to load.
+                    No loan data available. Click &quot;Auto-Fetch Data&quot; to load.
                   </p>
                 )}
               </div>
@@ -518,9 +530,9 @@ export default function ReportDetailPage() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {report.liquidityData.top20Borrowers
-                                  .slice(0, 20)
-                                  .map((borrower: any, idx: number) => (
+                                {(report.liquidityData?.top20Borrowers as Borrower[] | undefined)
+                                  ?.slice(0, 20)
+                                  .map((borrower: Borrower, idx: number) => (
                                     <tr key={idx}>
                                       <td>{borrower.memberName}</td>
                                       <td className="text-right">
@@ -536,7 +548,7 @@ export default function ReportDetailPage() {
                   </div>
                 ) : (
                   <p className="text-gray-500">
-                    No liquidity data available. Click "Auto-Fetch Data" to load.
+                    No liquidity data available. Click &quot;Auto-Fetch Data&quot; to load.
                   </p>
                 )}
               </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../../contexts/AuthContext';
 import { MemberWorkflow } from '@/features/members';
@@ -145,7 +145,6 @@ interface KYM {
 
 export default function MemberDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { token } = useAuth();
   const [member, setMember] = useState<Member | null>(null);
   const [kym, setKym] = useState<KYM | null>(null);
@@ -190,11 +189,11 @@ export default function MemberDetailPage() {
             const altKymData = await altKycResponse.json();
             setKym(altKymData);
           }
-        } catch (err) {
+        } catch {
           // Ignore if this endpoint also fails
         }
       }
-    } catch (err) {
+    } catch {
       setError('Error loading member');
     } finally {
       setIsLoading(false);

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 
@@ -104,7 +103,7 @@ export default function StatementPage() {
         console.error('API Error:', response.status, errorText);
         setError('Failed to load statement');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading statement');
     } finally {
       setIsLoading(false);

@@ -2,12 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { PiggyBank, ArrowLeft, FileText, Download, Calendar, Filter } from 'lucide-react';
+import { PiggyBank, ArrowLeft, FileText, Download, Filter } from 'lucide-react';
 import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
 
 export default function SavingsReportsPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, _setIsLoading] = useState(false);
   const [dateFilters, setDateFilters] = useState({
     fromDate: '',
     toDate: '',

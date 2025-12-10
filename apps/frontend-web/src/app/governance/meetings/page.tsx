@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ProtectedRoute, Card, CardContent, Button, Input } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -50,14 +48,13 @@ interface PendingAgendaItem {
 }
 
 export default function GovernanceMeetingsPage() {
-  const router = useRouter();
   const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
-  const [pendingAgendaItems, setPendingAgendaItems] = useState<PendingAgendaItem[]>([]);
+  const [_selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [_pendingAgendaItems, setPendingAgendaItems] = useState<PendingAgendaItem[]>([]);
   const [unassignedPendingItems, setUnassignedPendingItems] = useState<PendingAgendaItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');

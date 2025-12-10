@@ -3,7 +3,6 @@
  * Provides conversion between Nepali (Bikram Sambat) and Gregorian (AD) dates
  */
 
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
 
 /**
@@ -15,7 +14,6 @@ export function adToBs(adDate: Date | string): string {
     if (isNaN(date.getTime())) {
       throw new Error('Invalid date');
     }
-    // @ts-ignore
     const nepaliDate = new NepaliDate(date);
     const year = nepaliDate.getYear();
     const month = String(nepaliDate.getMonth() + 1).padStart(2, '0');
@@ -36,9 +34,7 @@ export function bsToAd(bsDate: string): Date {
     if (!year || !month || !day) {
       throw new Error('Invalid BS date format. Expected YYYY-MM-DD');
     }
-    // @ts-ignore - NepaliDate constructor expects month to be 0-indexed
     const nepaliDate = new NepaliDate(year, month - 1, day);
-    // @ts-ignore
     return nepaliDate.toJsDate();
   } catch (error) {
     console.error('Error converting BS to AD:', error);

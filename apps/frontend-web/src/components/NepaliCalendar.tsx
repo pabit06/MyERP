@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
-import { adToBs, formatBsDate, getNepaliMonthName, bsToAd } from '../lib/nepali-date';
+import { adToBs, getNepaliMonthName } from '../lib/nepali-date';
 
 interface NepaliCalendarProps {
   onDateSelect?: (adDate: string, bsDate: string) => void;
@@ -20,9 +19,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
     // Iterate backwards from day 32 to find the last valid day
     for (let day = 32; day >= 28; day--) {
       try {
-        // @ts-ignore
         const testDate = new NepaliDate(bsYear, bsMonth - 1, day);
-        // @ts-ignore
         const testMonth = testDate.getMonth() + 1; // Convert to 1-indexed
         // If the month matches, this is a valid day
         if (testMonth === bsMonth) {
@@ -45,19 +42,14 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       const [bsYear, bsMonth] = currentBsDate.split('-').map(Number);
 
       // Get first day of BS month (gate 1)
-      // @ts-ignore
       const firstDayBs = new NepaliDate(bsYear, bsMonth - 1, 1);
-      // @ts-ignore
       const firstDayAd = firstDayBs.toJsDate();
 
       // Get number of days in BS month
       const daysInBsMonth = getDaysInBsMonth(bsYear, bsMonth);
 
-      // Get last day of BS month
-      // @ts-ignore
-      const lastDayBs = new NepaliDate(bsYear, bsMonth - 1, daysInBsMonth);
-      // @ts-ignore
-      const lastDayAd = lastDayBs.toJsDate();
+      // Get last day of BS month (unused but kept for potential future use)
+      const _lastDayBs = new NepaliDate(bsYear, bsMonth - 1, daysInBsMonth);
 
       // Get starting day of week for BS month's first day
       const startingDayOfWeek = firstDayAd.getDay();
@@ -76,9 +68,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
         const daysInPrevMonth = getDaysInBsMonth(bsYear - 1, 12);
         for (let i = startingDayOfWeek - 1; i >= 0; i--) {
           const bsDay = daysInPrevMonth - i;
-          // @ts-ignore
           const dateBs = new NepaliDate(bsYear - 1, 11, bsDay);
-          // @ts-ignore
           const dateAd = dateBs.toJsDate();
           const bsDate = `${bsYear - 1}-12-${String(bsDay).padStart(2, '0')}`;
           dates.push({
@@ -93,9 +83,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
         const daysInPrevMonth = getDaysInBsMonth(bsYear, bsMonth - 1);
         for (let i = startingDayOfWeek - 1; i >= 0; i--) {
           const bsDay = daysInPrevMonth - i;
-          // @ts-ignore
           const dateBs = new NepaliDate(bsYear, bsMonth - 2, bsDay);
-          // @ts-ignore
           const dateAd = dateBs.toJsDate();
           const bsDate = `${bsYear}-${String(bsMonth - 1).padStart(2, '0')}-${String(bsDay).padStart(2, '0')}`;
           dates.push({
@@ -110,9 +98,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
 
       // Add current BS month's days (starting from gate 1)
       for (let bsDay = 1; bsDay <= daysInBsMonth; bsDay++) {
-        // @ts-ignore
         const dateBs = new NepaliDate(bsYear, bsMonth - 1, bsDay);
-        // @ts-ignore
         const dateAd = dateBs.toJsDate();
         const bsDate = `${bsYear}-${String(bsMonth).padStart(2, '0')}-${String(bsDay).padStart(2, '0')}`;
         dates.push({
@@ -133,9 +119,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
           nextBsMonth = 1;
           nextBsYear = bsYear + 1;
         }
-        // @ts-ignore
         const dateBs = new NepaliDate(nextBsYear, nextBsMonth - 1, bsDay);
-        // @ts-ignore
         const dateAd = dateBs.toJsDate();
         const bsDate = `${nextBsYear}-${String(nextBsMonth).padStart(2, '0')}-${String(bsDay).padStart(2, '0')}`;
         dates.push({
@@ -172,7 +156,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       for (let i = startingDayOfWeek - 1; i >= 0; i--) {
         const date = new Date(year, month - 1, prevMonthDays - i);
         const bsDate = adToBs(date);
-        const [bsYear, bsMonthNum, bsDay] = bsDate.split('-').map(Number);
+        const [_bsYear, _bsMonthNum, bsDay] = bsDate.split('-').map(Number);
         dates.push({
           adDate: date,
           bsDate,
@@ -186,7 +170,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
         const bsDate = adToBs(date);
-        const [bsYear, bsMonthNum, bsDay] = bsDate.split('-').map(Number);
+        const [_bsYear, _bsMonthNum, bsDay] = bsDate.split('-').map(Number);
         dates.push({
           adDate: date,
           bsDate,
@@ -201,7 +185,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       for (let day = 1; day <= remainingDays; day++) {
         const date = new Date(year, month + 1, day);
         const bsDate = adToBs(date);
-        const [bsYear, bsMonthNum, bsDay] = bsDate.split('-').map(Number);
+        const [_bsYear, _bsMonthNum, bsDay] = bsDate.split('-').map(Number);
         dates.push({
           adDate: date,
           bsDate,
@@ -229,9 +213,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
       const currentBsDateStr = adToBs(currentDate);
       const [currentBsYear, currentBsMonth] = currentBsDateStr.split('-').map(Number);
       // Get first day of current BS month to align the view
-      // @ts-ignore
       const firstDayBs = new NepaliDate(currentBsYear, currentBsMonth - 1, 1);
-      // @ts-ignore
       const firstDayAd = firstDayBs.toJsDate();
       // Only update if the current date doesn't match the first day of BS month
       if (currentDate.getTime() !== firstDayAd.getTime()) {
@@ -252,9 +234,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
         prevBsYear = bsYear - 1;
       }
       // Get first day of previous BS month
-      // @ts-ignore
       const prevMonthFirstDay = new NepaliDate(prevBsYear, prevBsMonth - 1, 1);
-      // @ts-ignore
       setCurrentDate(prevMonthFirstDay.toJsDate());
     } else {
       setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -273,9 +253,7 @@ export default function NepaliCalendar({ onDateSelect, selectedDate }: NepaliCal
         nextBsYear = bsYear + 1;
       }
       // Get first day of next BS month
-      // @ts-ignore
       const nextMonthFirstDay = new NepaliDate(nextBsYear, nextBsMonth - 1, 1);
-      // @ts-ignore
       setCurrentDate(nextMonthFirstDay.toJsDate());
     } else {
       setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));

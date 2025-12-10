@@ -2,17 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-  FileText,
-  ArrowLeft,
-  Download,
-  Calendar,
-  Filter,
-  PieChart,
-  BarChart,
-  TrendingUp,
-  X,
-} from 'lucide-react';
+import { FileText, ArrowLeft, Download, PieChart, BarChart, TrendingUp, X } from 'lucide-react';
 import { ProtectedRoute, NepaliDatePicker } from '@/features/components/shared';
 
 type ReportType = 'balance-sheet' | 'profit-loss' | 'trial-balance';

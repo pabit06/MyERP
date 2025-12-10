@@ -9,7 +9,7 @@ export interface DatePickerProps {
 }
 
 const DatePicker = React.forwardRef<HTMLInputElement, DatePickerProps>(
-  ({ value, onChange, ...props }, ref) => {
+  ({ value: _value, onChange, ...props }, ref) => {
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
       const date = event.target.value ? new Date(event.target.value) : undefined;
       onChange(date);

@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { ArrowLeft, Printer } from 'lucide-react';
 import Link from 'next/link';
 
@@ -29,7 +28,6 @@ interface ShareAccount {
 export default function CertificatePrintPage() {
   const { token } = useAuth();
   const params = useParams();
-  const router = useRouter();
   const memberId = params.memberId as string;
   const [account, setAccount] = useState<ShareAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +53,7 @@ export default function CertificatePrintPage() {
       } else {
         setError('Failed to load certificate data');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading certificate data');
     } finally {
       setIsLoading(false);

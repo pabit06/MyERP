@@ -509,7 +509,6 @@ export default function MeetingDetailPage() {
   };
 
   const isDraft = meeting?.workflowStatus === 'DRAFT';
-  const isLocked = meeting?.workflowStatus === 'LOCKED';
   const isFinalized = meeting?.workflowStatus === 'FINALIZED';
 
   if (authLoading || loading) {
@@ -761,7 +760,7 @@ export default function MeetingDetailPage() {
                         }
                         disabled={!isDraft}
                         className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${!isDraft ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                        onChange={(e) => {
+                        onChange={(_e) => {
                           // Handle date update
                         }}
                       />
@@ -776,7 +775,7 @@ export default function MeetingDetailPage() {
                         disabled={!isDraft}
                         placeholder="Meeting location"
                         className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${!isDraft ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                        onChange={(e) => {
+                        onChange={(_e) => {
                           // Handle location update
                         }}
                       />

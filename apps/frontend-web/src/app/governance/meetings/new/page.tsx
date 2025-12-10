@@ -3,7 +3,6 @@
 import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 
 const MEETING_TYPES = [

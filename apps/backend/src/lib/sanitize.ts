@@ -94,9 +94,18 @@ export function sanitizeEmail(email: string): string {
   if (!email || typeof email !== 'string') {
     return '';
   }
-  // Basic email validation and sanitization
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const trimmed = email.trim().toLowerCase();
+
+  // Basic email validation with ReDoS-safe regex pattern
+  // Pattern avoids nested quantifiers that can cause exponential backtracking
+  // Limits length to prevent ReDoS attacks (RFC 5321: max 320 chars for email)
+  if (trimmed.length > 320) {
+    return '';
+  }
+
+  // Use a more specific pattern that avoids catastrophic backtracking
+  // This pattern is more restrictive but safer and still covers most valid emails
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return emailRegex.test(trimmed) ? trimmed : '';
 }
 
@@ -148,7 +157,7 @@ export function sanitizeSqlPattern(input: string): string {
  * @param options - Sanitization options
  * @returns Sanitized object
  */
-export function sanitizeObject<T extends Record<string, any>>(
+export function sanitizeObject<T extends Record<string, unknown>>(
   obj: T,
   options: {
     sanitizeStrings?: boolean;
@@ -166,7 +175,7 @@ export function sanitizeObject<T extends Record<string, any>>(
     return obj;
   }
 
-  const sanitized: any = Array.isArray(obj) ? [...obj] : { ...obj };
+  const sanitized = Array.isArray(obj) ? ([...obj] as T) : ({ ...obj } as T);
 
   for (const key in sanitized) {
     if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
@@ -174,19 +183,22 @@ export function sanitizeObject<T extends Record<string, any>>(
 
       if (typeof value === 'string') {
         if (sanitizeHtmlFields) {
-          sanitized[key] = sanitizeHtml(value) as any;
+          (sanitized as Record<string, unknown>)[key] = sanitizeHtml(value);
         } else if (sanitizeStrings) {
-          sanitized[key] = sanitizeText(value) as any;
+          (sanitized as Record<string, unknown>)[key] = sanitizeText(value);
         }
       } else if (typeof value === 'object' && value !== null) {
-        sanitized[key] = sanitizeObject(value, {
-          sanitizeStrings,
-          sanitizeHtml: sanitizeHtmlFields,
-          maxDepth: maxDepth - 1,
-        }) as any;
+        (sanitized as Record<string, unknown>)[key] = sanitizeObject(
+          value as Record<string, unknown>,
+          {
+            sanitizeStrings,
+            sanitizeHtml: sanitizeHtmlFields,
+            maxDepth: maxDepth - 1,
+          }
+        );
       }
     }
   }
 
-  return sanitized as T;
+  return sanitized;
 }

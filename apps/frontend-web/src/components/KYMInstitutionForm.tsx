@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { InstitutionKymFormSchema, InstitutionKymFormData } from '@myerp/shared-types';
@@ -10,7 +10,6 @@ import {
   NepaliDatePicker,
   Card,
   CardContent,
-  CardHeader,
   CardTitle,
   Accordion,
   AccordionContent,
@@ -27,7 +26,7 @@ interface KYMInstitutionFormProps {
 }
 
 export const KYMInstitutionForm: React.FC<KYMInstitutionFormProps> = ({
-  memberId,
+  memberId: _memberId,
   defaultValues,
   mode,
   onSubmit,
@@ -67,7 +66,6 @@ export const KYMInstitutionForm: React.FC<KYMInstitutionFormProps> = ({
   });
 
   const hasBylawsConstitution = watch('hasBylawsConstitution');
-  const hasOfficialLetter = watch('hasOfficialLetter');
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">

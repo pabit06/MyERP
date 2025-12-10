@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -10,6 +10,100 @@ interface MemberWorkflowProps {
   workflowStatus: string;
   onStatusChange: () => void;
   createdAt?: string; // Add createdAt prop for application date
+}
+
+interface KYM {
+  dateOfBirth?: string | Date;
+  dateOfBirthBS?: string;
+  gender?: string;
+  nationality?: string;
+  citizenshipNumber?: string;
+  citizenshipIssuingOffice?: string;
+  citizenshipIssuingDistrict?: string;
+  grandfatherName?: string;
+  fatherName?: string;
+  motherName?: string;
+  maritalStatus?: string;
+  spouseName?: string;
+  spouseSurname?: string;
+  familyType?: string;
+  occupation?: string;
+  occupationSpecify?: string;
+  panNo?: string;
+  spouseOccupation?: string;
+  spouseOccupationSpecify?: string;
+  isHighRankingPositionHolder?: boolean;
+  pepName?: string;
+  pepRelationship?: string;
+  pepPosition?: string;
+  permanentProvince?: string;
+  permanentMunicipality?: string;
+  permanentWard?: string;
+  permanentVillageTole?: string;
+  permanentHouseNo?: string;
+  temporaryProvince?: string;
+  temporaryMunicipality?: string;
+  temporaryWard?: string;
+  temporaryVillageTole?: string;
+  temporaryHouseNo?: string;
+  residenceType?: string;
+  contactNo?: string;
+  emailId?: string;
+  voterIdCardNo?: string;
+  pollingStation?: string;
+  residenceDuration?: string;
+  passportNo?: string;
+  membershipObjective?: string;
+  isMemberOfAnotherCooperative?: boolean;
+  isFamilyMemberOfAnotherCooperative?: boolean;
+  isAnotherFamilyMemberInThisInstitution?: boolean;
+  dualMembershipPurpose?: string;
+  familyDualMembershipPurpose?: string;
+  annualFamilyIncome?: string;
+  initialShareAmount?: number;
+  initialSavingsAmount?: number;
+  initialOtherAmount?: number;
+  initialOtherSpecify?: string;
+  estimatedTransactionsPerYear?: number;
+  estimatedAnnualDeposit?: number;
+  estimatedLoanAmount?: number;
+  additionalRemarks?: string;
+  declarationChangeAgreement?: boolean;
+  declarationTruthfulness?: boolean;
+  declarationDate?: string | Date;
+  recommender1Name?: string;
+  recommender1MembershipNo?: string;
+  recommender2Name?: string;
+  recommender2MembershipNo?: string;
+  [key: string]: unknown; // Allow additional properties
+}
+
+interface WorkflowHistory {
+  id: string;
+  memberId: string;
+  fromStatus?: string;
+  toStatus: string;
+  action: string;
+  performedBy?: string;
+  remarks?: string;
+  createdAt: string;
+  [key: string]: unknown; // Allow additional properties
+}
+
+interface Meeting {
+  id: string;
+  title: string;
+  description?: string;
+  meetingType: string;
+  meetingNo?: number;
+  date?: string;
+  scheduledDate?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  status: string;
+  workflowStatus?: string;
+  [key: string]: unknown; // Allow additional properties
 }
 
 const WORKFLOW_STEPS = [
@@ -28,9 +122,9 @@ export default function MemberWorkflow({
   createdAt,
 }: MemberWorkflowProps) {
   const { token } = useAuth();
-  const [kym, setKym] = useState<any>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [kym, setKym] = useState<KYM | null>(null);
+  const [history, setHistory] = useState<WorkflowHistory[]>([]);
+  const [_isLoading, setIsLoading] = useState(true);
   const [showKYMForm, setShowKYMForm] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showBODModal, setShowBODModal] = useState(false);
@@ -38,17 +132,11 @@ export default function MemberWorkflow({
     'approve' | 'reject' | 'review' | 'complete_review'
   >('review');
   const [remarks, setRemarks] = useState('');
-  const [meetingId, setMeetingId] = useState('');
-  const [meetings, setMeetings] = useState<any[]>([]);
+  const [_meetingId, setMeetingId] = useState('');
+  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [reviewCompleted, setReviewCompleted] = useState(false);
 
-  useEffect(() => {
-    fetchWorkflowData();
-    // Reset review completed state when workflow status changes
-    setReviewCompleted(false);
-  }, [memberId, token, workflowStatus]);
-
-  const fetchWorkflowData = async () => {
+  const fetchWorkflowData = useCallback(async () => {
     if (!token) return;
     setIsLoading(true);
     try {
@@ -72,12 +160,19 @@ export default function MemberWorkflow({
       }
     } catch (err) {
       console.error('Error fetching workflow data:', err);
+      // Error is logged, no further action needed
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [memberId, token]);
 
-  const fetchMeetings = async () => {
+  useEffect(() => {
+    fetchWorkflowData();
+    // Reset review completed state when workflow status changes
+    setReviewCompleted(false);
+  }, [memberId, token, workflowStatus, fetchWorkflowData]);
+
+  const _fetchMeetings = async () => {
     if (!token) return;
     try {
       const response = await fetch(
@@ -90,12 +185,12 @@ export default function MemberWorkflow({
         const data = await response.json();
         setMeetings(data.meetings || []);
       }
-    } catch (err) {
-      console.error('Error fetching meetings:', err);
+    } catch {
+      // Error is ignored, no further action needed
     }
   };
 
-  const handleKYMSubmit = async (kymData: any) => {
+  const handleKYMSubmit = async (kymData: KYM) => {
     if (!token) return;
     try {
       const response = await fetch(`${API_URL}/member-workflow/${memberId}/kyc`, {
@@ -115,7 +210,7 @@ export default function MemberWorkflow({
         const error = await response.json();
         alert(error.error || 'Failed to save KYM');
       }
-    } catch (err) {
+    } catch {
       alert('Error saving KYM');
     }
   };
@@ -156,7 +251,7 @@ export default function MemberWorkflow({
           : error.error || 'Failed to review KYM';
         alert(errorMessage);
       }
-    } catch (err) {
+    } catch {
       alert('Error reviewing KYM');
     }
   };
@@ -187,7 +282,7 @@ export default function MemberWorkflow({
         const error = await response.json();
         alert(error.error || 'Failed to send to BOD');
       }
-    } catch (err) {
+    } catch {
       alert('Error sending to BOD');
     }
   };

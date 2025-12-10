@@ -3,17 +3,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import {
   TrendingUp,
-  ChevronRight,
-  ChevronDown,
   Folder,
   FileText,
   Search,
-  ChevronsDown,
-  ChevronsUp,
-  Eye,
   Plus,
   RefreshCw,
   DollarSign,
@@ -64,7 +58,6 @@ export default function AssetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [accountBalances, setAccountBalances] = useState<Record<string, number>>({});
   const [isSeeding, setIsSeeding] = useState(false);
-  const [allExpanded, setAllExpanded] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
   const [hasOldAccounts, setHasOldAccounts] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -99,6 +92,7 @@ export default function AssetsPage() {
         setAccountBalances(balanceMap);
       } catch (err) {
         console.error('Error processing balances:', err);
+        // Error is logged, no further action needed
       }
     },
     [token]
@@ -118,7 +112,6 @@ export default function AssetsPage() {
         // Auto-expand all nodes by default to show all ledger heads
         const allIds = data.map((acc: Account) => acc.id);
         setExpandedNodes(new Set(allIds));
-        setAllExpanded(true);
         // Fetch balances
         await fetchAccountBalances(data);
 
@@ -131,7 +124,7 @@ export default function AssetsPage() {
       } else {
         setError('Error loading accounts');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading accounts');
     } finally {
       setIsLoading(false);
@@ -165,8 +158,8 @@ export default function AssetsPage() {
         const data = await response.json();
         setError(data.error || 'Failed to seed accounts');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to seed accounts');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to seed accounts');
     } finally {
       setIsSeeding(false);
     }
@@ -204,8 +197,8 @@ export default function AssetsPage() {
         const data = await response.json();
         setError(data.error || 'Failed to create account');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create account');
     } finally {
       setIsSubmitting(false);
     }
@@ -239,8 +232,8 @@ export default function AssetsPage() {
         const data = await response.json();
         setError(data.error || 'Failed to update account');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to update account');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update account');
     } finally {
       setIsSubmitting(false);
     }
@@ -269,7 +262,7 @@ export default function AssetsPage() {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        await response.json();
         // Refresh accounts after migration
         await fetchAccounts();
         // Hide migrate button after successful migration
@@ -281,8 +274,8 @@ export default function AssetsPage() {
         const data = await response.json();
         setError(data.error || 'Failed to migrate accounts');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to migrate accounts');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to migrate accounts');
     } finally {
       setIsMigrating(false);
     }
@@ -378,7 +371,8 @@ export default function AssetsPage() {
     }
   }, [expandedNodes, accounts, accountBalances, buildTree]);
 
-  const toggleExpand = (nodeId: string) => {
+  // Reserved for future use - expand/collapse functionality
+  const _toggleExpand = (nodeId: string) => {
     const newExpanded = new Set(expandedNodes);
     if (newExpanded.has(nodeId)) {
       newExpanded.delete(nodeId);
@@ -386,20 +380,17 @@ export default function AssetsPage() {
       newExpanded.add(nodeId);
     }
     setExpandedNodes(newExpanded);
-    setAllExpanded(false); // User manually toggled, so not all expanded anymore
   };
 
-  const expandAll = () => {
+  const _expandAll = () => {
     const allIds = accounts.map((acc) => acc.id);
     setExpandedNodes(new Set(allIds));
-    setAllExpanded(true);
   };
 
-  const collapseAll = () => {
+  const _collapseAll = () => {
     // Only keep root nodes expanded
     const rootIds = accounts.filter((acc) => !acc.parentId).map((acc) => acc.id);
     setExpandedNodes(new Set(rootIds));
-    setAllExpanded(false);
   };
 
   const filterTree = (nodes: AccountTreeNode[], query: string): AccountTreeNode[] => {

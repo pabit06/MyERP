@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Script from 'next/script';
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
 
 interface NepaliDatePickerProps {
@@ -36,9 +35,7 @@ export default function NepaliDatePicker({
       try {
         const date = new Date(value);
         if (!isNaN(date.getTime())) {
-          // @ts-ignore
           const nepaliDate = new NepaliDate(date);
-          // @ts-ignore
           const bsDateString = `${nepaliDate.getYear()}-${String(nepaliDate.getMonth() + 1).padStart(2, '0')}-${String(nepaliDate.getDate()).padStart(2, '0')}`;
           setBsDate(bsDateString);
           setAdDate(value);
@@ -74,10 +71,10 @@ export default function NepaliDatePicker({
     const initializePicker = () => {
       if (inputRef.current && !initializedRef.current && typeof window !== 'undefined') {
         // Check if NepaliDatePicker is available (library loaded)
-        // @ts-ignore
+        // @ts-expect-error - NepaliDatePicker library adds property to input element
         if (inputRef.current.NepaliDatePicker) {
           try {
-            // @ts-ignore
+            // @ts-expect-error - NepaliDatePicker library method
             inputRef.current.NepaliDatePicker({
               dateFormat: 'YYYY-MM-DD',
               ndpYear: true,
@@ -126,14 +123,14 @@ export default function NepaliDatePicker({
 
     // Also listen for script load event
     if (typeof window !== 'undefined') {
-      // @ts-ignore
+      // @ts-expect-error - Custom property added to window object
       if (window.nepaliDatePickerLoaded) {
         initializePicker();
       } else {
         // Wait a bit for script to load
         const checkInterval = setInterval(() => {
           if (inputRef.current && !initializedRef.current) {
-            // @ts-ignore
+            // @ts-expect-error - NepaliDatePicker library adds property to input element
             if (inputRef.current.NepaliDatePicker) {
               initializePicker();
               clearInterval(checkInterval);
@@ -148,9 +145,12 @@ export default function NepaliDatePicker({
 
     // Cleanup function
     return () => {
-      if (inputRef.current && handleInputChange) {
-        inputRef.current.removeEventListener('change', handleInputChange);
-        inputRef.current.removeEventListener('input', handleInputChange);
+      // Capture the current ref value to avoid stale closure
+      const inputElement = inputRef.current;
+      const handler = handleInputChange;
+      if (inputElement && handler) {
+        inputElement.removeEventListener('change', handler);
+        inputElement.removeEventListener('input', handler);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -180,9 +180,7 @@ export default function NepaliDatePicker({
         setBsDate(bsDateString);
 
         // Convert BS to AD (NepaliDate constructor expects month to be 0-indexed)
-        // @ts-ignore
         const nepaliDate = new NepaliDate(year, month - 1, day);
-        // @ts-ignore
         const adDateObj = nepaliDate.toJsDate();
         const isoString = adDateObj.toISOString().split('T')[0];
 
@@ -206,9 +204,7 @@ export default function NepaliDatePicker({
       try {
         const date = new Date(adDateString);
         if (!isNaN(date.getTime())) {
-          // @ts-ignore
           const nepaliDate = new NepaliDate(date);
-          // @ts-ignore
           const bsDateString = `${nepaliDate.getYear()}-${String(nepaliDate.getMonth() + 1).padStart(2, '0')}-${String(nepaliDate.getDate()).padStart(2, '0')}`;
           setBsDate(bsDateString);
           if (onBsDateChange) {
@@ -270,10 +266,8 @@ export default function NepaliDatePicker({
         src="/nepali.datepicker.v5.0.6.min.js"
         strategy="lazyOnload"
         onLoad={() => {
-          // @ts-ignore
           if (typeof window !== 'undefined') {
-            // @ts-ignore
-            window.nepaliDatePickerLoaded = true;
+            (window as Record<string, unknown>).nepaliDatePickerLoaded = true;
           }
         }}
       />

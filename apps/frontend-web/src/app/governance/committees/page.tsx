@@ -12,7 +12,6 @@ import {
   Input,
 } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -49,7 +48,7 @@ const COMMITTEE_TYPE_LABELS: Record<string, { label: string; labelNepali: string
 
 export default function CommitteesPage() {
   const router = useRouter();
-  const { token, hasModule, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [committees, setCommittees] = useState<Committee[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

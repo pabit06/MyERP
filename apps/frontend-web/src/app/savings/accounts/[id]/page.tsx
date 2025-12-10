@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import { Toaster, toast } from 'react-hot-toast';
 
@@ -73,7 +72,7 @@ export default function SavingsAccountDetailPage() {
         const errorData = await response.json();
         setError(errorData.error || 'Account not found');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading account');
       toast.error('Could not fetch account details.');
     } finally {

@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
-import { ArrowLeft, FileText, Calendar, DollarSign, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, ExternalLink } from 'lucide-react';
 
 import NepaliDate from 'nepali-date-converter';
 
@@ -87,7 +86,6 @@ export default function JournalEntryDetailPage() {
     try {
       const date = new Date(dateString);
       if (isNaN(date.getTime())) return '';
-      // @ts-ignore
       const nepaliDate = new NepaliDate(date);
       const year = nepaliDate.getYear();
       const month = nepaliDate.getMonth() + 1;
@@ -125,7 +123,7 @@ export default function JournalEntryDetailPage() {
         month: 'short',
         day: 'numeric',
       });
-    } catch (error) {
+    } catch {
       return dateString;
     }
   };

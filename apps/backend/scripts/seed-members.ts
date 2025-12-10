@@ -6,12 +6,13 @@
 import dotenv from 'dotenv';
 import { prisma } from '@myerp/db-schema';
 import { MemberType, RiskCategory } from '@prisma/client';
+import crypto from 'crypto';
 
 // Load environment variables
 dotenv.config();
 
-// Helper to generate random number between min and max
-const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+// Helper to generate random number between min and max (cryptographically secure)
+const random = (min: number, max: number) => crypto.randomInt(min, max + 1);
 
 // Helper to generate random number divisible by 100 (for share amounts)
 const randomMultipleOf100 = (min: number, max: number) => {
@@ -21,8 +22,12 @@ const randomMultipleOf100 = (min: number, max: number) => {
   return randomMultiple * 100;
 };
 
-// Helper to get random array element
-const sample = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+// Helper to get random array element (cryptographically secure)
+const sample = <T>(arr: T[]): T => arr[crypto.randomInt(0, arr.length)];
+
+// Helper to generate random float between 0 and 1 (cryptographically secure)
+const randomFloat = (): number =>
+  crypto.randomInt(0, Number.MAX_SAFE_INTEGER) / Number.MAX_SAFE_INTEGER;
 
 // Data for generation
 const firstNames = [
@@ -242,7 +247,7 @@ async function seedMembers(cooperativeIdentifier?: string, count: number = 20) {
 
     for (let i = 0; i < count; i++) {
       // Mix of Individuals (80%) and Institutions (20%)
-      const isInstitution = Math.random() > 0.8;
+      const isInstitution = randomFloat() > 0.8;
       const memberType = isInstitution ? MemberType.INSTITUTION : MemberType.INDIVIDUAL;
 
       // Generate basic member data
@@ -329,7 +334,7 @@ async function seedMembers(cooperativeIdentifier?: string, count: number = 20) {
                     // 16 years = 16 * 365.25 * 24 * 60 * 60 * 1000 = 504,921,600,000 ms
                     // 50 years = 50 * 365.25 * 24 * 60 * 60 * 1000 = 1,577,880,000,000 ms
                     dateOfBirth: new Date(Date.now() - random(504921600000, 1577880000000)), // 16-50 years old
-                    gender: Math.random() > 0.5 ? 'MALE' : 'FEMALE',
+                    gender: randomFloat() > 0.5 ? 'MALE' : 'FEMALE',
                     nationality: 'Nepali',
                     citizenshipNumber: `${random(10, 99)}-${random(0, 99)}-${random(1000, 9999)}`,
                     citizenshipIssuingDistrict: sample(districts),
@@ -342,7 +347,7 @@ async function seedMembers(cooperativeIdentifier?: string, count: number = 20) {
                       occupationDetails[occupation as keyof typeof occupationDetails] || ['Others']
                     ),
                     spouseName:
-                      Math.random() > 0.3 ? `${sample(firstNames)} ${sample(lastNames)}` : null,
+                      randomFloat() > 0.3 ? `${sample(firstNames)} ${sample(lastNames)}` : null,
                     spouseSurname: sample(lastNames),
                     spouseOccupation: sample(occupations),
                     annualFamilyIncome: sample(incomeRanges),

@@ -1,10 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 import { removeDuplication } from '@/lib/utils';
 import { ArrowUp, ArrowDown } from 'lucide-react';
@@ -28,7 +26,6 @@ interface Member {
 }
 
 export default function KYMApprovalsPage() {
-  const router = useRouter();
   const { token } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,7 +57,7 @@ export default function KYMApprovalsPage() {
       } else {
         setError('Failed to load pending members');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading pending members');
     } finally {
       setIsLoading(false);
@@ -91,7 +88,7 @@ export default function KYMApprovalsPage() {
         const error = await response.json();
         alert(error.error || 'Failed to update member status');
       }
-    } catch (err) {
+    } catch {
       alert('Error updating member status');
     }
   };

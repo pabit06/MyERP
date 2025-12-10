@@ -78,7 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const fetchUserData = async (authToken: string) => {
+  const fetchUserData = async (_authToken: string) => {
     try {
       const data = await apiClient.get<{ user: User; cooperative: Cooperative }>('/auth/me', {
         skipErrorToast: true, // Don't show toast for auth check failures
@@ -95,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           tenantId: data.cooperative.id,
         });
       }
-    } catch (error) {
+    } catch {
       // Token invalid, clear auth
       handleLogout();
     } finally {
@@ -104,31 +104,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    try {
-      const data = await apiClient.post<{
-        token: string;
-        user: User;
-        cooperative: Cooperative;
-      }>('/auth/login', { email, password }, { skipAuth: true });
+    const data = await apiClient.post<{
+      token: string;
+      user: User;
+      cooperative: Cooperative;
+    }>('/auth/login', { email, password }, { skipAuth: true });
 
-      const authToken = data.token;
-      localStorage.setItem('token', authToken);
-      setToken(authToken);
-      setUser(data.user);
-      setCooperative(data.cooperative);
+    const authToken = data.token;
+    localStorage.setItem('token', authToken);
+    setToken(authToken);
+    setUser(data.user);
+    setCooperative(data.cooperative);
 
-      // Set Sentry user context
-      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-        Sentry.setUser({
-          id: data.user.id,
-          email: data.user.email,
-          username: `${data.user.firstName} ${data.user.lastName}`,
-          tenantId: data.cooperative.id,
-        });
-      }
-    } catch (error) {
-      // Error is already handled by API client (toast shown)
-      throw error;
+    // Set Sentry user context
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      Sentry.setUser({
+        id: data.user.id,
+        email: data.user.email,
+        username: `${data.user.firstName} ${data.user.lastName}`,
+        tenantId: data.cooperative.id,
+      });
     }
   };
 

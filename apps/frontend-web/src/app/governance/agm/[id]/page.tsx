@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
   ProtectedRoute,
   Card,
@@ -12,7 +12,6 @@ import {
   Input,
 } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiClient } from '@/lib/api';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -36,7 +35,6 @@ interface AGM {
 
 export default function AGMDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const { token, isAuthenticated, isLoading: authLoading } = useAuth();
   const [agm, setAgm] = useState<AGM | null>(null);
   const [loading, setLoading] = useState(true);
