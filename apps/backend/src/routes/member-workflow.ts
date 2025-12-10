@@ -842,7 +842,7 @@ router.post('/:memberId/review', async (req: Request, res: Response) => {
             : 0;
           const advanceAmount = initialShareAmount + initialSavingsAmount;
 
-          console.log(`[Member Approval] Processing shares for member ${memberId}:`, {
+          console.log('[Member Approval] Processing shares for member %s:', memberId, {
             initialShareAmount,
             initialSavingsAmount,
             advanceAmount,
