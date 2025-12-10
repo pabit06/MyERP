@@ -2,24 +2,24 @@
 
 ## Supported Versions
 
-We actively support and provide security updates for the following versions:
+I actively support and provide security updates for the following versions:
 
 | Version  | Supported          |
 | -------- | ------------------ |
 | Latest   | :white_check_mark: |
 | < Latest | :x:                |
 
-We recommend always using the latest version to ensure you have the most recent security patches.
+I recommend always using the latest version to ensure you have the most recent security patches.
 
 ## Reporting a Vulnerability
 
-We take the security of MyERP very seriously. If you discover a security vulnerability, please follow these steps:
+I take the security of MyERP very seriously. If you discover a security vulnerability, please follow these steps:
 
 ### How to Report
 
 1. **Do NOT** open a public GitHub issue for security vulnerabilities
-2. **Do NOT** disclose the vulnerability publicly until we've had a chance to address it
-3. Send an email to: **security@myerp.com** (or your security contact email)
+2. **Do NOT** disclose the vulnerability publicly until I've had a chance to address it
+3. Send an email to: **prembhandari06@gmail.com**
    - Include a detailed description of the vulnerability
    - Provide steps to reproduce the issue
    - Include any proof-of-concept code or screenshots (if applicable)
@@ -45,20 +45,20 @@ We take the security of MyERP very seriously. If you discover a security vulnera
 
 ### What to Expect
 
-1. **Acknowledgment**: You'll receive confirmation that we've received your report
-2. **Investigation**: Our security team will investigate the issue
-3. **Updates**: We'll keep you informed of our progress
-4. **Resolution**: Once fixed, we'll notify you and may request your verification
-5. **Credit**: With your permission, we'll credit you in our security advisories
+1. **Acknowledgment**: You'll receive confirmation that I've received your report
+2. **Investigation**: I will investigate the issue
+3. **Updates**: I'll keep you informed of my progress
+4. **Resolution**: Once fixed, I'll notify you and may request your verification
+5. **Credit**: With your permission, I'll credit you in my security advisories
 
 ### Security Best Practices
 
 When reporting vulnerabilities, please:
 
 - Act in good faith and avoid accessing or modifying data that doesn't belong to you
-- Do not perform any actions that could harm our users or systems
+- Do not perform any actions that could harm my users or systems
 - Do not violate any laws or breach any agreements
-- Keep the vulnerability details confidential until we've resolved it
+- Keep the vulnerability details confidential until I've resolved it
 
 ## Security Features
 
@@ -75,7 +75,7 @@ MyERP includes several built-in security features:
 
 ## Security Updates
 
-Security updates are released as needed. We recommend:
+Security updates are released as needed. I recommend:
 
 - Subscribing to security advisories (if available)
 - Regularly updating dependencies: `pnpm update`
@@ -84,16 +84,16 @@ Security updates are released as needed. We recommend:
 
 ## Responsible Disclosure
 
-We follow responsible disclosure practices:
+I follow responsible disclosure practices:
 
-1. We will not take legal action against security researchers who:
+1. I will not take legal action against security researchers who:
    - Act in good faith
    - Do not access or modify data without authorization
-   - Do not cause harm to our systems or users
+   - Do not cause harm to my systems or users
    - Report vulnerabilities promptly
 
-2. We ask that you:
-   - Give us reasonable time to fix the issue before public disclosure
+2. I ask that you:
+   - Give me reasonable time to fix the issue before public disclosure
    - Not exploit the vulnerability beyond what's necessary to demonstrate it
    - Not share the vulnerability with others until it's resolved
 
@@ -101,8 +101,8 @@ We follow responsible disclosure practices:
 
 For security-related inquiries, please contact:
 
-- **Email**: prembhandari06@gmail.com.com
-- **GitHub Security Advisories**: Use GitHub's private vulnerability reporting feature if enabled
+- **Email**: prembhandari06@gmail.com
+- **GitHub Security Advisories**:
 
 ## Additional Resources
 
