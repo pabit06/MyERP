@@ -102,7 +102,6 @@ I follow responsible disclosure practices:
 For security-related inquiries, please contact:
 
 - **Email**: prembhandari06@gmail.com
-- **GitHub Security Advisories**:
 
 ## Additional Resources
 
