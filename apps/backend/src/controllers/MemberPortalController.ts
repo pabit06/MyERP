@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { BaseController } from './BaseController.js';
-import { UnauthorizedError } from '../lib/errors.js';
+import { UnauthorizedError, NotFoundError } from '../lib/errors.js';
 
 export class MemberPortalController extends BaseController {
   /**
@@ -119,6 +119,108 @@ export class MemberPortalController extends BaseController {
     res.json({
       loans: [],
     });
+  }
+  /**
+   * Get Notices
+   */
+  async getNotices(req: Request, res: Response) {
+    // Placeholder for notices
+    const notices = [
+      {
+        id: '1',
+        title: 'Annual General Meeting 2081',
+        date: new Date(),
+        content: 'The AGM will be held on ...',
+      },
+      {
+        id: '2',
+        title: 'Mobile Banking Maintenance',
+        date: new Date(Date.now() - 86400000), // yesterday
+        content: 'System will be down for ...',
+      },
+    ];
+    res.json({ notices });
+  }
+
+  /**
+   * Get Account Statements (Transaction History)
+   */
+  async getStatements(req: Request, res: Response) {
+    const memberId = req.user!.userId;
+    const { accountId } = req.params;
+
+    // 1. Verify Account belongs to member
+    const account = await this.prisma.savingAccount.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account) {
+      // Check loan account if not savings
+      // (Not implemented for loans yet, so 404)
+      throw new NotFoundError('Account', accountId);
+    }
+
+    if (account.memberId !== memberId) {
+      throw new NotFoundError('Account', accountId);
+    }
+
+    // 2. Fetch Transactions (Journal Entries)
+    // Filtering by description containing account number
+    const transactions = await this.prisma.journalEntry.findMany({
+      where: {
+        description: {
+          contains: account.accountNumber,
+        },
+      },
+      orderBy: {
+        date: 'desc',
+      },
+      take: 50, // Limit to last 50
+    });
+
+    res.json({
+      accountNumber: account.accountNumber,
+      transactions: transactions.map((t) => ({
+        id: t.id,
+        date: t.date,
+        description: t.description,
+        amount: 0, // TODO: Parse amount from ledgers if needed, or description
+        // For MVP, we pass the raw description which usually has info.
+        // To get actual amount, we need to join Ledgers.
+      })),
+    });
+  }
+
+  /**
+   * Get QR Code Payload
+   */
+  async getQRCode(req: Request, res: Response) {
+    const memberId = req.user!.userId;
+    const { accountId } = req.params;
+
+    const account = await this.prisma.savingAccount.findUnique({
+      where: { id: accountId },
+    });
+
+    if (!account || account.memberId !== memberId) {
+      throw new NotFoundError('Account', accountId);
+    }
+
+    // Generate Fonepay-compatible or generic payload
+    const payload = JSON.stringify({
+      scheme: 'NEPALPAY',
+      version: '1.0',
+      type: 'MERCHANT',
+      data: {
+        pan: '123456789', // Cooperative PAN
+        ac: account.accountNumber,
+        nm: 'MY COOPERATIVE LTD',
+        mcc: '1234',
+        curr: 'NPR',
+      },
+    });
+
+    res.json({ payload });
   }
 }
 

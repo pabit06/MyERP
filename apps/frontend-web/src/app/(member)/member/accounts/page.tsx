@@ -84,12 +84,13 @@ export default function MemberAccountsPage() {
                 <th className="px-6 py-3 font-medium text-right">Balance</th>
                 <th className="px-6 py-3 font-medium text-right">Rate (%)</th>
                 <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {savings.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     No savings accounts found.
                   </td>
                 </tr>
@@ -112,6 +113,21 @@ export default function MemberAccountsPage() {
                       >
                         {acc.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <a
+                        href={`/member/accounts/${acc.id}/statement`}
+                        className="text-teal-600 hover:text-teal-900 font-medium text-xs"
+                      >
+                        Statement
+                      </a>
+                      <span className="text-gray-300">|</span>
+                      <a
+                        href={`/member/accounts/${acc.id}/qr`}
+                        className="text-blue-600 hover:text-blue-900 font-medium text-xs"
+                      >
+                        QR
+                      </a>
                     </td>
                   </tr>
                 ))
@@ -136,12 +152,13 @@ export default function MemberAccountsPage() {
                 <th className="px-6 py-3 font-medium text-right">Rate (%)</th>
                 <th className="px-6 py-3 font-medium">Maturity Date</th>
                 <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {fds.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
                     No fixed deposit accounts found.
                   </td>
                 </tr>
@@ -167,6 +184,14 @@ export default function MemberAccountsPage() {
                       >
                         {acc.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-right space-x-2">
+                      <a
+                        href={`/member/accounts/${acc.id}/statement`}
+                        className="text-teal-600 hover:text-teal-900 font-medium text-xs"
+                      >
+                        Statement
+                      </a>
                     </td>
                   </tr>
                 ))

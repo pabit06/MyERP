@@ -220,6 +220,9 @@ importers:
       react-hook-form:
         specifier: ^7.68.0
         version: 7.68.0(react@18.3.1)
+      react-qr-code:
+        specifier: ^2.0.18
+        version: 2.0.18(react@18.3.1)
       react-quill:
         specifier: ^2.0.0
         version: 2.0.0(react-dom@18.3.1)(react@18.3.1)
@@ -14400,6 +14403,10 @@ packages:
   /pure-rand@6.1.0:
     resolution: {integrity: sha512-bVWawvoZoBYpp6yIoQtQXHZjmz35RSVHnUOTefl8Vcjr8snTPY1wnpSPMWekcFwbxI6gtmT7rSYPFvz71ldiOA==}
 
+  /qr.js@0.0.0:
+    resolution: {integrity: sha512-c4iYnWb+k2E+vYpRimHqSu575b1/wKl4XFeJGpFmrJQz5I88v9aY2czh7s0w36srfCM1sXgC/xpoJz5dJfq+OQ==}
+    dev: false
+
   /qrcode-terminal@0.11.0:
     resolution: {integrity: sha512-Uu7ii+FQy4Qf82G4xu7ShHhjhGahEpCWc3x8UavY3CTcWV+ufmmCtwkr7ZKsX42jdL0kr1B5FKUeqJvAn51jzQ==}
     hasBin: true
@@ -14659,6 +14666,16 @@ packages:
       nepali-datetime: 1.4.1
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
+    dev: false
+
+  /react-qr-code@2.0.18(react@18.3.1):
+    resolution: {integrity: sha512-v1Jqz7urLMhkO6jkgJuBYhnqvXagzceg3qJUWayuCK/c6LTIonpWbwxR1f1APGd4xrW/QcQEovNrAojbUz65Tg==}
+    peerDependencies:
+      react: '*'
+    dependencies:
+      prop-types: 15.8.1
+      qr.js: 0.0.0
+      react: 18.3.1
     dev: false
 
   /react-quill@2.0.0(react-dom@18.3.1)(react@18.3.1):

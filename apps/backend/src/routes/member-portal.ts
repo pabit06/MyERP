@@ -42,4 +42,22 @@ router.get(
   asyncHandler((req, res) => memberPortalController.getLoans(req, res))
 );
 
+router.get(
+  '/notices',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getNotices(req, res))
+);
+
+router.get(
+  '/accounts/:accountId/statement',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getStatements(req, res))
+);
+
+router.get(
+  '/accounts/:accountId/qr',
+  authenticateMember,
+  asyncHandler((req, res) => memberPortalController.getQRCode(req, res))
+);
+
 export const memberPortalRouter = router;
