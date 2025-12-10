@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -18,6 +18,15 @@ import {
 } from 'lucide-react';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+interface Account {
+  id: string;
+  code: string;
+  name: string;
+  balance: number;
+  isGroup: boolean;
+  type: string;
+}
 
 interface GLStats {
   assets: {
@@ -58,16 +67,26 @@ export default function GeneralLedgerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (!hasModule('cbs')) {
-      setError('CBS module is not enabled for your subscription');
-      setIsLoading(false);
-      return;
-    }
-    fetchDashboardStats();
-  }, [token, hasModule]);
+  // Calculate statistics helper function
+  const calculateStats = useCallback((accounts: Account[], accountType?: string) => {
+    // For liabilities, use absolute value since balances may be stored as negative
+    // but should be displayed as positive (credits increase liabilities)
+    const rawTotal = accounts
+      .filter((acc) => !acc.isGroup) // Only count ledger accounts to avoid double-counting
+      .reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
-  const fetchDashboardStats = async () => {
+    const total = accountType === 'liability' ? Math.abs(rawTotal) : rawTotal;
+    const groupCount = accounts.filter((acc) => acc.isGroup).length;
+    const ledgerCount = accounts.filter((acc) => !acc.isGroup).length;
+    return {
+      total,
+      count: accounts.length,
+      groupCount,
+      ledgerCount,
+    };
+  }, []);
+
+  const fetchDashboardStats = useCallback(async () => {
     if (!token) return;
 
     setIsLoading(true);
@@ -94,32 +113,13 @@ export default function GeneralLedgerPage() {
 
       const [assetsData, liabilitiesData, equityData, incomeData, expensesData] = await Promise.all(
         [
-          assetsRes.ok ? assetsRes.json() : [],
-          liabilitiesRes.ok ? liabilitiesRes.json() : [],
-          equityRes.ok ? equityRes.json() : [],
-          incomeRes.ok ? incomeRes.json() : [],
-          expensesRes.ok ? expensesRes.json() : [],
+          assetsRes.ok ? (assetsRes.json() as Promise<Account[]>) : Promise.resolve([]),
+          liabilitiesRes.ok ? (liabilitiesRes.json() as Promise<Account[]>) : Promise.resolve([]),
+          equityRes.ok ? (equityRes.json() as Promise<Account[]>) : Promise.resolve([]),
+          incomeRes.ok ? (incomeRes.json() as Promise<Account[]>) : Promise.resolve([]),
+          expensesRes.ok ? (expensesRes.json() as Promise<Account[]>) : Promise.resolve([]),
         ]
       );
-
-      // Calculate statistics
-      const calculateStats = (accounts: any[], accountType?: string) => {
-        // For liabilities, use absolute value since balances may be stored as negative
-        // but should be displayed as positive (credits increase liabilities)
-        const rawTotal = accounts
-          .filter((acc) => !acc.isGroup) // Only count ledger accounts to avoid double-counting
-          .reduce((sum, acc) => sum + (acc.balance || 0), 0);
-
-        const total = accountType === 'liability' ? Math.abs(rawTotal) : rawTotal;
-        const groupCount = accounts.filter((acc) => acc.isGroup).length;
-        const ledgerCount = accounts.filter((acc) => !acc.isGroup).length;
-        return {
-          total,
-          count: accounts.length,
-          groupCount,
-          ledgerCount,
-        };
-      };
 
       setStats({
         assets: calculateStats(assetsData, 'asset'),
@@ -134,7 +134,16 @@ export default function GeneralLedgerPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, calculateStats]);
+
+  useEffect(() => {
+    if (!hasModule('cbs')) {
+      setError('CBS module is not enabled for your subscription');
+      setIsLoading(false);
+      return;
+    }
+    fetchDashboardStats();
+  }, [hasModule, fetchDashboardStats]);
 
   if (!hasModule('cbs')) {
     return (

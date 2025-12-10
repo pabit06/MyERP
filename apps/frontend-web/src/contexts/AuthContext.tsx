@@ -1,6 +1,13 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  ReactNode,
+} from 'react';
 import * as Sentry from '@sentry/nextjs';
 import { apiClient } from '../lib/api';
 
@@ -45,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Handle logout (defined early for use in useEffect)
-  const handleLogout = React.useCallback(() => {
+  const handleLogout = useCallback(() => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
@@ -55,6 +62,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       Sentry.setUser(null);
     }
   }, []);
+
+  // Fetch user data function (wrapped in useCallback to avoid stale closures)
+  const fetchUserData = useCallback(
+    async (_authToken: string) => {
+      try {
+        const data = await apiClient.get<{ user: User; cooperative: Cooperative }>('/auth/me', {
+          skipErrorToast: true, // Don't show toast for auth check failures
+        });
+        setUser(data.user);
+        setCooperative(data.cooperative);
+
+        // Set Sentry user context
+        if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+          Sentry.setUser({
+            id: data.user.id,
+            email: data.user.email,
+            username: `${data.user.firstName} ${data.user.lastName}`,
+            tenantId: data.cooperative.id,
+          });
+        }
+      } catch {
+        // Token invalid, clear auth
+        handleLogout();
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [handleLogout]
+  );
 
   // Initialize API client with token getter and unauthorized handler
   useEffect(() => {
@@ -76,32 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setIsLoading(false);
     }
-  }, []);
-
-  const fetchUserData = async (_authToken: string) => {
-    try {
-      const data = await apiClient.get<{ user: User; cooperative: Cooperative }>('/auth/me', {
-        skipErrorToast: true, // Don't show toast for auth check failures
-      });
-      setUser(data.user);
-      setCooperative(data.cooperative);
-
-      // Set Sentry user context
-      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-        Sentry.setUser({
-          id: data.user.id,
-          email: data.user.email,
-          username: `${data.user.firstName} ${data.user.lastName}`,
-          tenantId: data.cooperative.id,
-        });
-      }
-    } catch {
-      // Token invalid, clear auth
-      handleLogout();
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [fetchUserData]);
 
   const login = async (email: string, password: string) => {
     const data = await apiClient.post<{

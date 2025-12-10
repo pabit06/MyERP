@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ProtectedRoute,
@@ -59,26 +59,8 @@ export default function CommitteesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && token) {
-      fetchCommittees();
-    }
-  }, [authLoading, isAuthenticated, token, currentPage, typeFilter, statutoryFilter]);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentPage === 1) {
-        fetchCommittees();
-      } else {
-        setCurrentPage(1);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchCommittees = async () => {
+  const fetchCommittees = useCallback(async () => {
+    if (!token) return;
     try {
       setLoading(true);
       setError(null);
@@ -109,15 +91,36 @@ export default function CommitteesPage() {
       setCommittees(data.committees || []);
       setPagination(data.pagination || null);
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to load committees. Please check if the backend server is running.';
       console.error('Error fetching committees:', err);
-      setError(
-        err.message || 'Failed to load committees. Please check if the backend server is running.'
-      );
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, currentPage, pageSize, searchTerm, typeFilter, statutoryFilter]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && token) {
+      fetchCommittees();
+    }
+  }, [authLoading, isAuthenticated, token, fetchCommittees]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchCommittees();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentPage, fetchCommittees]);
 
   const handleExport = async () => {
     if (!token) return;
@@ -146,9 +149,10 @@ export default function CommitteesPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to export committees';
       console.error('Error exporting committees:', err);
-      alert('Failed to export committees');
+      alert(errorMessage);
     }
   };
 

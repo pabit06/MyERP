@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../contexts/AuthContext';
 import Link from 'next/link';
@@ -53,16 +53,7 @@ export default function SavingsPage() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
-  useEffect(() => {
-    if (!hasModule('cbs')) {
-      setError('CBS module is not enabled for your subscription');
-      setIsLoading(false);
-      return;
-    }
-    fetchData();
-  }, [token, hasModule, activeTab]);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!token) return;
 
     setIsLoading(true);
@@ -82,15 +73,29 @@ export default function SavingsPage() {
       } else {
         throw new Error('Failed to fetch data');
       }
-    } catch (err) {
+    } catch {
       setError('Error loading data');
       toast.error('Could not fetch data.');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [token, activeTab]);
 
-  const handleCreateProduct = async (productData: any) => {
+  interface ProductFormData {
+    code: string;
+    name: string;
+    description?: string;
+    interestRate: number;
+    minimumBalance: number;
+    interestPostingFrequency: string;
+    interestCalculationMethod: string;
+    isTaxApplicable: boolean;
+    taxRate?: number;
+    depositGLCode?: string;
+    interestExpenseGLCode?: string;
+  }
+
+  const handleCreateProduct = async (productData: ProductFormData) => {
     if (!token) return;
 
     const toastId = toast.loading('Creating product...');
@@ -154,17 +159,25 @@ export default function SavingsPage() {
       toast.success('Product created successfully', { id: toastId });
       setShowProductModal(false);
       fetchData();
-    } catch (err: any) {
-      toast.error(err.message || 'Error creating product', { id: toastId });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error creating product';
+      toast.error(errorMessage, { id: toastId });
     }
   };
+
+  interface Nominee {
+    name: string;
+    relationship: string;
+    citizenshipNumber?: string;
+    address?: string;
+  }
 
   const handleCreateAccount = async (accountData: {
     memberId: string;
     productId: string;
     accountNumber: string;
     initialDeposit?: number;
-    nominee?: any;
+    nominee?: Nominee;
   }) => {
     if (!token) return;
 
@@ -187,8 +200,9 @@ export default function SavingsPage() {
         const error = await response.json();
         throw new Error(error.error || 'Failed to create account');
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Error creating account', { id: toastId });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Error creating account';
+      toast.error(errorMessage, { id: toastId });
     }
   };
 

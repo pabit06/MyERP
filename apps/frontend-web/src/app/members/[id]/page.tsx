@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -9,6 +9,22 @@ import Link from 'next/link';
 import { removeDuplication } from '../../../lib/utils';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+interface SavingAccount {
+  id: string;
+  accountNumber: string;
+  productName: string;
+  balance: number;
+  status: string;
+}
+
+interface LoanApplication {
+  id: string;
+  applicationNumber: string;
+  productName: string;
+  amount: number;
+  status: string;
+}
 
 interface Member {
   id: string;
@@ -25,8 +41,8 @@ interface Member {
   isActive: boolean;
   workflowStatus?: string;
   createdAt: string;
-  savingAccounts?: any[];
-  loanApplications?: any[];
+  savingAccounts?: SavingAccount[];
+  loanApplications?: LoanApplication[];
   shareLedger?: {
     totalShares: number;
     totalValue: number;
@@ -151,13 +167,9 @@ export default function MemberDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (params.id && token) {
-      fetchMember();
-    }
-  }, [params.id, token]);
+  const fetchMember = useCallback(async () => {
+    if (!params.id || !token) return;
 
-  const fetchMember = async () => {
     setIsLoading(true);
     try {
       const [memberResponse, kycResponse] = await Promise.all([
@@ -198,7 +210,13 @@ export default function MemberDetailPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id, token]);
+
+  useEffect(() => {
+    if (params.id && token) {
+      fetchMember();
+    }
+  }, [params.id, token, fetchMember]);
 
   if (isLoading) {
     return (

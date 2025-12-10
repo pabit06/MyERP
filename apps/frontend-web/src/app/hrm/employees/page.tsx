@@ -1,22 +1,32 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+interface Employee {
+  id: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  phone?: string;
+  department?: {
+    name: string;
+  };
+  designation?: {
+    name: string;
+  };
+}
+
 export default function EmployeesPage() {
   const { token } = useAuth();
-  const [employees, setEmployees] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!token) return;
-    fetchEmployees();
-  }, [token]);
-
-  const fetchEmployees = async () => {
+  const fetchEmployees = useCallback(async () => {
     try {
       const response = await fetch(`${API_URL}/hrm/employees`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -30,7 +40,13 @@ export default function EmployeesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (token) {
+      fetchEmployees();
+    }
+  }, [token, fetchEmployees]);
 
   return (
     <div className="p-6">

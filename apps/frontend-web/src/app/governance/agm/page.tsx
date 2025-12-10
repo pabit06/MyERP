@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   ProtectedRoute,
@@ -62,35 +62,8 @@ export default function AGMPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && token) {
-      fetchAGMs();
-    }
-  }, [
-    authLoading,
-    isAuthenticated,
-    token,
-    currentPage,
-    statusFilter,
-    fiscalYearFilter,
-    startDateFilter,
-    endDateFilter,
-  ]);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentPage === 1) {
-        fetchAGMs();
-      } else {
-        setCurrentPage(1);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchAGMs = async () => {
+  const fetchAGMs = useCallback(async () => {
+    if (!token) return;
     try {
       setLoading(true);
       const params = new URLSearchParams({
@@ -118,13 +91,42 @@ export default function AGMPage() {
       setAgms(data.agms || []);
       setPagination(data.pagination || null);
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load AGMs';
       console.error('Error fetching AGMs:', err);
-      setError(err.message || 'Failed to load AGMs');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    token,
+    currentPage,
+    pageSize,
+    searchTerm,
+    statusFilter,
+    fiscalYearFilter,
+    startDateFilter,
+    endDateFilter,
+  ]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && token) {
+      fetchAGMs();
+    }
+  }, [authLoading, isAuthenticated, token, fetchAGMs]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchAGMs();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentPage, fetchAGMs]);
 
   const handleExport = async () => {
     if (!token) return;
@@ -155,7 +157,7 @@ export default function AGMPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error exporting AGMs:', err);
       alert('Failed to export AGMs');
     }

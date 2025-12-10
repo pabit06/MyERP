@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ProtectedRoute } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Search, Download, Printer, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
@@ -45,9 +45,31 @@ export default function ShareRegisterPage() {
     hasCertificate: '',
   });
 
+  const fetchAccounts = useCallback(async () => {
+    if (!token) return;
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await fetch(`${API_URL}/shares/accounts`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setAccounts(data.accounts || []);
+        setFilteredAccounts(data.accounts || []);
+      } else {
+        setError('Failed to load share register');
+      }
+    } catch {
+      setError('Error loading share register');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
   useEffect(() => {
     fetchAccounts();
-  }, [token]);
+  }, [fetchAccounts]);
 
   useEffect(() => {
     let filtered = [...accounts];
@@ -86,8 +108,8 @@ export default function ShareRegisterPage() {
     // Apply sorting
     if (sortBy) {
       filtered.sort((a, b) => {
-        let aVal: any;
-        let bVal: any;
+        let aVal: string | number;
+        let bVal: string | number;
 
         switch (sortBy) {
           case 'memberNumber':
@@ -129,35 +151,15 @@ export default function ShareRegisterPage() {
         if (typeof aVal === 'string' && typeof bVal === 'string') {
           return sortOrder === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         } else {
-          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+          const aNum = typeof aVal === 'number' ? aVal : 0;
+          const bNum = typeof bVal === 'number' ? bVal : 0;
+          return sortOrder === 'asc' ? aNum - bNum : bNum - aNum;
         }
       });
     }
 
     setFilteredAccounts(filtered);
   }, [searchTerm, accounts, sortBy, sortOrder, filters]);
-
-  const fetchAccounts = async () => {
-    if (!token) return;
-    setIsLoading(true);
-    setError('');
-    try {
-      const response = await fetch(`${API_URL}/shares/accounts`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setAccounts(data.accounts || []);
-        setFilteredAccounts(data.accounts || []);
-      } else {
-        setError('Failed to load share register');
-      }
-    } catch {
-      setError('Error loading share register');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handlePrint = () => {
     window.print();

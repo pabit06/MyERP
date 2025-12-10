@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { ProtectedRoute, Card, CardContent, Button, Input } from '@/features/components/shared';
 import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
@@ -64,36 +64,7 @@ export default function GovernanceMeetingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(20);
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && token) {
-      fetchMeetings();
-      fetchUnassignedPendingAgenda();
-    }
-  }, [
-    authLoading,
-    isAuthenticated,
-    token,
-    currentPage,
-    typeFilter,
-    statusFilter,
-    startDateFilter,
-    endDateFilter,
-  ]);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (currentPage === 1) {
-        fetchMeetings();
-      } else {
-        setCurrentPage(1);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  const fetchMeetings = async () => {
+  const fetchMeetings = useCallback(async () => {
     if (!token) return;
     try {
       setLoading(true);
@@ -120,14 +91,60 @@ export default function GovernanceMeetingsPage() {
       setMeetings(data.meetings || []);
       setPagination(data.pagination || null);
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch meetings';
       console.error('Error fetching meetings:', error);
-      setError(error.message || 'Failed to fetch meetings');
+      setError(errorMessage);
       setMeetings([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [
+    token,
+    currentPage,
+    pageSize,
+    searchTerm,
+    typeFilter,
+    statusFilter,
+    startDateFilter,
+    endDateFilter,
+  ]);
+
+  const fetchUnassignedPendingAgenda = useCallback(async () => {
+    if (!token) return;
+    try {
+      const response = await fetch(`${API_URL}/member-workflow/pending-agenda`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setUnassignedPendingItems(data.pendingAgendaItems || []);
+      }
+    } catch (error) {
+      console.error('Error fetching pending agenda:', error);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && token) {
+      fetchMeetings();
+      fetchUnassignedPendingAgenda();
+    }
+  }, [authLoading, isAuthenticated, token, fetchMeetings, fetchUnassignedPendingAgenda]);
+
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchMeetings();
+      } else {
+        setCurrentPage(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, currentPage, fetchMeetings]);
 
   const handleExport = async () => {
     if (!token) return;
@@ -156,25 +173,10 @@ export default function GovernanceMeetingsPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to export meetings';
       console.error('Error exporting meetings:', err);
-      alert('Failed to export meetings');
-    }
-  };
-
-  const fetchUnassignedPendingAgenda = async () => {
-    if (!token) return;
-    try {
-      const response = await fetch(`${API_URL}/member-workflow/pending-agenda`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnassignedPendingItems(data.pendingAgendaItems || []);
-      }
-    } catch (error) {
-      console.error('Error fetching pending agenda:', error);
+      alert(errorMessage);
     }
   };
 

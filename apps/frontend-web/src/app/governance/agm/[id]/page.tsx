@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import {
   ProtectedRoute,
@@ -46,13 +46,8 @@ export default function AGMDetailPage() {
   // For single dynamic routes like [id], it's always a string, but we handle both cases
   const agmId = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && token && agmId) {
-      fetchAGM();
-    }
-  }, [authLoading, isAuthenticated, token, agmId]);
-
-  const fetchAGM = async () => {
+  const fetchAGM = useCallback(async () => {
+    if (!token || !agmId) return;
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/governance/agm/${agmId}`, {
@@ -69,13 +64,20 @@ export default function AGMDetailPage() {
       setAgm(data.agm);
       setFormData(data.agm);
       setError(null);
-    } catch (err: any) {
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load AGM';
       console.error('Error fetching AGM:', err);
-      setError(err.message || 'Failed to load AGM');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  };
+  }, [token, agmId]);
+
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && token && agmId) {
+      fetchAGM();
+    }
+  }, [authLoading, isAuthenticated, token, agmId, fetchAGM]);
 
   const handleUpdate = async () => {
     if (!token) return;
