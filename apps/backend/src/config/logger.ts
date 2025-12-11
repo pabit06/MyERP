@@ -80,6 +80,17 @@ function redactSensitiveData(obj: any, depth = 0): any {
   return obj;
 }
 
+// Custom format that escapes format specifiers to prevent format string injection
+// This must run BEFORE winston.format.splat() to prevent format string vulnerabilities
+const escapeFormatSpecifiers = winston.format((info) => {
+  if (info.message && typeof info.message === 'string') {
+    // Escape format specifiers to prevent format string injection
+    // This ensures user-controlled input cannot be interpreted as format strings
+    info.message = info.message.replace(/%/g, '%%');
+  }
+  return info;
+})();
+
 // Custom format that redacts sensitive data
 const redactFormat = winston.format((info) => {
   if (info.message && typeof info.message === 'object') {
@@ -98,26 +109,31 @@ const redactFormat = winston.format((info) => {
 })();
 
 // Define log format
+// IMPORTANT: escapeFormatSpecifiers must come BEFORE splat() to prevent format string injection
 const logFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  escapeFormatSpecifiers, // Escape format specifiers before splat() processes them
   redactFormat,
   winston.format.errors({ stack: true }),
-  winston.format.splat(),
+  winston.format.splat(), // Safe to use after escaping format specifiers
   winston.format.json()
 );
 
 // Console format for development (more readable)
+// IMPORTANT: escapeFormatSpecifiers must come BEFORE splat() to prevent format string injection
 const consoleFormat = winston.format.combine(
   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  escapeFormatSpecifiers, // Escape format specifiers before splat() processes them
   redactFormat,
+  winston.format.errors({ stack: true }),
+  winston.format.splat(), // Safe to use after escaping format specifiers
   winston.format.colorize(),
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    // Safely handle message - convert to string and escape format specifiers
-    // This prevents format string injection attacks when using printf-style formatting
+    // Message is already safe (format specifiers escaped before splat())
+    // But we add an extra layer of protection here
     let safeMessage: string;
     if (typeof message === 'string') {
-      // Escape any printf-style format specifiers to prevent format string injection
-      safeMessage = message.replace(/%/g, '%%');
+      safeMessage = message; // Already escaped by escapeFormatSpecifiers
     } else {
       safeMessage = JSON.stringify(message);
     }

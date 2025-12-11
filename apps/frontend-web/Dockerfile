@@ -49,8 +49,10 @@ COPY --from=dependencies /app/pnpm-workspace.yaml ./
 COPY --from=dependencies /app/apps/frontend-web/package.json ./apps/frontend-web/
 COPY --from=dependencies /app/packages/shared-types/package.json ./packages/shared-types/
 
-# Install production dependencies only
-RUN pnpm install --frozen-lockfile --prod
+# Install only production dependencies for frontend-web and its workspace dependencies
+# Using --filter with ... includes workspace dependencies
+# --ignore-scripts skips prepare script (husky) which is not needed in production
+RUN pnpm install --frozen-lockfile --filter @myerp/frontend-web... --prod --ignore-scripts
 
 # Copy built Next.js application
 COPY --from=build /app/apps/frontend-web/.next ./apps/frontend-web/.next
