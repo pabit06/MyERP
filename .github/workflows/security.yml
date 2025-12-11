@@ -71,7 +71,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: ['javascript', 'typescript']
+        # Use 'javascript' only - CodeQL analyzes both JavaScript and TypeScript files
+        language: ['javascript']
 
     steps:
       - name: Checkout code
