@@ -92,10 +92,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [handleLogout]
   );
 
-  // Initialize API client with token getter and unauthorized handler
+  // Initialize API client with token getter and unauthorized handler on mount
   useEffect(() => {
-    // Set token getter
-    apiClient.setTokenGetter(() => token);
+    // Set token getter with localStorage fallback for initial load
+    // This ensures token is available even before state is updated
+    apiClient.setTokenGetter(() => {
+      // Use state token if available, otherwise fallback to localStorage
+      if (token) return token;
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem('token');
+      }
+      return null;
+    });
 
     // Set unauthorized handler
     apiClient.setUnauthorizedHandler(() => {
@@ -107,12 +115,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
+      // Set token state
       setToken(storedToken);
+      // fetchUserData will use the token getter which has localStorage fallback
+      // This ensures the API call has the token even if state hasn't updated yet
       fetchUserData(storedToken);
     } else {
       setIsLoading(false);
     }
-  }, [fetchUserData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const login = async (email: string, password: string) => {
     const data = await apiClient.post<{

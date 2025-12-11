@@ -372,15 +372,23 @@ async function main() {
     where: { name: 'Basic' },
   });
 
-  const basicPlan =
-    existingBasic ||
-    (await prisma.plan.create({
-      data: {
-        name: 'Basic',
-        monthlyPrice: 0,
-        enabledModules: [],
-      },
-    }));
+  // All available modules
+  const allModules = ['cbs', 'dms', 'hrm', 'governance', 'inventory', 'compliance'];
+
+  const basicPlan = existingBasic
+    ? await prisma.plan.update({
+        where: { id: existingBasic.id },
+        data: {
+          enabledModules: allModules,
+        },
+      })
+    : await prisma.plan.create({
+        data: {
+          name: 'Basic',
+          monthlyPrice: 0,
+          enabledModules: allModules,
+        },
+      });
 
   const existingStandard = await prisma.plan.findFirst({
     where: { name: 'Standard' },

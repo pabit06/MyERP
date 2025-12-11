@@ -35,6 +35,23 @@ interface Stats {
   employees?: number;
 }
 
+/**
+ * Get time-based greeting based on current hour
+ */
+function getTimeBasedGreeting(): string {
+  const hour = new Date().getHours();
+  
+  if (hour >= 5 && hour < 12) {
+    return 'Good Morning';
+  } else if (hour >= 12 && hour < 17) {
+    return 'Good Afternoon';
+  } else if (hour >= 17 && hour < 21) {
+    return 'Good Evening';
+  } else {
+    return 'Good Night';
+  }
+}
+
 export default function DashboardPage() {
   const { user, cooperative, hasModule, token } = useAuth();
   const [stats, setStats] = useState<Stats>({});
@@ -133,7 +150,7 @@ export default function DashboardPage() {
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-2">Good Morning, {user?.firstName}! 👋</h2>
+            <h2 className="text-2xl font-bold mb-2">{getTimeBasedGreeting()}, {user?.firstName}! 👋</h2>
             <p className="text-primary-foreground/90 max-w-xl text-lg">
               Here is what&apos;s happening in{' '}
               <span className="font-semibold">{cooperative?.name}</span> today. You have{' '}
