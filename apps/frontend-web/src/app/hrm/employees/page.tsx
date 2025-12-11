@@ -8,17 +8,24 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface Employee {
   id: string;
+  code: string;
   employeeNumber: string;
   firstName: string;
   lastName: string;
   email?: string;
   phone?: string;
-  department?: {
-    name: string;
-  };
+  position?: string; // For backward compatibility
+  status: string; // "active", "inactive", "terminated"
+  department?:
+    | {
+        name: string;
+      }
+    | string
+    | null;
   designation?: {
-    name: string;
-  };
+    title: string;
+    name?: string; // Some APIs might use name instead of title
+  } | null;
 }
 
 export default function EmployeesPage() {
@@ -95,10 +102,16 @@ export default function EmployeesPage() {
                     {emp.firstName} {emp.lastName}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {emp.department?.name || emp.department || '-'}
+                    {typeof emp.department === 'object' && emp.department !== null
+                      ? emp.department.name
+                      : typeof emp.department === 'string'
+                        ? emp.department
+                        : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {emp.designation?.title || emp.position || '-'}
+                    {typeof emp.designation === 'object' && emp.designation !== null
+                      ? emp.designation.title || emp.designation.name
+                      : emp.position || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
