@@ -3,11 +3,13 @@
 ## Actions Completed
 
 ✅ **Committed changes:**
+
 ```bash
 git commit -m "ci: configure CI/CD pipeline and add GitHub secrets"
 ```
 
 ✅ **Pushed to repository:**
+
 ```bash
 git push
 ```
@@ -24,6 +26,7 @@ The workflows should now be running! To view them:
 After pushing, you should see these workflows:
 
 ### 1. CI Workflow
+
 - **Triggered by:** Push to your branch
 - **Jobs:**
   - ✅ Lint
@@ -36,10 +39,12 @@ After pushing, you should see these workflows:
 - **Status:** Should be running or queued
 
 ### 2. Security Audit Workflow
+
 - **Purpose:** Check for security vulnerabilities
 - **Status:** Should run automatically
 
 ### 3. Dependency Update Check
+
 - **Purpose:** Check for outdated dependencies
 - **Status:** May run on schedule (weekly)
 
@@ -53,6 +58,7 @@ After pushing, you should see these workflows:
 ## Success Indicators
 
 ✅ **All checks passed:**
+
 - Green checkmarks (✅) next to all jobs
 - "All checks have passed" message
 - Workflow shows "completed" status
@@ -60,6 +66,7 @@ After pushing, you should see these workflows:
 ## If Workflows Don't Appear
 
 If you don't see workflows running:
+
 1. **Wait 1-2 minutes** - GitHub may take time to detect the push
 2. **Refresh the Actions page**
 3. **Check the branch** - Workflows run on `main`, `develop`, or `upgrade/**` branches
@@ -68,6 +75,7 @@ If you don't see workflows running:
 ## Next Steps
 
 Once workflows complete successfully:
+
 1. ✅ Review the results
 2. ✅ Set up branch protection (optional)
 3. ✅ Configure deployment (optional)

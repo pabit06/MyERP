@@ -162,19 +162,22 @@ export class FixedDepositController {
       });
 
       // Handle Funding (Debit Source, Credit FD Liability)
-      // Note: We need a "Fixed Deposit Liability" GL account.
-      // For MVP, we'll assume a specific GL code or pass it.
-      // In a real system, `FixedDepositProduct` should have a mapped `glCode`.
-      // Let's assume passed or default for now, but really we should have updated the schema to include GL mapping on FDProduct.
-      // Since we didn't add GL mapping to FDProduct in the schema step, let's use a placeholder or derived one.
-      // Ideally, we should add `glCode` to `FixedDepositProduct`.
-      // Let's assume a generic FD Liability code for now: "00-20200-01-00001" (Example)
+      // Get FD Liability GL account dynamically
+      // Try to find FD liability account by code pattern (00-20200-*)
+      const fdLiabilityGLAccount = await tx.chartOfAccounts.findFirst({
+        where: {
+          cooperativeId,
+          code: { startsWith: '00-20200-' },
+          type: 'liability',
+          isActive: true,
+        },
+        orderBy: { code: 'asc' }, // Get first matching account
+      });
 
-      const fdLiabilityGL = '00-20200-01-00001'; // TODO: Make dynamic
+      // Fallback to default if not found
+      const fdLiabilityGL = fdLiabilityGLAccount?.id || '00-20200-01-00001';
 
-      // TODO: Implement savings account funding logic
-      const _debitLeg = {}; // Reserved for future implementation
-      const _debitAmount = amount; // Reserved for future implementation
+      // Savings account funding logic is implemented below
       const description = `FD Opening - ${accountNumber}`;
 
       if (sourceAccountId) {
@@ -262,10 +265,17 @@ export class FixedDepositController {
     // 2. Process each account
     // Note: For large datasets, use cursor-based pagination or batching
     for (const account of accounts) {
-      // Simple Simple Interest Calculation: Principal * Rate / 100 / 365
-      // TODO: Handle leap years, compound interest if applicable
+      // Calculate days in year (handle leap years)
+      const currentYear = new Date().getFullYear();
+      const isLeapYear =
+        (currentYear % 4 === 0 && currentYear % 100 !== 0) || currentYear % 400 === 0;
+      const daysInYear = isLeapYear ? 366 : 365;
+
+      // Simple Interest Calculation: Principal * Rate / 100 / daysInYear
+      // Note: For compound interest, this would need to be calculated differently
+      // based on the posting frequency (monthly, quarterly, annually)
       const dailyInterest =
-        (Number(account.principal) * Number(account.interestRate)) / (100 * 365);
+        (Number(account.principal) * Number(account.interestRate)) / (100 * daysInYear);
 
       if (dailyInterest > 0) {
         await prisma.fixedDepositAccount.update({
@@ -384,13 +394,87 @@ export class FixedDepositController {
         },
       });
 
-      // Accounting Entries
-      const fdLiabilityGL = '00-20200-01-00001'; // Liability Account
-      const interestExpenseGL = '00-40100-01-00001'; // Expense Account
-      const tdsPayableGL = '00-20100-01-00001'; // TDS Payable
+      // Accounting Entries - Get GL accounts dynamically
+      const fdLiabilityGLAccount = await tx.chartOfAccounts.findFirst({
+        where: {
+          cooperativeId,
+          code: { startsWith: '00-20200-' },
+          type: 'liability',
+          isActive: true,
+        },
+        orderBy: { code: 'asc' },
+      });
+      const fdLiabilityGL = fdLiabilityGLAccount?.id || '00-20200-01-00001';
 
-      // If paying by Cash
-      if (cashAccountCode) {
+      // Find interest expense and TDS payable accounts
+      const interestExpenseGLAccount = await tx.chartOfAccounts.findFirst({
+        where: {
+          cooperativeId,
+          code: { startsWith: '00-40100-' },
+          type: 'expense',
+          isActive: true,
+        },
+        orderBy: { code: 'asc' },
+      });
+      const interestExpenseGL = interestExpenseGLAccount?.id || '00-40100-01-00001';
+
+      const tdsPayableGLAccount = await tx.chartOfAccounts.findFirst({
+        where: {
+          cooperativeId,
+          code: { startsWith: '00-20100-' },
+          type: 'liability',
+          isActive: true,
+        },
+        orderBy: { code: 'asc' },
+      });
+      const tdsPayableGL = tdsPayableGLAccount?.id || '00-20100-01-00001';
+
+      // If paying to Savings Account
+      if (data.destinationAccountId) {
+        const destinationAccount = await tx.savingAccount.findUnique({
+          where: { id: data.destinationAccountId },
+        });
+
+        if (!destinationAccount) {
+          throw new NotFoundError('Destination savings account', data.destinationAccountId);
+        }
+
+        // Credit savings account balance
+        await tx.savingAccount.update({
+          where: { id: data.destinationAccountId },
+          data: { balance: { increment: totalPayout } },
+        });
+
+        // Get savings liability GL
+        const savingsLiabilityGLAccount = await tx.chartOfAccounts.findFirst({
+          where: {
+            cooperativeId,
+            code: { startsWith: '00-20100-' },
+            type: 'liability',
+            isActive: true,
+          },
+          orderBy: { code: 'asc' },
+        });
+        const savingsLiabilityGL = savingsLiabilityGLAccount?.id || '00-20100-01-00001';
+
+        await accountingController.createJournalEntry(
+          cooperativeId,
+          `FD Closure - ${account.accountNumber} (${isPremature ? 'Premature' : 'Maturity'}) - To Savings ${destinationAccount.accountNumber}`,
+          [
+            // Debit FD Liability (Principal)
+            { accountId: fdLiabilityGL, debit: principal, credit: 0 },
+            // Debit Interest Expense
+            { accountId: interestExpenseGL, debit: totalInterest, credit: 0 },
+            // Credit TDS Payable
+            { accountId: tdsPayableGL, debit: 0, credit: tdsAmount },
+            // Credit Savings Liability (Payout to savings account)
+            { accountId: savingsLiabilityGL, debit: 0, credit: totalPayout },
+          ],
+          closeDate,
+          userId
+        );
+      } else if (cashAccountCode) {
+        // If paying by Cash
         await accountingController.createJournalEntry(
           cooperativeId,
           `FD Closure - ${account.accountNumber} (${isPremature ? 'Premature' : 'Maturity'})`,
@@ -408,7 +492,6 @@ export class FixedDepositController {
           userId
         );
       }
-      // TODO: Implement Savings Transfer logic if _destinationAccountId provided
 
       return updatedAccount;
     });

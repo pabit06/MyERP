@@ -3,6 +3,7 @@
 ## 📋 Current Core Features
 
 ### 1. **Multi-Tenant SaaS Architecture**
+
 - ✅ Cooperative/tenant management
 - ✅ Subscription plans with module-based pricing
 - ✅ Subdomain-based routing
@@ -10,6 +11,7 @@
 - ✅ Plan management (enabled modules per tenant)
 
 ### 2. **Core Banking System (CBS)**
+
 - ✅ Day Book (Day Begin/Day End)
 - ✅ Voucher management
 - ✅ Teller settlements
@@ -18,6 +20,7 @@
 - ✅ Cash reconciliation
 
 ### 3. **Member Management**
+
 - ✅ Member onboarding workflow
 - ✅ KYC/KYM (Know Your Member) forms
   - Individual member KYC
@@ -31,6 +34,7 @@
 - ✅ Account signatories management
 
 ### 4. **Savings Management**
+
 - ✅ Saving products configuration
 - ✅ Saving accounts management
 - ✅ Interest calculation (daily balance method)
@@ -41,6 +45,7 @@
 - ✅ Savings transactions
 
 ### 5. **Loans Management**
+
 - ✅ Loan products configuration
 - ✅ Loan application workflow
 - ✅ EMI schedule generation
@@ -52,6 +57,7 @@
 - ✅ Loan recovery management
 
 ### 6. **Shares Management**
+
 - ✅ Share accounts per member
 - ✅ Share transactions (Purchase, Return, Transfer, Bonus)
 - ✅ Share certificate management
@@ -59,6 +65,7 @@
 - ✅ Share transaction history
 
 ### 7. **Accounting System**
+
 - ✅ Chart of Accounts (hierarchical)
 - ✅ General Ledger
 - ✅ Journal Entries
@@ -69,6 +76,7 @@
 - ✅ Financial reporting hooks
 
 ### 8. **Human Resource Management (HRM)**
+
 - ✅ Employee management
 - ✅ Department management
 - ✅ Designation management
@@ -89,6 +97,7 @@
 - ✅ Employee loan deductions
 
 ### 9. **Governance**
+
 - ✅ Meeting management
   - Board meetings
   - General meetings
@@ -110,6 +119,7 @@
 - ✅ Manager reports
 
 ### 10. **Document Management System (DMS)**
+
 - ✅ Darta (Incoming Documents)
   - Document registration
   - Fiscal year-based numbering
@@ -129,6 +139,7 @@
 - ✅ Document archival and retention
 
 ### 11. **Inventory Management**
+
 - ✅ Inventory categories (hierarchical)
 - ✅ Inventory items
 - ✅ Stock quantity tracking
@@ -137,6 +148,7 @@
 - ✅ Location tracking
 
 ### 12. **Compliance & AML**
+
 - ✅ AML (Anti-Money Laundering) monitoring
 - ✅ Risk assessment and categorization
 - ✅ PEP (Politically Exposed Person) screening
@@ -152,6 +164,7 @@
 - ✅ AML training sessions
 
 ### 13. **Reports & Analytics**
+
 - ✅ Manager reports (monthly)
 - ✅ Financial reports
 - ✅ Member statistics
@@ -162,6 +175,7 @@
 - ✅ Report data fetcher service
 
 ### 14. **Notifications System**
+
 - ✅ Multi-channel notifications
   - SMS
   - Email
@@ -172,6 +186,7 @@
 - ✅ Retry mechanism
 
 ### 15. **Workflow Engine**
+
 - ✅ Generic workflow system
 - ✅ Workflow history tracking
 - ✅ Status transitions
@@ -179,6 +194,7 @@
 - ✅ Custom workflow definitions
 
 ### 16. **Authentication & Authorization**
+
 - ✅ JWT-based authentication
 - ✅ Role-Based Access Control (RBAC)
 - ✅ Permission management
@@ -187,6 +203,7 @@
 - ✅ Session management
 
 ### 17. **System Administration**
+
 - ✅ System admin panel
 - ✅ Tenant management
 - ✅ User management across tenants
@@ -194,6 +211,7 @@
 - ✅ System health monitoring
 
 ### 18. **Additional Features**
+
 - ✅ Nepali date support (Bikram Sambat)
 - ✅ Fiscal year management
 - ✅ Public API endpoints
@@ -212,6 +230,7 @@
 ### **Priority 1: Core Banking Enhancements**
 
 #### 1.1 **Fixed Deposits (Term Deposits)**
+
 - Fixed deposit products with different tenures
 - Interest rate configuration per tenure
 - Premature withdrawal handling
@@ -220,6 +239,7 @@
 - Interest calculation and posting
 
 #### 1.2 **Recurring Deposits (RD)**
+
 - RD product configuration
 - Installment tracking
 - Auto-debit from savings account
@@ -227,6 +247,7 @@
 - Interest accrual
 
 #### 1.3 **Loan Products Enhancement**
+
 - Loan product variants (secured/unsecured)
 - Collateral management
 - Guarantor management
@@ -236,12 +257,14 @@
 - Loan recovery strategies
 
 #### 1.4 **Interest Rate Management**
+
 - Dynamic interest rate configuration
 - Interest rate history
 - Rate change notifications
 - Effective date management
 
 #### 1.5 **Transaction Types Expansion**
+
 - Bulk transactions
 - Recurring transactions
 - Standing instructions
@@ -252,6 +275,7 @@
 ### **Priority 2: Financial Management**
 
 #### 2.1 **Budget Management**
+
 - Annual budget creation
 - Budget vs Actual reports
 - Budget approval workflow
@@ -259,12 +283,14 @@
 - Department-wise budgets
 
 #### 2.2 **Cash Flow Management**
+
 - Cash flow forecasting
 - Cash flow statements
 - Liquidity gap analysis
 - Cash position dashboard
 
 #### 2.3 **Investment Management**
+
 - Investment portfolio tracking
 - Investment products
 - Maturity tracking
@@ -272,6 +298,7 @@
 - Investment reports
 
 #### 2.4 **Asset Management**
+
 - Fixed asset register
 - Depreciation calculation
 - Asset categories
@@ -279,6 +306,7 @@
 - Asset valuation
 
 #### 2.5 **Liability Management**
+
 - Liability tracking
 - Maturity schedules
 - Interest payment tracking
@@ -286,6 +314,7 @@
 ### **Priority 3: Member Services**
 
 #### 3.1 **Member Portal (Web/Mobile)**
+
 - Member login and dashboard
 - Account balance inquiry
 - Transaction history
@@ -296,6 +325,7 @@
 - Complaint submission
 
 #### 3.2 **Mobile Banking**
+
 - Mobile app for members
 - QR code payments
 - Bill payments
@@ -304,6 +334,7 @@
 - Push notifications
 
 #### 3.3 **Member Communication**
+
 - Bulk SMS/Email
 - Announcement board
 - Event notifications
@@ -311,6 +342,7 @@
 - Newsletter distribution
 
 #### 3.4 **Member Benefits**
+
 - Dividend distribution
 - Bonus calculation and distribution
 - Member loyalty points
@@ -319,6 +351,7 @@
 ### **Priority 4: Advanced Reporting**
 
 #### 4.1 **Regulatory Reports**
+
 - NRB (Nepal Rastra Bank) reports
 - Tax reports
 - PEARLS ratios
@@ -326,6 +359,7 @@
 - Regulatory compliance reports
 
 #### 4.2 **Custom Report Builder**
+
 - Drag-and-drop report builder
 - Custom fields and formulas
 - Scheduled report generation
@@ -333,6 +367,7 @@
 - Export to Excel/PDF
 
 #### 4.3 **Dashboard & Analytics**
+
 - Executive dashboard
 - Real-time KPIs
 - Trend analysis
@@ -340,6 +375,7 @@
 - Data visualization (charts, graphs)
 
 #### 4.4 **Business Intelligence**
+
 - Data warehouse
 - OLAP cubes
 - Predictive analytics
@@ -349,30 +385,35 @@
 ### **Priority 5: Operations & Efficiency**
 
 #### 5.1 **Branch Management**
+
 - Multi-branch support
 - Branch-wise reporting
 - Inter-branch transfers
 - Branch performance metrics
 
 #### 5.2 **Teller Management**
+
 - Teller assignment
 - Teller performance tracking
 - Teller cash limits
 - Teller transaction limits
 
 #### 5.3 **Queue Management**
+
 - Token system
 - Queue display
 - Service type management
 - Wait time tracking
 
 #### 5.4 **Task Management**
+
 - Task assignment
 - Task tracking
 - Task reminders
 - Task completion reports
 
 #### 5.5 **Approval Workflows**
+
 - Multi-level approvals
 - Escalation rules
 - Approval delegation
@@ -381,24 +422,28 @@
 ### **Priority 6: Integration & APIs**
 
 #### 6.1 **Payment Gateway Integration**
+
 - Online payment processing
 - Multiple payment gateways
 - Payment reconciliation
 - Refund management
 
 #### 6.2 **Bank Integration**
+
 - Core banking system integration
 - RTGS/NEFT integration
 - Bank statement import
 - Reconciliation
 
 #### 6.3 **Third-Party Integrations**
+
 - Credit bureau integration
 - SMS gateway integration
 - Email service integration
 - Cloud storage integration
 
 #### 6.4 **API Management**
+
 - API versioning
 - API rate limiting
 - API documentation
@@ -407,6 +452,7 @@
 ### **Priority 7: Security & Compliance**
 
 #### 7.1 **Advanced Security**
+
 - Two-factor authentication (2FA)
 - Biometric authentication
 - OTP verification
@@ -414,6 +460,7 @@
 - Device management
 
 #### 7.2 **Data Protection**
+
 - Data encryption at rest
 - Data encryption in transit
 - Data masking
@@ -421,12 +468,14 @@
 - GDPR compliance features
 
 #### 7.3 **Audit & Compliance**
+
 - Comprehensive audit trail
 - Compliance checklist
 - Regulatory change management
 - Compliance reporting
 
 #### 7.4 **Backup & Recovery**
+
 - Automated backups
 - Point-in-time recovery
 - Disaster recovery plan
@@ -435,6 +484,7 @@
 ### **Priority 8: Customer Relationship Management**
 
 #### 8.1 **CRM Features**
+
 - Member interaction history
 - Follow-up reminders
 - Member segmentation
@@ -442,6 +492,7 @@
 - Lead management
 
 #### 8.2 **Complaint Management**
+
 - Complaint registration
 - Complaint tracking
 - Complaint resolution workflow
@@ -449,6 +500,7 @@
 - Feedback system
 
 #### 8.3 **Member Surveys**
+
 - Survey creation
 - Survey distribution
 - Response collection
@@ -457,24 +509,28 @@
 ### **Priority 9: Advanced HRM Features**
 
 #### 9.1 **Performance Management**
+
 - Performance appraisals
 - Goal setting
 - KPI tracking
 - Performance reviews
 
 #### 9.2 **Recruitment**
+
 - Job posting
 - Applicant tracking
 - Interview scheduling
 - Offer management
 
 #### 9.3 **Training & Development**
+
 - Training program management
 - Course catalog
 - Training material library
 - Certification tracking
 
 #### 9.4 **Employee Self-Service**
+
 - Employee portal
 - Leave application
 - Payslip download
@@ -483,60 +539,70 @@
 ### **Priority 10: Additional Modules**
 
 #### 10.1 **Insurance Management**
+
 - Insurance products
 - Policy management
 - Premium collection
 - Claims processing
 
 #### 10.2 **Project Management**
+
 - Project tracking
 - Project budgeting
 - Resource allocation
 - Project reports
 
 #### 10.3 **Event Management**
+
 - Event planning
 - Event registration
 - Attendance tracking
 - Event reports
 
 #### 10.4 **Library Management**
+
 - Book catalog
 - Issue/return tracking
 - Member library cards
 - Fine management
 
 #### 10.5 **Messaging System**
+
 - Internal messaging
 - Group chats
 - File sharing
 - Message search
 
 #### 10.6 **Calendar & Scheduling**
+
 - Shared calendar
 - Meeting scheduler
 - Resource booking
 - Reminder system
 
 #### 10.7 **Knowledge Base**
+
 - Document library
 - FAQ management
 - Help articles
 - Search functionality
 
 #### 10.8 **Vendor Management**
+
 - Vendor registration
 - Vendor evaluation
 - Purchase order management
 - Vendor payments
 
 #### 10.9 **Expense Management**
+
 - Expense claims
 - Expense approval
 - Reimbursement
 - Expense reports
 
 #### 10.10 **Asset Tracking**
+
 - Asset tagging
 - Asset location tracking
 - Maintenance scheduling
@@ -547,6 +613,7 @@
 ## 📊 Feature Implementation Priority Matrix
 
 ### **High Priority (Immediate Value)**
+
 1. Fixed Deposits
 2. Member Portal
 3. Mobile Banking
@@ -556,6 +623,7 @@
 7. Dashboard & Analytics
 
 ### **Medium Priority (Important but not urgent)**
+
 1. Recurring Deposits
 2. Budget Management
 3. Cash Flow Management
@@ -565,6 +633,7 @@
 7. Advanced HRM Features
 
 ### **Low Priority (Nice to have)**
+
 1. Insurance Management
 2. Project Management
 3. Event Management
@@ -599,6 +668,6 @@
 
 ---
 
-*Last Updated: Based on current codebase analysis*
-*Total Current Features: 18 major modules*
-*Total Suggested Features: 50+ new features across 10 priority categories*
+_Last Updated: Based on current codebase analysis_
+_Total Current Features: 18 major modules_
+_Total Suggested Features: 50+ new features across 10 priority categories_

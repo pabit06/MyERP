@@ -3,9 +3,11 @@
 ## 🚀 Immediate Actions (Do First)
 
 ### 1. Complete Documentation Organization ⏱️ 5 minutes
+
 **Status:** Structure created, files need to be moved
 
 **Action:**
+
 ```powershell
 # Run the organization script
 cd e:\MyERP
@@ -13,25 +15,30 @@ cd e:\MyERP
 ```
 
 **Or manually move files:**
+
 - Move status files → `docs/status/`
 - Move setup files → `docs/setup/`
 - Move roadmap files → `docs/roadmap/`
 - Move assessment files → `docs/assessment/`
 
 **Verify:**
+
 - Root should only have `README.md`, `START_HERE.md`, and config files
 - All docs organized in `docs/` subdirectories
 
 ---
 
 ### 2. Fix Duplicate Components ⏱️ 5 minutes
+
 **Status:** Critical issue - components exist in two locations
 
 **Problem:**
+
 - `apps/frontend-web/src/components/shared/` (OLD - DELETE)
 - `apps/frontend-web/src/features/components/shared/` (NEW - KEEP)
 
 **Action:**
+
 ```powershell
 # 1. Verify all imports use new location
 cd apps/frontend-web
@@ -50,10 +57,12 @@ pnpm build
 ---
 
 ### 3. Update .gitignore for Secrets ⏱️ 2 minutes
+
 **Status:** Secret files should not be committed
 
 **Action:**
 Add to `.gitignore`:
+
 ```
 # Secrets and sensitive files
 docs/setup/*.txt
@@ -68,9 +77,11 @@ docs/setup/JWT_SECRET*.txt
 ## 📋 Short-term Improvements (This Week)
 
 ### 4. Complete Frontend Feature Migration
+
 **Status:** Partially complete
 
 **Action Items:**
+
 - [ ] Move remaining components from `components/` to `features/`
 - [ ] Update all import paths
 - [ ] Remove old component directories
@@ -81,18 +92,22 @@ docs/setup/JWT_SECRET*.txt
 ---
 
 ### 5. Clean Up Root Directory
+
 **Status:** Some files may remain
 
 **Action:**
+
 - Remove any remaining markdown files from root (except README.md, START_HERE.md)
 - Move to appropriate `docs/` subdirectory
 
 ---
 
 ### 6. Review and Update Documentation
+
 **Status:** Structure created, content may need updates
 
 **Action:**
+
 - Review `docs/README.md` - ensure all links work
 - Update any broken references
 - Add missing documentation
@@ -102,9 +117,11 @@ docs/setup/JWT_SECRET*.txt
 ## 🔧 Medium-term Enhancements (Next Sprint)
 
 ### 7. Backend Repository Pattern (Optional)
+
 **Status:** Current structure is good, but could be enhanced
 
 **Consider:**
+
 - Implement repository pattern for better testability
 - Separate data access from business logic
 
@@ -113,9 +130,11 @@ docs/setup/JWT_SECRET*.txt
 ---
 
 ### 8. Add Linting Rules
+
 **Status:** Prevent future issues
 
 **Action:**
+
 - Add ESLint rules to prevent imports from old locations
 - Enforce path alias usage
 - Add pre-commit hooks
@@ -123,9 +142,11 @@ docs/setup/JWT_SECRET*.txt
 ---
 
 ### 9. Documentation Standards
+
 **Status:** Create guidelines
 
 **Action:**
+
 - Create documentation template
 - Define where different types of docs should go
 - Add to contributing guide
@@ -135,6 +156,7 @@ docs/setup/JWT_SECRET*.txt
 ## 📊 Quick Status Check
 
 Run this to see current state:
+
 ```powershell
 # Check root directory
 Get-ChildItem -File -Filter "*.md" | Where-Object { $_.Name -notmatch "README|START_HERE" } | Select-Object Name
@@ -182,6 +204,7 @@ Get-ChildItem -Directory docs\ | Select-Object Name
 ## 🆘 Need Help?
 
 If you encounter issues:
+
 1. Check the assessment documents in `docs/assessment/`
 2. Review the quick fix guides
 3. Verify file paths and imports

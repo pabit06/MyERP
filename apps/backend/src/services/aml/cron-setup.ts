@@ -12,7 +12,7 @@ export async function setupAmlCronJobs() {
   try {
     // Dynamic import to avoid requiring node-cron if not installed
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore - node-cron is optional dependency
+    // @ts-expect-error - node-cron is optional dependency
     const cron = (await import('node-cron').catch(() => null)) as any;
     if (!cron) {
       throw new Error('node-cron not available');

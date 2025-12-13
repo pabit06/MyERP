@@ -19,16 +19,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 3. **Add these 3 secrets:**
 
 ### Secret 1: JWT_SECRET
+
 - **Name:** `JWT_SECRET`
 - **Value:** (Paste the value from Step 1)
 - Click "Add secret"
 
 ### Secret 2: JWT_EXPIRES_IN
+
 - **Name:** `JWT_EXPIRES_IN`
 - **Value:** `7d`
 - Click "Add secret"
 
 ### Secret 3: NEXT_PUBLIC_API_URL
+
 - **Name:** `NEXT_PUBLIC_API_URL`
 - **Value:** `https://api.yourdomain.com/api` (update with your actual API URL)
 - Click "Add secret"
@@ -36,6 +39,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## Step 3: Verify
 
 After adding all secrets, you should see:
+
 - ✅ JWT_SECRET
 - ✅ JWT_EXPIRES_IN
 - ✅ NEXT_PUBLIC_API_URL

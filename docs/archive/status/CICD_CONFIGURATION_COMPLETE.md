@@ -40,6 +40,7 @@ All CI/CD configuration files and documentation have been created. The pipeline 
 ### 3. Deployment Examples ✅
 
 Added example deployment configurations for:
+
 - ✅ SSH deployment
 - ✅ Docker Hub deployment
 - ✅ AWS ECS deployment
@@ -53,6 +54,7 @@ Added example deployment configurations for:
 ### 1. Configure GitHub Secrets ⚠️
 
 **Minimum Required:**
+
 - `JWT_SECRET` - Generate with: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`
 - `JWT_EXPIRES_IN` - Set to `7d`
 - `NEXT_PUBLIC_API_URL` - Your backend API URL

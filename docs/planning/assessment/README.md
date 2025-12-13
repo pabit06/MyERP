@@ -15,6 +15,7 @@ These documents provide analysis and actionable recommendations for improving th
 ## Quick Fixes
 
 For immediate improvements, see:
+
 - **QUICK_FIX_DUPLICATE_COMPONENTS.md** - Fix duplicate components (5 minutes)
 - **FOLDER_STRUCTURE_ASSESSMENT.md** - Overall structure improvements
 

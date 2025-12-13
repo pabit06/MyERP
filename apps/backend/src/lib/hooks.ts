@@ -56,7 +56,6 @@ class HookRegistry {
     priority: number = 100,
     name?: string
   ): void {
-    const _key = `${model}:${hookType}`;
     if (!this.hooks.has(model)) {
       this.hooks.set(model, new Map());
     }

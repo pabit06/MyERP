@@ -35,18 +35,21 @@ Your project has a **solid foundation** with good monorepo structure, but there 
 ### 1. **Duplicate Components** (HIGH PRIORITY)
 
 **Problem:**
+
 - Components exist in TWO locations:
   - `src/components/shared/` (old location)
   - `src/features/components/shared/` (new location)
 - Same components: `NepaliCalendar`, `NepaliDatePicker`, `ConfirmModal`, `RichTextEditor`
 
 **Impact:**
+
 - Confusion about which to use
 - Maintenance burden (changes in one place, not the other)
 - Potential for inconsistencies
 - Larger bundle size if both are imported
 
 **Solution:**
+
 ```bash
 # 1. Verify all imports use the new location
 # 2. Delete old location: src/components/shared/
@@ -54,6 +57,7 @@ Your project has a **solid foundation** with good monorepo structure, but there 
 ```
 
 **Action Items:**
+
 - [ ] Audit all imports to ensure they use `@/features/components/shared`
 - [ ] Delete `src/components/shared/` directory
 - [ ] Update any remaining imports
@@ -63,11 +67,13 @@ Your project has a **solid foundation** with good monorepo structure, but there 
 ### 2. **Root Directory Clutter** (MEDIUM PRIORITY)
 
 **Problem:**
+
 - 20+ markdown files in root directory
 - Status files, setup files, migration docs scattered
 - Hard to find important documentation
 
 **Current Root Files:**
+
 ```
 BROWSER_CHECK_SUMMARY.md
 BROWSER_SETUP_GUIDE.md
@@ -86,6 +92,7 @@ SECURITY_ENHANCEMENTS_COMPLETE.md
 ```
 
 **Recommended Structure:**
+
 ```
 docs/
 ├── setup/              # Setup guides
@@ -103,6 +110,7 @@ docs/
 ```
 
 **Action Items:**
+
 - [ ] Create organized structure in `docs/`
 - [ ] Move status files to `docs/status/`
 - [ ] Move setup guides to `docs/setup/`
@@ -114,17 +122,20 @@ docs/
 ### 3. **Incomplete Feature Migration** (MEDIUM PRIORITY)
 
 **Problem:**
+
 - Migration to feature-based structure is incomplete
 - Some components still in old `components/` directory
 - Inconsistent import patterns
 
 **Current State:**
+
 - ✅ Features structure created
 - ✅ Some components migrated
 - ❌ Old `components/` directory still has files
 - ❌ Some imports may still reference old paths
 
 **Recommended Complete Structure:**
+
 ```
 src/
 ├── app/                    # Next.js app router (routing only)
@@ -149,6 +160,7 @@ src/
 ```
 
 **Action Items:**
+
 - [ ] Complete migration of all components to features
 - [ ] Remove old `components/` directory (except shared)
 - [ ] Ensure all imports use feature paths
@@ -163,6 +175,7 @@ src/
 **Recommendation:** Consider Repository Pattern
 
 **Current Structure:**
+
 ```
 services/
 ├── accounting.ts
@@ -171,6 +184,7 @@ services/
 ```
 
 **Suggested Enhancement:**
+
 ```
 services/
 ├── accounting/
@@ -183,6 +197,7 @@ services/
 ```
 
 **Benefits:**
+
 - Better testability (mock repositories)
 - Clearer separation of business logic vs data access
 - Easier to swap data sources
@@ -194,6 +209,7 @@ services/
 ### 5. **Documentation Organization** (LOW PRIORITY)
 
 **Problem:**
+
 - Documentation scattered across:
   - Root directory
   - `docs/` directory
@@ -201,6 +217,7 @@ services/
   - `.cursor/plans/` directory
 
 **Recommended Structure:**
+
 ```
 docs/
 ├── README.md              # Documentation index
@@ -217,6 +234,7 @@ docs/
 ## 📋 Recommended Action Plan
 
 ### Phase 1: Critical Fixes (Do First)
+
 1. ✅ **Remove duplicate components**
    - Delete `src/components/shared/`
    - Verify all imports work
@@ -227,6 +245,7 @@ docs/
    - Keep only essential files in root
 
 ### Phase 2: Complete Migration (Do Next)
+
 3. ✅ **Complete feature migration**
    - Move remaining components to features
    - Update all imports
@@ -238,6 +257,7 @@ docs/
    - Update references
 
 ### Phase 3: Enhancements (Optional)
+
 5. ⚪ **Backend repository pattern** (if needed)
 6. ⚪ **Add feature-specific API modules**
 7. ⚪ **Improve test organization**
@@ -247,6 +267,7 @@ docs/
 ## 🎯 Target Structure
 
 ### Root Directory (Clean)
+
 ```
 MyERP/
 ├── apps/
@@ -262,6 +283,7 @@ MyERP/
 ```
 
 ### Frontend Structure
+
 ```
 apps/frontend-web/src/
 ├── app/                    # Next.js routing
@@ -275,6 +297,7 @@ apps/frontend-web/src/
 ```
 
 ### Backend Structure (Current is Good)
+
 ```
 apps/backend/src/
 ├── config/
@@ -290,14 +313,14 @@ apps/backend/src/
 
 ## 📊 Overall Assessment
 
-| Category | Rating | Notes |
-|----------|--------|-------|
-| **Monorepo Structure** | ⭐⭐⭐⭐⭐ | Excellent |
-| **Backend Organization** | ⭐⭐⭐⭐ | Very good, minor enhancements possible |
-| **Frontend Organization** | ⭐⭐⭐ | Good, but incomplete migration |
-| **Documentation** | ⭐⭐ | Needs organization |
-| **Code Duplication** | ⭐⭐ | Duplicate components need removal |
-| **Overall** | ⭐⭐⭐⭐ | **7/10** - Solid foundation, needs cleanup |
+| Category                  | Rating     | Notes                                      |
+| ------------------------- | ---------- | ------------------------------------------ |
+| **Monorepo Structure**    | ⭐⭐⭐⭐⭐ | Excellent                                  |
+| **Backend Organization**  | ⭐⭐⭐⭐   | Very good, minor enhancements possible     |
+| **Frontend Organization** | ⭐⭐⭐     | Good, but incomplete migration             |
+| **Documentation**         | ⭐⭐       | Needs organization                         |
+| **Code Duplication**      | ⭐⭐       | Duplicate components need removal          |
+| **Overall**               | ⭐⭐⭐⭐   | **7/10** - Solid foundation, needs cleanup |
 
 ---
 
@@ -331,6 +354,7 @@ apps/backend/src/
 ## Conclusion
 
 Your project has a **strong foundation** with good architectural decisions. The main issues are:
+
 1. **Incomplete migration** (duplicate components)
 2. **Root directory clutter** (documentation organization)
 3. **Inconsistent structure** (some old patterns remain)

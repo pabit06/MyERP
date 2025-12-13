@@ -20,10 +20,10 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 2. Click **"New repository secret"**
 3. Add these 3 secrets:
 
-| Secret Name | Value |
-|------------|-------|
-| `JWT_SECRET` | (Paste from Step 1) |
-| `JWT_EXPIRES_IN` | `7d` |
+| Secret Name           | Value                            |
+| --------------------- | -------------------------------- |
+| `JWT_SECRET`          | (Paste from Step 1)              |
+| `JWT_EXPIRES_IN`      | `7d`                             |
 | `NEXT_PUBLIC_API_URL` | `https://api.yourdomain.com/api` |
 
 ### Step 3: Test Workflows

@@ -5,12 +5,12 @@
 You have **duplicate workflows** that need to be consolidated:
 
 ### CI Workflows:
+
 - **`ci.yml`** (Original - 463 lines)
   - ✅ Lint, Type Check, Build
   - ✅ Backend tests with PostgreSQL
   - ✅ Frontend tests
   - ✅ **E2E tests with Playwright** (Unique feature)
-  
 - **`ci-enhanced.yml`** (New - 224 lines)
   - ✅ Lint, Type Check, Build
   - ✅ **Integration tests** (Unique feature - NEW!)
@@ -20,6 +20,7 @@ You have **duplicate workflows** that need to be consolidated:
 **Overlap:** ~70% duplicate code
 
 ### CD Workflows:
+
 - **`cd.yml`** (Original)
 - **`cd-enhanced.yml`** (New)
 
@@ -30,6 +31,7 @@ You have **duplicate workflows** that need to be consolidated:
 I've created `ci-consolidated.yml` that combines the best of both:
 
 **Features:**
+
 - ✅ All checks from original CI
 - ✅ **Integration tests** (your new 13 tests!)
 - ✅ E2E tests (Playwright)
@@ -37,6 +39,7 @@ I've created `ci-consolidated.yml` that combines the best of both:
 - ✅ Faster (better parallelization)
 
 **Migration Steps:**
+
 ```bash
 # 1. Rename old workflows (backup)
 git mv .github/workflows/ci.yml .github/workflows/ci.yml.old
@@ -68,6 +71,7 @@ git commit -m "chore: Remove duplicate workflows"
 ```
 
 **Then add integration tests to original `ci.yml`:**
+
 ```yaml
 # Add this job to ci.yml
 test-integration:
@@ -94,23 +98,23 @@ Temporarily disable one workflow:
 ```yaml
 # Add to top of ci-enhanced.yml
 on:
-  workflow_dispatch:  # Only run manually
+  workflow_dispatch: # Only run manually
 ```
 
 ## 📊 Comparison
 
-| Feature | ci.yml | ci-enhanced.yml | ci-consolidated.yml |
-|---------|--------|-----------------|---------------------|
-| Lint | ✅ | ✅ | ✅ |
-| Type Check | ✅ | ✅ | ✅ |
-| Integration Tests | ❌ | ✅ | ✅ |
-| Unit Tests | ✅ | ✅ | ✅ |
-| Frontend Tests | ✅ | ❌ | ✅ |
-| E2E Tests | ✅ | ❌ | ✅ |
-| Build | ✅ | ✅ | ✅ |
-| Test Summary | ❌ | ✅ | ✅ |
-| **Lines of Code** | 463 | 224 | 280 |
-| **Maintainability** | Medium | High | **Highest** |
+| Feature             | ci.yml | ci-enhanced.yml | ci-consolidated.yml |
+| ------------------- | ------ | --------------- | ------------------- |
+| Lint                | ✅     | ✅              | ✅                  |
+| Type Check          | ✅     | ✅              | ✅                  |
+| Integration Tests   | ❌     | ✅              | ✅                  |
+| Unit Tests          | ✅     | ✅              | ✅                  |
+| Frontend Tests      | ✅     | ❌              | ✅                  |
+| E2E Tests           | ✅     | ❌              | ✅                  |
+| Build               | ✅     | ✅              | ✅                  |
+| Test Summary        | ❌     | ✅              | ✅                  |
+| **Lines of Code**   | 463    | 224             | 280                 |
+| **Maintainability** | Medium | High            | **Highest**         |
 
 ## 🎯 My Recommendation
 
@@ -148,6 +152,7 @@ git push origin main
 ## 📝 For CD Workflows
 
 Need to check `cd.yml` content first. Would you like me to:
+
 1. Review `cd.yml` content
 2. Create consolidated CD workflow
 3. Provide migration plan for CD
@@ -155,6 +160,7 @@ Need to check `cd.yml` content first. Would you like me to:
 ## ❓ What Would You Like To Do?
 
 **Choose one:**
+
 - A) Use consolidated workflow (recommended)
 - B) Keep original, add integration tests
 - C) Keep both, disable enhanced

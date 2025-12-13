@@ -18,6 +18,7 @@ docs/
 ## 📊 Files Organized
 
 ### Status Reports → `docs/status/` (16 files)
+
 - BROWSER_CHECK_SUMMARY.md
 - BROWSER_STATUS_REPORT.md
 - BROWSER_STATUS.md
@@ -36,6 +37,7 @@ docs/
 - WORKFLOWS_TRIGGERED.md
 
 ### Setup & Configuration → `docs/setup/` (9 files)
+
 - BROWSER_SETUP_GUIDE.md
 - CICD_SETUP.md
 - GITHUB_SECRETS_TO_ADD.md
@@ -47,10 +49,12 @@ docs/
 - JWT_SECRET.txt ⚠️
 
 ### Roadmap & Planning → `docs/roadmap/` (2 files)
+
 - NEXT_STEPS_ROADMAP.md
 - PROJECT_IMPROVEMENTS.md
 
 ### Assessments → `docs/assessment/` (3 files)
+
 - FOLDER_STRUCTURE_ASSESSMENT.md
 - QUICK_FIX_DUPLICATE_COMPONENTS.md
 - VALIDATION_MIDDLEWARE_SUMMARY.md
@@ -58,6 +62,7 @@ docs/
 ## ✅ Root Directory Status
 
 The root directory is now clean and contains only:
+
 - `README.md` - Main project README
 - `START_HERE.md` - Quick start guide
 - `NEXT_ACTIONS.md` - Action plan document
@@ -67,6 +72,7 @@ The root directory is now clean and contains only:
 ## ⚠️ Security Note
 
 Secret files (`.txt` files in `docs/setup/`) contain sensitive information. Make sure they are:
+
 - Added to `.gitignore`
 - Not committed to version control
 - Stored securely in production

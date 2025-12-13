@@ -5,29 +5,34 @@
 Enhanced performance monitoring has been successfully added to the MyERP backend with the following features:
 
 ### 1. Prometheus Metrics Export ✅
+
 - **Endpoint:** `GET /health/metrics/prometheus`
 - **Format:** Standard Prometheus format
 - **Metrics:** HTTP, database, memory, uptime
 - **Use Case:** Integration with Prometheus/Grafana
 
 ### 2. Database Query Performance Tracking ✅
+
 - **Automatic:** Tracks all Prisma queries via middleware
 - **Metrics:** Query count, duration, slow queries, percentiles
 - **Logging:** Automatically logs slow queries (> 1 second)
 - **Integration:** Seamlessly integrated with existing Prisma client
 
 ### 3. Route-Level Performance Monitoring ✅
+
 - **Tracking:** Per-route performance metrics
 - **Detection:** Identifies slow and very slow routes
 - **Metrics:** Request count, response times, error rates per route
 - **Integration:** Automatic Sentry breadcrumb integration
 
 ### 4. Performance Dashboard ✅
+
 - **Endpoint:** `GET /health/performance`
 - **Data:** Comprehensive performance summary
 - **Features:** System metrics, HTTP metrics, database metrics, slowest routes
 
 ### 5. Enhanced Metrics Endpoint ✅
+
 - **Endpoint:** `GET /health/metrics` (enhanced)
 - **New Data:** Database and route performance metrics
 
@@ -46,11 +51,11 @@ Enhanced performance monitoring has been successfully added to the MyERP backend
 
 ## New Endpoints
 
-| Endpoint | Description | Format |
-|----------|-------------|--------|
-| `GET /health/metrics/prometheus` | Prometheus metrics | text/plain |
-| `GET /health/performance` | Performance dashboard | JSON |
-| `GET /health/metrics` | Enhanced metrics (includes DB & routes) | JSON |
+| Endpoint                         | Description                             | Format     |
+| -------------------------------- | --------------------------------------- | ---------- |
+| `GET /health/metrics/prometheus` | Prometheus metrics                      | text/plain |
+| `GET /health/performance`        | Performance dashboard                   | JSON       |
+| `GET /health/metrics`            | Enhanced metrics (includes DB & routes) | JSON       |
 
 ## Quick Test
 

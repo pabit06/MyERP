@@ -58,36 +58,48 @@ docs/
 ## 📋 Categories
 
 ### Setup & Configuration (`setup/`)
+
 Documentation for setting up and configuring the system:
+
 - Database setup and configuration
 - Credentials and secrets management
 - Notification system setup
 
 ### Implementation (`implementation/`)
+
 Documentation about implementation progress and details:
+
 - Implementation summaries
 - Completed tasks
 - Remaining tasks
 - Improvements made
 
 ### Migration (`migration/`)
+
 Guides for migrating data or upgrading the system:
+
 - Migration instructions
 - Migration status
 
 ### RBAC (`rbac/`)
+
 Role-Based Access Control documentation:
+
 - Implementation details
 - Usage examples
 - Completion status
 
 ### Testing (`testing/`)
+
 Testing guides and setup instructions:
+
 - Notification testing
 - Report setup guides
 
 ### Project Information (`project/`)
+
 General project information:
+
 - Technology stack
 - Dependencies
 - Commands reference
@@ -95,7 +107,9 @@ General project information:
 - Project health reports
 
 ### Planning (`planning/`)
+
 Planning and structure documents:
+
 - Project plans
 - Folder structure listings
 
@@ -121,4 +135,3 @@ When adding new documentation:
 - ✅ **Clean root**: Root directory only contains README.md
 - ✅ **Scalable**: Easy to add new categories
 - ✅ **Maintainable**: Clear organization makes updates easier
-

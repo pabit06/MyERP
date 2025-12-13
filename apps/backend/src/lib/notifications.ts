@@ -666,6 +666,18 @@ export async function sendBulkNotification(
           if (channel === 'EMAIL' && !recipient.email) return;
           if ((channel === 'IN_APP' || channel === 'PUSH') && !recipient.userId) return;
 
+          // Template substitution: Replace {name}, {phone}, {email} placeholders
+          let personalizedMessage = message;
+          if (recipient.name) {
+            personalizedMessage = personalizedMessage.replace(/{name}/g, recipient.name);
+          }
+          if (recipient.phone) {
+            personalizedMessage = personalizedMessage.replace(/{phone}/g, recipient.phone);
+          }
+          if (recipient.email) {
+            personalizedMessage = personalizedMessage.replace(/{email}/g, recipient.email);
+          }
+
           await sendNotification({
             cooperativeId,
             userId: recipient.userId,
@@ -673,7 +685,7 @@ export async function sendBulkNotification(
             email: recipient.email,
             type: 'bulk_announcement',
             title,
-            message, // TODO: Template substitution if needed (e.g. Hello {name})
+            message: personalizedMessage,
             channel,
             metadata,
           });

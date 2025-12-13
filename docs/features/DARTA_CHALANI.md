@@ -1,6 +1,7 @@
 # Darta-Chalani Document Management System (DMS)
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [System Architecture](#system-architecture)
 3. [Data Models](#data-models)
@@ -22,6 +23,7 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 - **Patra Chalani**: Outgoing/internal correspondence (sent letters)
 
 ### Key Features
+
 - Fiscal year-based document numbering
 - Complete audit trail of document movements
 - Status-based workflow management
@@ -69,12 +71,12 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 {
   id: string
   cooperativeId: string
-  
+
   // Smart Numbering
   fiscalYear: string          // e.g., "2081/82"
   serialNo: number            // e.g., 1
   dartaNumber: string         // e.g., "D-081/82-001"
-  
+
   // Document Details
   title: string
   description?: string
@@ -83,30 +85,30 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
   status: DartaStatus         // ACTIVE | PROCESSING | COMPLETED | ARCHIVED | CANCELLED
   priority: DocumentPriority  // LOW | NORMAL | HIGH | URGENT
   remarks?: string
-  
+
   // Source Info (पत्र पठाउनेको विवरण)
   senderName: string          // Received From
   senderAddress?: string
   senderChalaniNo?: string    // प्राप्त पत्रको चलानी नं.
   senderChalaniDate?: Date    // प्राप्त पत्रको मिति
   receivedDate: Date          // दर्ता मिति
-  
+
   // Tracking
   qrCode?: string
   trackingCode?: string
   publicTrackingEnabled: boolean
-  
+
   // Audit Trail
   createdBy?: string
   updatedBy?: string
   closedBy?: string
-  
+
   // Soft Delete & Archival
   deletedAt?: Date
   isArchived: boolean
   archivedAt?: Date
   retentionUntil?: Date
-  
+
   // Relations
   documents: DartaDocument[]
   movements: DartaMovement[]
@@ -120,15 +122,15 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 {
   id: string
   cooperativeId: string
-  
+
   // Smart Numbering
   fiscalYear: string          // e.g., "2081/82"
   serialNo: number            // e.g., 1
   chalaniNumber: string       // e.g., "PC-081/82-001"
-  
+
   // Link to Darta (Reply)
   replyToDartaId?: string
-  
+
   // Document Details
   type: ChalaniType           // INCOMING | OUTGOING | INTERNAL
   subject: string
@@ -137,38 +139,38 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
   status: ChalaniStatus       // DRAFT | PENDING | IN_PROGRESS | APPROVED | SENT | COMPLETED | ARCHIVED | CANCELLED
   priority: DocumentPriority
   remarks?: string
-  
+
   // Receiver/Sender Details
   receiverName: string        // पत्र पाउने संस्था वा व्यक्ति
   receiverAddress?: string
   senderName?: string
   senderAddress?: string
-  
+
   // Dispatch Details
   date: Date                  // पत्रको मिति
   receivedDate?: Date
   sentDate?: Date             // चलानी मिति
   transportMode?: string      // Email | Post Office | By Hand | Courier
-  
+
   // CC/BODHARTHA
   bodhartha?: string
-  
+
   // Tracking
   qrCode?: string
   trackingCode?: string
   publicTrackingEnabled: boolean
-  
+
   // Audit Trail
   createdBy?: string
   updatedBy?: string
   completedBy?: string
-  
+
   // Soft Delete & Archival
   deletedAt?: Date
   isArchived: boolean
   archivedAt?: Date
   retentionUntil?: Date
-  
+
   // Relations
   documents: PatraChalaniDocument[]
   actions: PatraChalaniAction[]
@@ -178,6 +180,7 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 ### Enums
 
 #### DartaStatus
+
 - `ACTIVE`: Newly registered document (default)
 - `PROCESSING`: Under review/processing
 - `COMPLETED`: Processed and closed
@@ -185,6 +188,7 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 - `CANCELLED`: Cancelled/rejected
 
 #### ChalaniStatus
+
 - `DRAFT`: Being prepared (default)
 - `PENDING`: Awaiting approval/action
 - `IN_PROGRESS`: Being processed
@@ -195,12 +199,14 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 - `CANCELLED`: Cancelled
 
 #### DocumentPriority
+
 - `LOW`: Low priority
 - `NORMAL`: Normal priority (default)
 - `HIGH`: High priority
 - `URGENT`: Urgent
 
 #### DartaCategory
+
 - `GOVERNMENT_NOTICE`
 - `LOAN_REQUEST`
 - `MEMBER_APPLICATION`
@@ -211,6 +217,7 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 - `OTHER`
 
 #### ChalaniCategory
+
 - `OFFICIAL_CORRESPONDENCE`
 - `MEMBER_COMMUNICATION`
 - `GOVERNMENT_REPLY`
@@ -220,6 +227,7 @@ The Darta-Chalani Document Management System (DMS) is a comprehensive solution f
 - `OTHER`
 
 #### ChalaniType
+
 - `INCOMING`: Received correspondence
 - `OUTGOING`: Sent correspondence
 - `INTERNAL`: Internal memo/circular
@@ -239,6 +247,7 @@ ACTIVE → PROCESSING → COMPLETED → ARCHIVED
 ### Workflow Steps
 
 #### 1. Registration (ACTIVE)
+
 - Document received with sender details
 - Auto-generated Darta number (e.g., `D-081/82-001`)
 - Status: `ACTIVE` (default)
@@ -246,11 +255,13 @@ ACTIVE → PROCESSING → COMPLETED → ARCHIVED
 - Initial movement record created with type `CREATE`
 
 **Required Fields:**
+
 - `title`: Document title
 - `senderName`: Sender organization/person name
 - `receivedDate`: Registration date
 
 **Optional Fields:**
+
 - `description`: Document description
 - `subject`: Subject matter (विषय)
 - `category`: Document category
@@ -261,12 +272,14 @@ ACTIVE → PROCESSING → COMPLETED → ARCHIVED
 - `remarks`: Additional remarks
 
 #### 2. Processing (PROCESSING)
+
 - Status transition: `ACTIVE` → `PROCESSING`
 - Document forwarded/transferred between users/departments
 - All movements tracked in `DartaMovement` table
 - Multiple movements can occur during processing
 
 **Movement Types:**
+
 - `FORWARD`: Forward to another user/department
 - `TRANSFER`: Transfer ownership
 - `RETURN`: Return to sender
@@ -274,18 +287,21 @@ ACTIVE → PROCESSING → COMPLETED → ARCHIVED
 - `REJECT`: Reject the document
 
 #### 3. Completion (COMPLETED)
+
 - Status transition: `PROCESSING` → `COMPLETED`
 - Document processing finished
 - `closedAt` and `closedBy` automatically recorded
 - Can generate a Chalani (reply) from this Darta
 
 #### 4. Archival (ARCHIVED)
+
 - Status transition: `COMPLETED` → `ARCHIVED`
 - Document moved to archive
 - `archivedAt` and `archivedBy` recorded
 - Can be restored if needed
 
 #### 5. Cancellation (CANCELLED)
+
 - Status transition: Any → `CANCELLED`
 - Document cancelled/rejected
 - Terminal state
@@ -293,6 +309,7 @@ ACTIVE → PROCESSING → COMPLETED → ARCHIVED
 ### Movement Tracking
 
 Each movement is recorded with:
+
 - `movementType`: Type of movement
 - `fromUserId`: User who sent/transferred
 - `toUserId`: User who received
@@ -317,6 +334,7 @@ DRAFT → PENDING → IN_PROGRESS → APPROVED → SENT → COMPLETED → ARCHIV
 ### Workflow Steps
 
 #### 1. Draft Creation (DRAFT)
+
 - Create with receiver/sender details
 - Auto-generated Chalani number (e.g., `PC-081/82-001`)
 - Status: `DRAFT` (default)
@@ -324,12 +342,14 @@ DRAFT → PENDING → IN_PROGRESS → APPROVED → SENT → COMPLETED → ARCHIV
 - Attachments can be uploaded
 
 **Required Fields:**
+
 - `type`: INCOMING | OUTGOING | INTERNAL
 - `subject`: Letter subject
 - `receiverName`: Receiver organization/person name
 - `date`: Letter date (पत्रको मिति)
 
 **Optional Fields:**
+
 - `content`: Letter content (पत्रको ब्यहोरा)
 - `category`: Document category
 - `priority`: Priority level (default: NORMAL)
@@ -344,12 +364,14 @@ DRAFT → PENDING → IN_PROGRESS → APPROVED → SENT → COMPLETED → ARCHIV
 - `replyToDartaId`: Link to source Darta (for replies)
 
 #### 2. Review & Approval (PENDING → IN_PROGRESS)
+
 - Status transition: `DRAFT` → `PENDING` → `IN_PROGRESS`
 - Actions tracked in `PatraChalaniAction` table
 - Forward for approval if needed
 - Multiple actions can occur during processing
 
 **Action Types:**
+
 - `FORWARD`: Forward to another user/department
 - `REPLY`: Reply to a Darta (links via `replyToDartaId`)
 - `NOTE`: Add internal note
@@ -357,33 +379,39 @@ DRAFT → PENDING → IN_PROGRESS → APPROVED → SENT → COMPLETED → ARCHIV
 - `REJECT`: Reject the document
 
 **Status Updates:**
+
 - `FORWARD` or `REPLY` → Status becomes `IN_PROGRESS`
 - `APPROVE` → Status becomes `APPROVED`
 - `REJECT` → Status becomes `CANCELLED`
 
 #### 3. Approval (APPROVED)
+
 - Status transition: `IN_PROGRESS` → `APPROVED`
 - Document approved for dispatch
 - Ready to be sent
 
 #### 4. Dispatch (SENT)
+
 - Status transition: `APPROVED` → `SENT`
 - Document dispatched
 - `sentDate` and `transportMode` recorded
 - Track delivery if applicable
 
 #### 5. Completion (COMPLETED)
+
 - Status transition: `SENT` → `COMPLETED`
 - Process completed
 - `completedAt` and `completedBy` automatically recorded
 
 #### 6. Archival (ARCHIVED)
+
 - Status transition: `COMPLETED` → `ARCHIVED`
 - Document moved to archive
 - `archivedAt` and `archivedBy` recorded
 - Can be restored if needed
 
 #### 7. Cancellation (CANCELLED)
+
 - Status transition: Any → `CANCELLED`
 - Document cancelled
 - Terminal state
@@ -391,6 +419,7 @@ DRAFT → PENDING → IN_PROGRESS → APPROVED → SENT → COMPLETED → ARCHIV
 ### Action Tracking
 
 Each action is recorded with:
+
 - `actionType`: Type of action
 - `actionTo`: User/Department action is forwarded to
 - `remarks`: Action remarks
@@ -398,6 +427,7 @@ Each action is recorded with:
 - `actionDate`: Timestamp
 
 **Status Updates Based on Actions:**
+
 - `COMPLETE` → Status becomes `COMPLETED`, `completedAt` set
 - `ARCHIVE` → Status becomes `ARCHIVED`
 - `FORWARD` or `REPLY` → Status becomes `IN_PROGRESS`
@@ -409,6 +439,7 @@ Each action is recorded with:
 ### Format
 
 **Darta:** `D-YY/YY-NNN`
+
 - Prefix: `D-`
 - Fiscal Year: Last 2 digits of start year + last 2 digits of end year (e.g., `081/82`)
 - Serial Number: 3-digit sequential number (e.g., `001`)
@@ -416,6 +447,7 @@ Each action is recorded with:
 **Example:** `D-081/82-001`, `D-081/82-002`, etc.
 
 **Chalani:** `PC-YY/YY-NNN`
+
 - Prefix: `PC-`
 - Fiscal Year: Last 2 digits of start year + last 2 digits of end year (e.g., `081/82`)
 - Serial Number: 3-digit sequential number (e.g., `001`)
@@ -446,11 +478,13 @@ Each action is recorded with:
 ### Darta Endpoints
 
 #### List Dartas
+
 ```
 GET /api/darta
 ```
 
 **Query Parameters:**
+
 - `status`: Filter by status (ACTIVE, PROCESSING, COMPLETED, ARCHIVED, CANCELLED)
 - `category`: Filter by category
 - `search`: Search in title, dartaNumber, subject
@@ -459,6 +493,7 @@ GET /api/darta
 - `limit`: Items per page (default: 20, max: 100)
 
 **Response:**
+
 ```json
 {
   "dartas": [...],
@@ -472,11 +507,13 @@ GET /api/darta
 ```
 
 #### Get Darta Details
+
 ```
 GET /api/darta/:id
 ```
 
 **Response:**
+
 ```json
 {
   "id": "...",
@@ -489,11 +526,13 @@ GET /api/darta/:id
 ```
 
 #### Create Darta
+
 ```
 POST /api/darta
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Document Title",
@@ -512,6 +551,7 @@ POST /api/darta
 ```
 
 **Response:**
+
 ```json
 {
   "id": "...",
@@ -521,11 +561,13 @@ POST /api/darta
 ```
 
 #### Update Darta
+
 ```
 PUT /api/darta/:id
 ```
 
 **Request Body:**
+
 ```json
 {
   "title": "Updated Title",
@@ -536,11 +578,13 @@ PUT /api/darta/:id
 ```
 
 #### Record Movement
+
 ```
 POST /api/darta/:id/movement
 ```
 
 **Request Body:**
+
 ```json
 {
   "movementType": "FORWARD",
@@ -553,17 +597,20 @@ POST /api/darta/:id/movement
 ```
 
 #### Upload Document
+
 ```
 POST /api/darta/:id/document
 Content-Type: multipart/form-data
 ```
 
 **Form Data:**
+
 - `file`: File to upload
 - `title`: Document title
 - `description`: Document description
 
 #### Delete Document
+
 ```
 DELETE /api/darta/:id/document/:docId
 ```
@@ -571,11 +618,13 @@ DELETE /api/darta/:id/document/:docId
 ### Patra Chalani Endpoints
 
 #### List Patra Chalanis
+
 ```
 GET /api/patra-chalani
 ```
 
 **Query Parameters:**
+
 - `type`: Filter by type (INCOMING, OUTGOING, INTERNAL)
 - `status`: Filter by status
 - `category`: Filter by category
@@ -587,16 +636,19 @@ GET /api/patra-chalani
 - `limit`: Items per page (default: 20, max: 100)
 
 #### Get Patra Chalani Details
+
 ```
 GET /api/patra-chalani/:id
 ```
 
 #### Create Patra Chalani
+
 ```
 POST /api/patra-chalani
 ```
 
 **Request Body:**
+
 ```json
 {
   "type": "OUTGOING",
@@ -619,16 +671,19 @@ POST /api/patra-chalani
 ```
 
 #### Update Patra Chalani
+
 ```
 PUT /api/patra-chalani/:id
 ```
 
 #### Add Action
+
 ```
 POST /api/patra-chalani/:id/action
 ```
 
 **Request Body:**
+
 ```json
 {
   "actionType": "FORWARD",
@@ -638,6 +693,7 @@ POST /api/patra-chalani/:id/action
 ```
 
 **Action Types:**
+
 - `FORWARD`: Forward to another user/department
 - `REPLY`: Reply to a Darta
 - `NOTE`: Add internal note
@@ -648,12 +704,14 @@ POST /api/patra-chalani/:id/action
 - `CANCEL`: Cancel the document
 
 #### Upload Document
+
 ```
 POST /api/patra-chalani/:id/document
 Content-Type: multipart/form-data
 ```
 
 #### Delete Document
+
 ```
 DELETE /api/patra-chalani/:id/document/:docId
 ```
@@ -663,35 +721,41 @@ DELETE /api/patra-chalani/:id/document/:docId
 ## Features & Capabilities
 
 ### 1. Fiscal Year Management
+
 - Documents organized by Nepali fiscal year
 - Automatic fiscal year detection
 - Support for custom fiscal years
 - Serial numbers reset each fiscal year
 
 ### 2. Atomic Numbering
+
 - Race-condition safe serial number generation
 - Uses counter tables with database transactions
 - Prevents duplicate numbers
 - Unique per cooperative per fiscal year
 
 ### 3. Status Management
+
 - Clear status transitions
 - Automatic status updates based on actions
 - Status history tracking
 - Terminal states (ARCHIVED, CANCELLED)
 
 ### 4. Movement Tracking
+
 - Complete audit trail of document movements
 - User and department tracking
 - Movement history with timestamps
 - Remarks for each movement
 
 ### 5. Document Linking
+
 - Darta-Chalani relationship tracking
 - Reply chain tracking via `replyToDartaId`
 - Generated Chalani tracking from Darta
 
 ### 6. File Management
+
 - Multiple attachments per document
 - Versioned document storage
 - Support for multiple storage providers
@@ -699,34 +763,40 @@ DELETE /api/patra-chalani/:id/document/:docId
 - Soft delete for documents
 
 ### 7. Soft Delete
+
 - Documents can be soft-deleted
 - `deletedAt` timestamp
 - Can be restored if needed
 - Excluded from normal queries
 
 ### 8. Retention Policies
+
 - Auto-archive based on `retentionUntil` date
 - Auto-delete support (future implementation)
 - Configurable retention periods
 
 ### 9. Public Tracking
+
 - Optional QR codes for documents
 - Public tracking codes
 - Public tracking page support
 - Enable/disable per document
 
 ### 10. Search & Filtering
+
 - Full-text search support (planned)
 - Filter by status, category, fiscal year
 - Date range filtering
 - Search across multiple fields
 
 ### 11. Priority Management
+
 - Four priority levels (LOW, NORMAL, HIGH, URGENT)
 - Visual indicators in UI
 - Filtering by priority
 
 ### 12. Audit Trail
+
 - Complete user tracking (created, updated, closed, completed)
 - Timestamp tracking for all actions
 - Movement and action history
@@ -754,8 +824,8 @@ const response = await fetch('/api/darta', {
     senderChalaniNo: 'MOF-2024-001',
     senderChalaniDate: '2024-01-15',
     receivedDate: '2024-01-20',
-    remarks: 'Urgent attention required'
-  })
+    remarks: 'Urgent attention required',
+  }),
 });
 
 // Response includes auto-generated dartaNumber: "D-081/82-001"
@@ -774,8 +844,8 @@ const response = await fetch(`/api/darta/${dartaId}/movement`, {
     toUserId: targetUserId,
     fromDepartment: 'Reception',
     toDepartment: 'Compliance',
-    remarks: 'Forwarding for compliance review'
-  })
+    remarks: 'Forwarding for compliance review',
+  }),
 });
 ```
 
@@ -799,8 +869,8 @@ const response = await fetch('/api/patra-chalani', {
     priority: 'HIGH',
     transportMode: 'Email',
     replyToDartaId: dartaId, // Link to original Darta
-    remarks: 'Reply to compliance notice'
-  })
+    remarks: 'Reply to compliance notice',
+  }),
 });
 ```
 
@@ -813,8 +883,8 @@ await fetch(`/api/patra-chalani/${chalaniId}/action`, {
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
     actionType: 'APPROVE',
-    remarks: 'Approved for dispatch'
-  })
+    remarks: 'Approved for dispatch',
+  }),
 });
 
 // Step 2: Update status to SENT
@@ -824,8 +894,8 @@ await fetch(`/api/patra-chalani/${chalaniId}`, {
   body: JSON.stringify({
     status: 'SENT',
     sentDate: '2024-01-26',
-    transportMode: 'Email'
-  })
+    transportMode: 'Email',
+  }),
 });
 ```
 
@@ -840,7 +910,7 @@ formData.append('description', 'Additional information');
 
 const response = await fetch(`/api/darta/${dartaId}/document`, {
   method: 'POST',
-  body: formData
+  body: formData,
 });
 ```
 
@@ -860,6 +930,7 @@ const data = await response.json();
 ### Database Schema
 
 #### Key Tables
+
 - `dartas`: Main Darta records
 - `darta_documents`: Document attachments for Darta
 - `darta_movements`: Movement history for Darta
@@ -870,6 +941,7 @@ const data = await response.json();
 - `chalani_serial_counters`: Atomic counter for Chalani numbering
 
 #### Indexes
+
 - `(cooperativeId, fiscalYear, serialNo)`: Unique constraint
 - `(cooperativeId, status)`: Status filtering
 - `(cooperativeId, fiscalYear)`: Fiscal year filtering
@@ -881,11 +953,13 @@ const data = await response.json();
 The system includes status mapping functions to handle frontend-backend status differences:
 
 **Darta Status Mapping:**
+
 - Frontend `PENDING` → Backend `ACTIVE`
 - Frontend `IN_PROGRESS` → Backend `PROCESSING`
 - Frontend `DONE` → Backend `COMPLETED`
 
 **Chalani Status Mapping:**
+
 - Frontend `ACTIVE` → Backend `PENDING`
 - Frontend `PROCESSING` → Backend `IN_PROGRESS`
 - Frontend `DONE` → Backend `COMPLETED`
@@ -898,21 +972,21 @@ async function generateSerialNumber(cooperativeId: string, fiscalYear: string) {
   return await prisma.$transaction(async (tx) => {
     // Get or create counter
     let counter = await tx.dartaSerialCounter.findUnique({
-      where: { cooperativeId_fiscalYear: { cooperativeId, fiscalYear } }
+      where: { cooperativeId_fiscalYear: { cooperativeId, fiscalYear } },
     });
-    
+
     if (!counter) {
       counter = await tx.dartaSerialCounter.create({
-        data: { cooperativeId, fiscalYear, lastSerialNo: 0 }
+        data: { cooperativeId, fiscalYear, lastSerialNo: 0 },
       });
     }
-    
+
     // Increment atomically
     counter = await tx.dartaSerialCounter.update({
       where: { id: counter.id },
-      data: { lastSerialNo: { increment: 1 } }
+      data: { lastSerialNo: { increment: 1 } },
     });
-    
+
     return counter.lastSerialNo;
   });
 }
@@ -921,6 +995,7 @@ async function generateSerialNumber(cooperativeId: string, fiscalYear: string) {
 ### Date Validation
 
 **Application-level constraints:**
+
 - Darta: `senderChalaniDate <= receivedDate` (if both provided)
 - PatraChalani (Incoming): `receivedDate <= date`
 - PatraChalani (Outgoing): `date <= sentDate`
@@ -932,25 +1007,27 @@ These should be enforced in application code or via Prisma middleware.
 PostgreSQL GIN indexes can be added via raw SQL migration:
 
 ```sql
-CREATE INDEX idx_darta_title_gin ON dartas 
+CREATE INDEX idx_darta_title_gin ON dartas
 USING gin(to_tsvector('nepali', title));
 
-CREATE INDEX idx_darta_subject_gin ON dartas 
+CREATE INDEX idx_darta_subject_gin ON dartas
 USING gin(to_tsvector('nepali', subject));
 
-CREATE INDEX idx_chalani_subject_gin ON patra_chalanis 
+CREATE INDEX idx_chalani_subject_gin ON patra_chalanis
 USING gin(to_tsvector('nepali', subject));
 ```
 
 ### File Storage
 
 Supports multiple storage providers:
+
 - **LOCAL**: Local file system
 - **S3**: AWS S3
 - **AZURE_BLOB**: Azure Blob Storage
 - **GCS**: Google Cloud Storage
 
 File metadata includes:
+
 - `filePath`: Local path or S3 key
 - `fileUrl`: Public/pre-signed URL
 - `fileHash`: SHA-256 hash for integrity
@@ -963,36 +1040,42 @@ File metadata includes:
 ## Best Practices
 
 ### 1. Document Creation
+
 - Always provide required fields
 - Use appropriate categories
 - Set correct priority levels
 - Include sender/receiver details
 
 ### 2. Status Management
+
 - Follow proper status transitions
 - Don't skip statuses
 - Use terminal states appropriately
 - Record movements/actions for audit
 
 ### 3. Numbering
+
 - Don't manually set serial numbers
 - Let the system generate numbers
 - Use fiscal year correctly
 - Handle custom fiscal years carefully
 
 ### 4. File Management
+
 - Validate file types and sizes
 - Use appropriate storage providers
 - Maintain file versioning
 - Clean up deleted files
 
 ### 5. Security
+
 - Validate user permissions
 - Check cooperative access
 - Sanitize user inputs
 - Use parameterized queries
 
 ### 6. Performance
+
 - Use pagination for large lists
 - Index frequently queried fields
 - Cache fiscal year calculations
@@ -1005,22 +1088,27 @@ File metadata includes:
 ### Common Issues
 
 #### 1. Duplicate Serial Numbers
+
 **Problem:** Two documents get the same serial number
 **Solution:** Ensure atomic counter transactions are working correctly
 
 #### 2. Status Mapping Errors
+
 **Problem:** Frontend status doesn't match backend enum
 **Solution:** Use status mapping functions in backend routes
 
 #### 3. Fiscal Year Mismatch
+
 **Problem:** Document created with wrong fiscal year
 **Solution:** Verify fiscal year calculation and custom fiscal year handling
 
 #### 4. File Upload Failures
+
 **Problem:** Files not uploading
 **Solution:** Check file size limits, storage provider configuration, permissions
 
 #### 5. Missing Audit Trail
+
 **Problem:** Movements/actions not recorded
 **Solution:** Ensure movement/action endpoints are called with proper data
 
@@ -1044,17 +1132,20 @@ File metadata includes:
 ## Support & Maintenance
 
 ### Module Requirements
+
 - DMS module must be enabled for the cooperative
 - Proper user permissions required
 - Storage provider configured
 
 ### Database Maintenance
+
 - Regular cleanup of soft-deleted documents
 - Archive old documents based on retention policies
 - Monitor serial counter tables
 - Optimize indexes periodically
 
 ### Monitoring
+
 - Track document creation rates
 - Monitor file storage usage
 - Check for failed uploads
@@ -1073,4 +1164,3 @@ For additional support or feature requests, please refer to the main project doc
 **Last Updated:** 2024
 **Version:** 1.0.0
 **Maintained By:** MyERP Development Team
-

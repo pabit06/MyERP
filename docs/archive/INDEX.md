@@ -57,4 +57,3 @@ Quick reference guide to all documentation files.
 - [Main Documentation](documentation.md)
 - [Darta-Chalani Documentation](darta-chalani-documentation.md)
 - [Reference Materials](reference/)
-

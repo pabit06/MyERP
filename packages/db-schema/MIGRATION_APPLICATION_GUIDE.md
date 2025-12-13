@@ -3,6 +3,7 @@
 ## Migration File Created
 
 The migration file has been successfully created at:
+
 - `packages/db-schema/prisma/migrations/20250125120000_add_performance_indexes/migration.sql`
 
 This migration contains **151 CREATE INDEX statements** to improve database query performance.
@@ -12,6 +13,7 @@ This migration contains **151 CREATE INDEX statements** to improve database quer
 ### Prerequisites
 
 1. **Set DATABASE_URL**: Ensure your `DATABASE_URL` environment variable is set
+
    ```bash
    # Example (adjust for your database)
    export DATABASE_URL="postgresql://user:password@localhost:5432/myerp?schema=public"
@@ -25,21 +27,25 @@ This migration contains **151 CREATE INDEX statements** to improve database quer
 ### Apply Migration
 
 #### For Development:
+
 ```bash
 pnpm prisma migrate dev
 ```
 
 This will:
+
 - Apply any pending migrations
 - Regenerate Prisma Client
 - Update the migration history
 
 #### For Production:
+
 ```bash
 pnpm prisma migrate deploy
 ```
 
 This will:
+
 - Apply all pending migrations
 - Not regenerate Prisma Client (run `pnpm prisma generate` separately if needed)
 
@@ -60,7 +66,7 @@ psql $DATABASE_URL -c "\d+ members"  # Check indexes on members table
 This migration adds performance indexes to **18 database models**:
 
 1. **Member** - 6 indexes
-2. **Transaction** - 4 indexes  
+2. **Transaction** - 4 indexes
 3. **JournalEntry** - 3 indexes
 4. **Ledger** - 5 indexes
 5. **SavingAccount** - 5 indexes
@@ -98,6 +104,7 @@ After applying this migration, you should see:
 ### If indexes already exist:
 
 If some indexes already exist, you may need to:
+
 1. Remove the duplicate CREATE INDEX statements from the migration file
 2. Or use `CREATE INDEX IF NOT EXISTS` (PostgreSQL 9.5+)
 

@@ -1,15 +1,15 @@
 /**
  * Clear Rate Limit Script
- * 
+ *
  * This script clears the rate limit for authentication endpoints.
  * Note: This only works if the server is using in-memory rate limiting.
  * For production with Redis, you would need to clear Redis keys instead.
- * 
+ *
  * Usage: tsx scripts/clear-rate-limit.ts [IP_ADDRESS]
  * If no IP is provided, it will clear all rate limits (requires server restart)
  */
 
-import { authLimiter } from '../src/middleware/security.js';
+// Rate limiter import removed - not used in this script
 
 const ipAddress = process.argv[2];
 
@@ -29,4 +29,3 @@ if (ipAddress) {
   console.log('📝 Note: Rate limits are stored in memory by default.');
   console.log('   After 15 minutes, the rate limit window expires automatically.');
 }
-

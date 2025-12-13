@@ -1,11 +1,13 @@
 # MyERP Structure Improvements Plan
 
 ## Overview
+
 Implementing industry-standard improvements based on professional suggestions to enhance scalability, maintainability, and developer experience for long-term project health.
 
 ## 1. Backend Configuration Management
 
 ### Create `apps/backend/src/config/` folder structure
+
 - **`apps/backend/src/config/env.ts`**: Environment variable validation using Zod
   - Validate all environment variables from `env.example`
   - Type-safe environment configuration
@@ -23,6 +25,7 @@ Implementing industry-standard improvements based on professional suggestions to
 - **`apps/backend/src/config/index.ts`**: Centralized config exports
 
 ### Update existing files
+
 - **`apps/backend/src/index.ts`**: Replace `dotenv.config()` and direct `process.env` access with typed config imports
 - **`apps/backend/src/lib/auth.ts`**: Use config for JWT settings
 - **`apps/backend/src/lib/notifications.ts`**: Use config for SMTP/SMS/FCM settings
@@ -31,11 +34,12 @@ Implementing industry-standard improvements based on professional suggestions to
 ## 2. Enhanced Database Seeding
 
 ### Enhance `packages/db-schema/prisma/seed.ts`
+
 Add comprehensive default data seeding following PEARLS standards for Nepali cooperatives:
 
 - **Default Roles**: Create essential roles with appropriate permissions
   - **Super Admin**: Full system access (`*` permission) - for IT/system administrators
-  - **Manager**: View all, approve workflows, manage operations (members:*, loans:*, workflow:*)
+  - **Manager**: View all, approve workflows, manage operations (members:_, loans:_, workflow:\*)
   - **Teller/Staff**: Limited to voucher entry and basic operations (transactions:create, members:view)
   - Use permission constants from `apps/backend/src/lib/permissions.ts`
   - Each role with predefined permission sets matching cooperative hierarchy
@@ -69,6 +73,7 @@ Add comprehensive default data seeding following PEARLS standards for Nepali coo
   - Each workflow with proper state transitions and role assignments
 
 ### Update seed script structure
+
 - **Idempotency**: Use Prisma `upsert` (update if exists, create if not) wherever possible
   - Prevents duplicate entries if seed script runs multiple times
   - Use `findFirst` + conditional create pattern where upsert not applicable
@@ -81,6 +86,7 @@ Add comprehensive default data seeding following PEARLS standards for Nepali coo
 ## 3. Shared Zod Schemas Enhancement
 
 ### Create `packages/shared-types/src/zod-schemas.ts`
+
 - **Separate DB Schemas from DTO Schemas**:
   - **DTO Schemas** (Data Transfer Objects): What the API accepts from frontend
     - May exclude fields that backend sets automatically (e.g., `isVerified`, `createdAt`)
@@ -94,10 +100,12 @@ Add comprehensive default data seeding following PEARLS standards for Nepali coo
 - **Compliance Schemas**: AML, KYC validation DTOs
 
 ### Update `packages/shared-types/src/index.ts`
+
 - Export all Zod schemas
 - Maintain backward compatibility with existing exports
 
 ### Usage
+
 - Backend: Use for request validation in routes
 - Frontend: Use for form validation and type inference
 - Single source of truth for validation rules
@@ -106,7 +114,9 @@ Add comprehensive default data seeding following PEARLS standards for Nepali coo
 ## 4. Frontend Feature-Based Structure (Full Migration)
 
 ### Rationale
+
 Full migration is essential to avoid inconsistency ("half old, half new" structure) that would:
+
 - Make it difficult for new developers to understand the codebase
 - Risk component duplication in multiple locations
 - Create maintenance burden with mixed patterns
@@ -114,9 +124,11 @@ Full migration is essential to avoid inconsistency ("half old, half new" structu
 Since the project is already substantial, investing 1-2 hours now for complete migration is the wisest long-term decision.
 
 ### Create `apps/frontend-web/src/features/` folder
+
 Complete migration from type-based to feature-based structure:
 
 **Feature folders to create:**
+
 - `features/auth/` - Login, register, authentication components
 - `features/dashboard/` - Dashboard charts, layouts, overview components
 - `features/accounting/` - General ledger, journal, day book, chart of accounts
@@ -132,6 +144,7 @@ Complete migration from type-based to feature-based structure:
 - `features/budget/` - Budget module (new feature, ready for future)
 
 **Each feature folder structure:**
+
 ```
 features/[feature-name]/
   ├── components/     # Feature-specific components
@@ -143,6 +156,7 @@ features/[feature-name]/
 ```
 
 ### Migration strategy (Full Migration)
+
 1. Create complete `features/` folder structure for all existing features
 2. Move ALL existing code from `app/`, `components/`, `lib/` to appropriate feature folders
 3. Update ALL imports across the entire codebase in one pass
@@ -152,11 +166,13 @@ features/[feature-name]/
 7. Ensure no duplicate code remains in old locations
 
 ### Next.js App Router Best Practices
+
 - **Keep `app/` folder strictly for Routing**: Only `page.tsx`, `layout.tsx`, and minimal data fetching
 - **UI Logic in Features**: All actual UI components, hooks, and business logic live in `features/`
 - **Pages Import from Features**: `app/loans/page.tsx` imports components from `features/loans/components/`
 
 ### Circular Dependency Prevention
+
 - **Avoid Cross-Feature Imports**: `features/loans` should NOT import from `features/accounting` and vice-versa
 - **Shared Code Location**: If features need to share code, move that specific code to:
   - `components/shared/` for shared UI components
@@ -164,6 +180,7 @@ features/[feature-name]/
 - **Dependency Direction**: Features → Shared Components/Utils (one-way dependency)
 
 ### Files to reorganize
+
 - Move `app/[feature]/*` pages to use feature-based imports
 - Move feature-specific components from `components/` to `features/[feature]/components/`
 - Move feature hooks to `features/[feature]/hooks/`
@@ -172,6 +189,7 @@ features/[feature-name]/
 ## 5. Middleware/Context Updates (SaaS Multi-Tenancy)
 
 ### Request Context Enhancement
+
 Since we're moving to a SaaS model with specific seeding per cooperative, ensure backend context properly tracks the active cooperative.
 
 - **Typed Request Context**: Extend Express Request type to include:
@@ -189,6 +207,7 @@ Since we're moving to a SaaS model with specific seeding per cooperative, ensure
   - Ensure all controllers can access `req.currentCooperativeId` with type safety
 
 ### Files to Update
+
 - `apps/backend/src/middleware/tenant.ts` - Enhance cooperative extraction logic
 - `apps/backend/src/types/express.d.ts` - Extend Request interface
 - All controllers using `req.cooperativeId` - Update to use typed `req.currentCooperativeId`
@@ -196,6 +215,7 @@ Since we're moving to a SaaS model with specific seeding per cooperative, ensure
 ## 6. Static Assets Organization
 
 ### Verify and document `apps/frontend-web/public/` structure
+
 - **Current assets**: Logo, Nepali datepicker files
 - **Add missing assets**:
   - `favicon.ico` and related icons
@@ -204,6 +224,7 @@ Since we're moving to a SaaS model with specific seeding per cooperative, ensure
   - Document templates (if any)
 
 ### Create asset organization structure
+
 ```
 public/
   ├── images/
@@ -227,23 +248,28 @@ public/
 ## Files to Create
 
 ### Backend
+
 - `apps/backend/src/config/env.ts`
 - `apps/backend/src/config/logger.ts`
 - `apps/backend/src/config/index.ts`
 
 ### Database
+
 - Enhanced `packages/db-schema/prisma/seed.ts` (expand existing)
 
 ### Shared Types
+
 - `packages/shared-types/src/zod-schemas.ts`
 
 ### Frontend
+
 - New `apps/frontend-web/src/features/` directory structure
 - Migration of existing files to feature folders
 
 ## Files to Modify
 
 ### Backend
+
 - `apps/backend/src/index.ts` - Use config
 - `apps/backend/src/lib/auth.ts` - Use config
 - `apps/backend/src/lib/notifications.ts` - Use config
@@ -252,9 +278,11 @@ public/
 - All files using `process.env` directly
 
 ### Shared Types
+
 - `packages/shared-types/src/index.ts` - Export schemas
 
 ### Frontend
+
 - All component files (move to features)
 - All page files (update imports)
 - Import statements across codebase

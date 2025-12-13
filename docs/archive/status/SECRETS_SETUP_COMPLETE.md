@@ -5,7 +5,7 @@
 All required secrets have been successfully added to your GitHub repository:
 
 1. ✅ **JWT_SECRET** - Added Dec 5, 2025
-2. ✅ **JWT_EXPIRES_IN** - Added Dec 5, 2025  
+2. ✅ **JWT_EXPIRES_IN** - Added Dec 5, 2025
 3. ✅ **NEXT_PUBLIC_API_URL** - Added Dec 5, 2025 (Value: `http://localhost:3000/api`)
 
 ## Next Steps: Test the Workflows

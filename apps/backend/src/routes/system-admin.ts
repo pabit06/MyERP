@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { requireSystemAdmin } from '../middleware/tenant.js';
 import { prisma } from '../lib/prisma.js';
+import { hashPassword } from '../lib/auth.js';
 
 const router = express.Router();
 
@@ -62,6 +63,152 @@ router.get('/cooperatives', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Get cooperatives error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+/**
+ * POST /api/system-admin/cooperatives
+ * Create a new cooperative and admin user (System Admin only)
+ */
+router.post('/cooperatives', async (req: Request, res: Response) => {
+  try {
+    const {
+      name,
+      subdomain,
+      email,
+      password,
+      firstName,
+      lastName,
+      planId,
+      address,
+      website,
+      phone,
+      description,
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !subdomain || !email || !password || !firstName || !lastName) {
+      res.status(400).json({
+        error: 'Missing required fields: name, subdomain, email, password, firstName, lastName',
+      });
+      return;
+    }
+
+    // Validate subdomain format
+    if (!/^[a-z0-9-]+$/.test(subdomain)) {
+      res.status(400).json({
+        error: 'Subdomain must contain only lowercase letters, numbers, and hyphens',
+      });
+      return;
+    }
+
+    // Check if subdomain is already taken
+    const existingCooperative = await prisma.cooperative.findUnique({
+      where: { subdomain },
+    });
+
+    if (existingCooperative) {
+      res.status(409).json({ error: 'Subdomain already taken' });
+      return;
+    }
+
+    // Check if email is already taken
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      res.status(409).json({ error: 'Email already registered' });
+      return;
+    }
+
+    // Get plan (use provided planId or default to Basic plan)
+    let plan = null;
+    if (planId) {
+      plan = await prisma.plan.findUnique({ where: { id: planId } });
+      if (!plan) {
+        res.status(404).json({ error: 'Plan not found' });
+        return;
+      }
+    } else {
+      plan = await prisma.plan.findFirst({ where: { name: 'Basic' } });
+      if (!plan) {
+        // Create Basic plan if it doesn't exist
+        plan = await prisma.plan.create({
+          data: {
+            name: 'Basic',
+            monthlyPrice: 0,
+            enabledModules: [],
+          },
+        });
+      }
+    }
+
+    // Create cooperative, subscription, profile, and user in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Create cooperative
+      const cooperative = await tx.cooperative.create({
+        data: {
+          name,
+          subdomain,
+        },
+      });
+
+      // Create subscription
+      await tx.subscription.create({
+        data: {
+          cooperativeId: cooperative.id,
+          planId: plan.id,
+          status: 'active',
+        },
+      });
+
+      // Create cooperative profile
+      await tx.cooperativeProfile.create({
+        data: {
+          cooperativeId: cooperative.id,
+          description,
+          address,
+          website,
+          phone,
+        },
+      });
+
+      // Hash password
+      const passwordHash = await hashPassword(password);
+
+      // Create admin user
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          firstName,
+          lastName,
+          cooperativeId: cooperative.id,
+          isActive: true,
+        },
+      });
+
+      return { cooperative, user };
+    });
+
+    res.status(201).json({
+      message: 'Cooperative registered successfully',
+      cooperative: {
+        id: result.cooperative.id,
+        name: result.cooperative.name,
+        subdomain: result.cooperative.subdomain,
+      },
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+      },
+    });
+  } catch (error) {
+    console.error('Create cooperative error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

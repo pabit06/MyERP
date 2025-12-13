@@ -11,6 +11,7 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 **File:** `.github/workflows/ci.yml`
 
 **Jobs:**
+
 - ✅ **Lint**: Runs ESLint on all code
 - ✅ **Type Check**: Validates TypeScript types
 - ✅ **Build**: Builds backend and frontend
@@ -19,6 +20,7 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 - ✅ **E2E Tests**: Runs end-to-end tests with full server
 
 **Triggers:**
+
 - Push to `main`, `develop`, or `upgrade/**` branches
 - Pull requests to `main` or `develop`
 
@@ -27,10 +29,12 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 **File:** `.github/workflows/cd.yml`
 
 **Jobs:**
+
 - ✅ **Deploy Backend**: Builds and packages backend
 - ✅ **Deploy Frontend**: Builds and packages frontend
 
 **Triggers:**
+
 - Push to `main` branch
 - Version tags (`v*`)
 
@@ -41,6 +45,7 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 **File:** `.github/workflows/security-audit.yml`
 
 **Features:**
+
 - ✅ Weekly security audits
 - ✅ Checks for known vulnerabilities
 - ✅ Fails on moderate+ severity issues
@@ -53,6 +58,7 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 **File:** `.github/workflows/dependency-update.yml`
 
 **Features:**
+
 - ✅ Weekly dependency update checks
 - ✅ Creates GitHub issues for updates
 - ✅ Reports outdated packages
@@ -62,20 +68,24 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 ## Workflow Features
 
 ### Parallel Execution
+
 - All CI jobs run in parallel for faster feedback
 - Independent jobs don't block each other
 
 ### Service Containers
+
 - PostgreSQL service for database tests
 - Automatic health checks
 - Isolated test environment
 
 ### Artifact Management
+
 - E2E test reports uploaded as artifacts
 - Build artifacts for deployment
 - 7-30 day retention
 
 ### Caching
+
 - pnpm cache for faster installs
 - Node.js version caching
 - Reduces workflow execution time
@@ -87,6 +97,7 @@ A comprehensive CI/CD pipeline has been set up using GitHub Actions to automate 
 Go to your repository settings → Secrets and variables → Actions, and add:
 
 **Required for CI:**
+
 ```
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/myerp_test
 JWT_SECRET=your-test-jwt-secret
@@ -95,6 +106,7 @@ NEXT_PUBLIC_API_URL=https://api.yourdomain.com
 ```
 
 **Optional for CD:**
+
 ```
 BACKEND_URL=https://api.yourdomain.com
 FRONTEND_URL=https://yourdomain.com
@@ -119,6 +131,7 @@ Workflows are automatically enabled when pushed to the repository. To verify:
 Edit `.github/workflows/cd.yml` to add your deployment steps:
 
 **Example for Docker:**
+
 ```yaml
 - name: Build and push Docker image
   uses: docker/build-push-action@v4
@@ -129,6 +142,7 @@ Edit `.github/workflows/cd.yml` to add your deployment steps:
 ```
 
 **Example for Vercel:**
+
 ```yaml
 - name: Deploy to Vercel
   uses: amondnet/vercel-action@v20
@@ -139,6 +153,7 @@ Edit `.github/workflows/cd.yml` to add your deployment steps:
 ## Workflow Execution
 
 ### On Push/PR
+
 1. **Lint** runs first (fastest check)
 2. **Type Check** runs in parallel
 3. **Build** runs in parallel
@@ -146,6 +161,7 @@ Edit `.github/workflows/cd.yml` to add your deployment steps:
 5. All must pass for PR to be mergeable
 
 ### On Main Branch Push
+
 1. All CI checks run
 2. If successful, CD workflows trigger
 3. Backend and frontend are built and packaged
@@ -163,16 +179,19 @@ Edit `.github/workflows/cd.yml` to add your deployment steps:
 ## Monitoring
 
 ### View Workflow Runs
+
 - Go to "Actions" tab in GitHub
 - See status of all workflow runs
 - View detailed logs for each job
 
 ### Test Results
+
 - Unit test results in job logs
 - E2E test reports as downloadable artifacts
 - Coverage reports (if configured)
 
 ### Security Alerts
+
 - GitHub will show security alerts in repository
 - Weekly audit results in workflow runs
 - Dependency update issues created automatically
@@ -200,7 +219,7 @@ Edit the `schedule` section in workflow files:
 
 ```yaml
 schedule:
-  - cron: '0 9 * * 1'  # Every Monday at 9 AM UTC
+  - cron: '0 9 * * 1' # Every Monday at 9 AM UTC
 ```
 
 ### Adding Environments
@@ -238,6 +257,7 @@ For a fast setup, see [.github/QUICK_START.md](../../.github/QUICK_START.md) - g
 **Detailed Guide:** See [.github/BRANCH_PROTECTION_SETUP.md](../../.github/BRANCH_PROTECTION_SETUP.md)
 
 **Quick Setup:**
+
 1. Go to Settings → Branches
 2. Add rule for `main` branch:
    - ✅ Require status checks to pass
@@ -249,21 +269,25 @@ For a fast setup, see [.github/QUICK_START.md](../../.github/QUICK_START.md) - g
 ## Troubleshooting
 
 ### Workflows Not Running
+
 - Check if workflows are enabled in repository settings
 - Verify workflow files are in `.github/workflows/`
 - Check for syntax errors in YAML files
 
 ### Tests Failing
+
 - Verify database connection string
 - Check environment variables
 - Review test logs for specific errors
 
 ### Build Failing
+
 - Check for TypeScript errors
 - Verify all dependencies are in package.json
 - Review build logs
 
 ### Deployment Failing
+
 - Verify deployment secrets are set
 - Check deployment target accessibility
 - Review deployment logs
@@ -271,16 +295,19 @@ For a fast setup, see [.github/QUICK_START.md](../../.github/QUICK_START.md) - g
 ## Integration with Other Tools
 
 ### Code Quality
+
 - ESLint for code linting
 - Prettier for code formatting
 - TypeScript for type checking
 
 ### Testing
+
 - Vitest for unit tests
 - Playwright for E2E tests
 - Coverage reporting (can be added)
 
 ### Deployment Options
+
 - Docker containers
 - Kubernetes clusters
 - Vercel/Netlify for frontend
@@ -290,11 +317,13 @@ For a fast setup, see [.github/QUICK_START.md](../../.github/QUICK_START.md) - g
 ## Cost Considerations
 
 GitHub Actions provides:
+
 - **Free tier**: 2,000 minutes/month for private repos
 - **Public repos**: Unlimited minutes
 - **Additional minutes**: $0.008/minute
 
 **Tips to reduce costs:**
+
 - Use caching effectively
 - Run only necessary jobs
 - Use workflow concurrency limits
@@ -313,6 +342,7 @@ Track these metrics to measure CI/CD effectiveness:
 ## Conclusion
 
 The CI/CD pipeline is now set up and ready to use. It will:
+
 - ✅ Automatically test all code changes
 - ✅ Build applications consistently
 - ✅ Check for security vulnerabilities

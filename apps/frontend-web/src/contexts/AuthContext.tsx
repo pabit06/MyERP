@@ -21,6 +21,7 @@ interface User {
     id: string;
     name: string;
   };
+  isSystemAdmin?: boolean;
 }
 
 interface Cooperative {
@@ -37,6 +38,7 @@ interface AuthContextType {
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isSystemAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   hasModule: (moduleName: string) => boolean;
@@ -171,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     token,
     isLoading,
     isAuthenticated: !!user && !!token,
+    isSystemAdmin: user?.isSystemAdmin || false,
     login,
     logout,
     hasModule,
