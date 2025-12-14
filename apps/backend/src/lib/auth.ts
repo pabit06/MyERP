@@ -23,7 +23,7 @@ export const generateToken = (payload: JWTPayload): string => {
     tokenPayload.roleId = payload.roleId;
   }
   const options: SignOptions = {
-    expiresIn: JWT_EXPIRES_IN as string,
+    expiresIn: JWT_EXPIRES_IN as SignOptions['expiresIn'],
   };
   return jwt.sign(tokenPayload, JWT_SECRET, options);
 };

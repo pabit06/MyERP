@@ -1,6 +1,53 @@
 import { prisma } from '../../lib/prisma.js';
 
 /**
+ * Get employee allowances
+ * This function can be extended when the schema is updated to support allowances.
+ * For now, returns an empty object. Future implementation can:
+ * 1. Check Employee.allowances JSON field
+ * 2. Check Department.defaultAllowances JSON field
+ * 3. Check Designation.defaultAllowances JSON field
+ * 4. Query a separate AllowanceConfiguration table
+ */
+async function getEmployeeAllowances(
+  _employeeId: string,
+  _departmentId: string | null,
+  _designationId: string | null
+): Promise<Record<string, number>> {
+  // NOTE: Schema update required to support allowances.
+  // When `Employee`, `Department`, or `Designation` models are updated to include `allowances` or `defaultAllowances` (JSON),
+  // uncomment and adapt the logic below.
+
+  /*
+  const employee = await prisma.employee.findUnique({
+    where: { id: employeeId },
+    include: { department: true, designation: true }
+  });
+
+  const allowances: Record<string, number> = {};
+
+  // Check employee-specific allowances first
+  // if (employee?.allowances) {
+  //   Object.assign(allowances, employee.allowances);
+  // }
+
+  // Then check designation defaults
+  // if (employee?.designation?.defaultAllowances) {
+  //   Object.assign(allowances, employee.designation.defaultAllowances);
+  // }
+
+  // Finally check department defaults
+  // if (employee?.department?.defaultAllowances) {
+  //   Object.assign(allowances, employee.department.defaultAllowances);
+  // }
+
+  return allowances;
+  */
+
+  return {};
+}
+
+/**
  * Default Nepal TDS slabs (as of 2024)
  * These should be configurable via PayrollSettings.tdsConfig
  */
@@ -196,7 +243,13 @@ export async function calculateEmployeePayroll(
   // Get allowances from employee settings or department/designation defaults
   // NOTE: Schema currently does not support allowances on Employee/Department models.
   // This should be implemented when the schema is updated to include allowance configurations.
-  const allowances: Record<string, number> = {};
+  // For now, this function can be extended to fetch from a future AllowanceConfiguration table
+  // or from employee.metadata JSON field if needed.
+  const allowances = await getEmployeeAllowances(
+    employee.id,
+    employee.departmentId,
+    employee.designationId
+  );
   const totalAllowances = Object.values(allowances).reduce((sum, val) => sum + (val || 0), 0);
   const grossSalary = basicSalary + totalAllowances;
 

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { apiClient } from '@/lib/api';
+import { toast } from 'sonner';
 import {
   Building2,
   Calendar,
@@ -54,17 +56,15 @@ export default function OnboardingWizard() {
     // Check if profile is complete
     const checkProfile = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/profile`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (response.ok) {
-          const data = await response.json();
-          // If address is missing, show wizard
-          if (!data.profile?.address) {
-            setShowWizard(true);
+        const data = await apiClient.get<{ profile?: { address?: string } }>(
+          '/onboarding/profile',
+          {
+            skipErrorToast: true, // Don't annoy user if check fails silently
           }
+        );
+        // If address is missing, show wizard
+        if (data.profile && !data.profile.address) {
+          setShowWizard(true);
         }
       } catch (error) {
         console.error('Failed to check profile', error);
@@ -88,38 +88,26 @@ export default function OnboardingWizard() {
     try {
       if (currentStep === 0) {
         // Save Profile
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            address: formData.address,
-            phone: formData.phone,
-            website: formData.website,
-            description: formData.description,
-          }),
+        await apiClient.put('/onboarding/profile', {
+          address: formData.address,
+          phone: formData.phone,
+          website: formData.website,
+          description: formData.description,
         });
+        toast.success('Organization details saved');
         setCurrentStep(1);
       } else if (currentStep === 1) {
         // Save Settings (Date)
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/onboarding/settings`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            operationStartDate: formData.operationStartDate,
-          }),
+        await apiClient.put('/onboarding/settings', {
+          operationStartDate: formData.operationStartDate,
         });
+        toast.success('Setup completed successfully!');
         setShowWizard(false);
         router.refresh(); // Refresh to update dashboard state if needed
       }
     } catch (error) {
       console.error('Failed to save', error);
-      // Ideally show error toast
+      // apiClient handles most error toasts, but we can add specific ones if needed
     } finally {
       setIsLoading(false);
     }

@@ -46,4 +46,27 @@ export const memberListQuerySchema = z.object({
   memberType: z.enum(['INDIVIDUAL', 'INSTITUTION']).optional(),
   sortBy: z.string().optional(),
   sortOrder: z.enum(['asc', 'desc']).optional().default('desc'),
+  isActive: z.string().optional(),
+  hasMemberNumber: z.string().optional(),
+  workflowStatus: z.string().optional(),
+  riskCategory: z.string().optional(),
+  province: z.string().optional(),
+  district: z.string().optional(),
+  joinedStart: z.string().optional(),
+  joinedEnd: z.string().optional(),
+});
+
+export const upcomingBirthdaysQuerySchema = z.object({
+  daysAhead: z
+    .string()
+    .optional()
+    .transform((val) => (val ? parseInt(val, 10) : 30))
+    .pipe(z.number().int().min(1).max(365).default(30)),
+});
+
+export const memberSimpleListQuerySchema = z.object({
+  includeInactive: z
+    .string()
+    .optional()
+    .transform((val) => val === 'true'),
 });

@@ -312,12 +312,7 @@ export class FixedDepositController {
       remarks?: string;
     }
   ) {
-    const {
-      destinationAccountId: _destinationAccountId, // TODO: Implement savings transfer
-      cashAccountCode,
-      closeDate = new Date(),
-      remarks,
-    } = data;
+    const { cashAccountCode, closeDate = new Date(), remarks } = data;
 
     // 1. Fetch Account
     const account = await prisma.fixedDepositAccount.findUnique({

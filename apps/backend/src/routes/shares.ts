@@ -262,11 +262,17 @@ router.post(
  */
 router.get(
   '/transactions',
+  validateQuery(
+    z.object({
+      memberId: z.string().optional(),
+      type: z.string().optional(),
+    })
+  ),
   asyncHandler(async (req: Request, res: Response) => {
-    const { memberId, type } = req.query;
+    const { memberId, type } = req.validatedQuery!;
     const transactions = await shareController.getTransactions(req.user!.tenantId!, {
-      memberId: memberId as string,
-      type: type as string,
+      memberId,
+      type,
     });
     res.json({ transactions });
   })

@@ -12,6 +12,7 @@ import {
   getEmployeeLeaveBalances,
 } from '../services/hrm/leave-service.js';
 import { getFiscalYearForDate } from '../lib/nepali-fiscal-year.js';
+import { adToBs } from '../lib/nepali-date.js';
 import { getBatchEmployeeLoanDeductions } from '../services/hrm/loan-deduction-batch.js';
 import { validate, validateParams, validateQuery } from '../middleware/validate.js';
 import { asyncHandler } from '../middleware/error-handler.js';
@@ -1223,11 +1224,19 @@ router.post('/payroll/runs/preview', async (req: Request, res: Response) => {
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { fiscalYear, monthBs, employeeIds } = req.body;
+    let { fiscalYear, monthBs } = req.body;
+    const { employeeIds } = req.body;
 
+    // Auto-calculate fiscal year and month if not provided
     if (!fiscalYear || !monthBs) {
-      res.status(400).json({ error: 'Missing required fields: fiscalYear, monthBs' });
-      return;
+      const currentDate = new Date();
+      const fiscalYearRange = getFiscalYearForDate(currentDate);
+      fiscalYear = fiscalYear || fiscalYearRange.label.replace('FY ', ''); // e.g., "2081/82"
+
+      // Get current BS month
+      const bsDateString = adToBs(currentDate);
+      const [, bsMonthStr] = bsDateString.split('-');
+      monthBs = monthBs || parseInt(bsMonthStr, 10);
     }
 
     const settings = await prisma.payrollSettings.findUnique({

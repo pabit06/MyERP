@@ -5,7 +5,7 @@
  */
 
 // Components
-export { KymForm } from '@/components/KymForm';
-export { KYMInstitutionForm } from '@/components/KYMInstitutionForm';
+export { default as KymForm } from './components/KymForm';
+export { default as KYMInstitutionForm } from './components/KYMInstitutionForm';
 export { default as MemberWorkflow } from './components/MemberWorkflow';
 export { default as SourceOfFundsModal } from './components/SourceOfFundsModal';

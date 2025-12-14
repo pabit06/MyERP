@@ -20,6 +20,7 @@ export { default as NepaliDatePicker } from './NepaliDatePicker';
 // UI Components
 export { default as ConfirmModal } from './ConfirmModal';
 export { default as RichTextEditor } from './RichTextEditor';
+export { ErrorBoundaryWrapper } from './ErrorBoundaryWrapper';
 
 // Re-export UI components from ui folder
 export * from './ui/button';
@@ -29,3 +30,11 @@ export * from './ui/select';
 export * from './ui/checkbox';
 export * from './ui/accordion';
 export * from './ui/date-picker';
+export * from './ui/badge';
+export * from './ui/data-table';
+export * from './ui/dropdown-menu';
+export * from './ui/sonner';
+export * from './ui/table';
+
+// Charts
+export * as Charts from './charts';

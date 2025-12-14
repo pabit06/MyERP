@@ -20,13 +20,11 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react';
-import MemberGrowthChart from '@/components/charts/MemberGrowthChart';
-import TrendsChart from '@/components/charts/TrendsChart';
+import { MemberGrowthChart, TrendsChart } from '@/features/components/shared/charts';
 import { format } from 'date-fns';
-import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OnboardingWizard } from '@/features/onboarding';
+import { Card, CardContent, CardHeader, CardTitle, Button } from '@/features/components/shared';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 interface Stats {
   members?: number;
