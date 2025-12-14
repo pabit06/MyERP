@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-// @ts-ignore - nepali-date-converter doesn't have TypeScript types
+// @ts-expect-error - nepali-date-converter doesn't have TypeScript types
 import NepaliDate from 'nepali-date-converter';
 
 const prisma = new PrismaClient();
@@ -10,10 +10,10 @@ const prisma = new PrismaClient();
  */
 function getShrawan1Date(bsYear: number): Date {
   try {
-    // @ts-ignore
+    // @ts-expect-error - NepaliDate constructor types not available
     const nepaliDate = new NepaliDate(bsYear, 3, 1); // Shrawan is month 4 (0-indexed = 3)
     return nepaliDate.toJsDate();
-  } catch (error) {
+  } catch {
     // Fallback: approximate Shrawan 1 as July 16 of the corresponding AD year
     // BS year 2081 corresponds roughly to AD year 2024
     const adYear = bsYear - 57; // Approximate conversion
@@ -26,10 +26,10 @@ function getShrawan1Date(bsYear: number): Date {
  */
 function getAshadEndDate(bsYear: number): Date {
   try {
-    // @ts-ignore
+    // @ts-expect-error - NepaliDate constructor types not available
     const nepaliDate = new NepaliDate(bsYear, 2, 32); // Ashad is month 3, get last day
     return nepaliDate.toJsDate();
-  } catch (error) {
+  } catch {
     // Fallback: approximate Ashad end as July 15 of the next AD year
     const adYear = bsYear - 57 + 1;
     return new Date(adYear, 6, 15);
@@ -41,12 +41,12 @@ function getAshadEndDate(bsYear: number): Date {
  */
 function getCurrentAndNextFiscalYears() {
   const now = new Date();
-  // @ts-ignore
+  // @ts-expect-error - NepaliDate constructor types not available
   const currentBsDate = new NepaliDate(now);
-  // @ts-ignore
+  // @ts-expect-error - getYear method types not available
   const currentBsYear = currentBsDate.getYear();
-  // @ts-ignore
-  const currentBsMonth = currentBsDate.getMonth() + 1; // Convert to 1-indexed
+  // @ts-expect-error - getMonth method types not available
+  const _currentBsMonth = currentBsDate.getMonth() + 1; // Convert to 1-indexed
 
   let currentFyBsYear: number;
   let currentFyStart: Date;
@@ -211,10 +211,42 @@ async function seedChartOfAccounts(cooperativeId: string) {
     true,
     null
   );
-  await createAccount('1.1.1', 'Cash in Hand', 'हातमा रोकड', 'asset', currentAssetsGroup.id, false, '4.1');
-  await createAccount('1.1.2', 'Cash at Bank', 'बैंकमा रोकड', 'asset', currentAssetsGroup.id, false, '4.2');
-  await createAccount('1.1.3', 'Savings Deposits', 'बचत निक्षेप', 'asset', currentAssetsGroup.id, false, '4.3');
-  await createAccount('1.1.4', 'Loans Receivable', 'ऋण प्राप्य', 'asset', currentAssetsGroup.id, false, '4.4');
+  await createAccount(
+    '1.1.1',
+    'Cash in Hand',
+    'हातमा रोकड',
+    'asset',
+    currentAssetsGroup.id,
+    false,
+    '4.1'
+  );
+  await createAccount(
+    '1.1.2',
+    'Cash at Bank',
+    'बैंकमा रोकड',
+    'asset',
+    currentAssetsGroup.id,
+    false,
+    '4.2'
+  );
+  await createAccount(
+    '1.1.3',
+    'Savings Deposits',
+    'बचत निक्षेप',
+    'asset',
+    currentAssetsGroup.id,
+    false,
+    '4.3'
+  );
+  await createAccount(
+    '1.1.4',
+    'Loans Receivable',
+    'ऋण प्राप्य',
+    'asset',
+    currentAssetsGroup.id,
+    false,
+    '4.4'
+  );
 
   const fixedAssetsGroup = await createAccount(
     '1.2',
@@ -225,12 +257,44 @@ async function seedChartOfAccounts(cooperativeId: string) {
     true,
     null
   );
-  await createAccount('1.2.1', 'Land and Building', 'जग्गा र भवन', 'asset', fixedAssetsGroup.id, false, '4.5');
-  await createAccount('1.2.2', 'Furniture and Fixtures', 'फर्निचर र फिक्सचर', 'asset', fixedAssetsGroup.id, false, '4.6');
-  await createAccount('1.2.3', 'Office Equipment', 'कार्यालय उपकरण', 'asset', fixedAssetsGroup.id, false, '4.7');
+  await createAccount(
+    '1.2.1',
+    'Land and Building',
+    'जग्गा र भवन',
+    'asset',
+    fixedAssetsGroup.id,
+    false,
+    '4.5'
+  );
+  await createAccount(
+    '1.2.2',
+    'Furniture and Fixtures',
+    'फर्निचर र फिक्सचर',
+    'asset',
+    fixedAssetsGroup.id,
+    false,
+    '4.6'
+  );
+  await createAccount(
+    '1.2.3',
+    'Office Equipment',
+    'कार्यालय उपकरण',
+    'asset',
+    fixedAssetsGroup.id,
+    false,
+    '4.7'
+  );
 
   // Liabilities (दायित्व)
-  const liabilitiesGroup = await createAccount('2', 'Liabilities', 'दायित्व', 'liability', null, true, null);
+  const liabilitiesGroup = await createAccount(
+    '2',
+    'Liabilities',
+    'दायित्व',
+    'liability',
+    null,
+    true,
+    null
+  );
   const currentLiabilitiesGroup = await createAccount(
     '2.1',
     'Current Liabilities',
@@ -240,27 +304,83 @@ async function seedChartOfAccounts(cooperativeId: string) {
     true,
     null
   );
-  await createAccount('2.1.1', 'Accounts Payable', 'देय खाता', 'liability', currentLiabilitiesGroup.id, false, '5.1');
-  await createAccount('2.1.2', 'Interest Payable', 'ब्याज देय', 'liability', currentLiabilitiesGroup.id, false, '5.2');
+  await createAccount(
+    '2.1.1',
+    'Accounts Payable',
+    'देय खाता',
+    'liability',
+    currentLiabilitiesGroup.id,
+    false,
+    '5.1'
+  );
+  await createAccount(
+    '2.1.2',
+    'Interest Payable',
+    'ब्याज देय',
+    'liability',
+    currentLiabilitiesGroup.id,
+    false,
+    '5.2'
+  );
 
   // Equity (इक्विटी)
   const equityGroup = await createAccount('3', 'Equity', 'इक्विटी', 'equity', null, true, null);
   await createAccount('3.1', 'Share Capital', 'शेयर पुँजी', 'equity', equityGroup.id, false, '6.1');
   await createAccount('3.2', 'Reserves', 'संचित कोष', 'equity', equityGroup.id, false, '6.2');
-  await createAccount('3.3', 'Retained Earnings', 'बाँकी आम्दानी', 'equity', equityGroup.id, false, '6.3');
+  await createAccount(
+    '3.3',
+    'Retained Earnings',
+    'बाँकी आम्दानी',
+    'equity',
+    equityGroup.id,
+    false,
+    '6.3'
+  );
 
   // Revenue (आम्दानी)
   const revenueGroup = await createAccount('4', 'Revenue', 'आम्दानी', 'revenue', null, true, null);
-  await createAccount('4.1', 'Interest Income', 'ब्याज आम्दानी', 'revenue', revenueGroup.id, false, '7.1');
-  await createAccount('4.2', 'Service Charges', 'सेवा शुल्क', 'revenue', revenueGroup.id, false, '7.2');
-  await createAccount('4.3', 'Other Income', 'अन्य आम्दानी', 'revenue', revenueGroup.id, false, '7.3');
+  await createAccount(
+    '4.1',
+    'Interest Income',
+    'ब्याज आम्दानी',
+    'revenue',
+    revenueGroup.id,
+    false,
+    '7.1'
+  );
+  await createAccount(
+    '4.2',
+    'Service Charges',
+    'सेवा शुल्क',
+    'revenue',
+    revenueGroup.id,
+    false,
+    '7.2'
+  );
+  await createAccount(
+    '4.3',
+    'Other Income',
+    'अन्य आम्दानी',
+    'revenue',
+    revenueGroup.id,
+    false,
+    '7.3'
+  );
 
   // Expenses (खर्च)
   const expensesGroup = await createAccount('5', 'Expenses', 'खर्च', 'expense', null, true, null);
   await createAccount('5.1', 'Salaries', 'तलब', 'expense', expensesGroup.id, false, '8.1');
   await createAccount('5.2', 'Rent', 'भाडा', 'expense', expensesGroup.id, false, '8.2');
   await createAccount('5.3', 'Utilities', 'उपयोगिता', 'expense', expensesGroup.id, false, '8.3');
-  await createAccount('5.4', 'Administrative Expenses', 'प्रशासनिक खर्च', 'expense', expensesGroup.id, false, '8.4');
+  await createAccount(
+    '5.4',
+    'Administrative Expenses',
+    'प्रशासनिक खर्च',
+    'expense',
+    expensesGroup.id,
+    false,
+    '8.4'
+  );
 
   console.log(`  ✅ Chart of Accounts seeded`);
 }
@@ -333,9 +453,15 @@ async function seedFiscalYears(cooperativeId: string) {
   const fiscalYears = getCurrentAndNextFiscalYears();
 
   // Log fiscal year information (fiscal years are used as strings in other models)
-  console.log(`  ✅ Current fiscal year: ${fiscalYears.current.label} (${fiscalYears.current.startDate.toISOString().split('T')[0]} to ${fiscalYears.current.endDate.toISOString().split('T')[0]})`);
-  console.log(`  ✅ Next fiscal year: ${fiscalYears.next.label} (${fiscalYears.next.startDate.toISOString().split('T')[0]} to ${fiscalYears.next.endDate.toISOString().split('T')[0]})`);
-  console.log(`  ℹ️  Fiscal years are stored as strings (e.g., "${fiscalYears.current.label}") in models like PayrollRun, Payroll, etc.`);
+  console.log(
+    `  ✅ Current fiscal year: ${fiscalYears.current.label} (${fiscalYears.current.startDate.toISOString().split('T')[0]} to ${fiscalYears.current.endDate.toISOString().split('T')[0]})`
+  );
+  console.log(
+    `  ✅ Next fiscal year: ${fiscalYears.next.label} (${fiscalYears.next.startDate.toISOString().split('T')[0]} to ${fiscalYears.next.endDate.toISOString().split('T')[0]})`
+  );
+  console.log(
+    `  ℹ️  Fiscal years are stored as strings (e.g., "${fiscalYears.current.label}") in models like PayrollRun, Payroll, etc.`
+  );
 }
 
 /**
@@ -372,15 +498,23 @@ async function main() {
     where: { name: 'Basic' },
   });
 
-  const basicPlan =
-    existingBasic ||
-    (await prisma.plan.create({
-      data: {
-        name: 'Basic',
-        monthlyPrice: 0,
-        enabledModules: [],
-      },
-    }));
+  // All available modules
+  const allModules = ['cbs', 'dms', 'hrm', 'governance', 'inventory', 'compliance'];
+
+  const basicPlan = existingBasic
+    ? await prisma.plan.update({
+        where: { id: existingBasic.id },
+        data: {
+          enabledModules: allModules,
+        },
+      })
+    : await prisma.plan.create({
+        data: {
+          name: 'Basic',
+          monthlyPrice: 0,
+          enabledModules: allModules,
+        },
+      });
 
   const existingStandard = await prisma.plan.findFirst({
     where: { name: 'Standard' },
@@ -442,7 +576,9 @@ async function main() {
       await seedCooperativeDefaults(coop.id);
     }
   } else {
-    console.log('\n📋 No existing cooperatives found. Defaults will be seeded when cooperatives are created.');
+    console.log(
+      '\n📋 No existing cooperatives found. Defaults will be seeded when cooperatives are created.'
+    );
   }
 
   console.log('\n✅ Database seeding completed!');

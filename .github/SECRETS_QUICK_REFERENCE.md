@@ -7,11 +7,13 @@ Add these 3 secrets to get CI working:
 ### 1. JWT_SECRET
 
 **Generate:**
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Or use the script:**
+
 ```bash
 pnpm generate:secrets
 ```
@@ -48,6 +50,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## Verification
 
 After adding secrets, verify:
+
 - [ ] Secrets appear in Settings → Secrets and variables → Actions
 - [ ] Secret names match exactly (case-sensitive)
 - [ ] Values are correct (no extra spaces)
@@ -55,6 +58,7 @@ After adding secrets, verify:
 ## Testing
 
 After adding secrets:
+
 1. Push a change to trigger workflows
 2. Check Actions tab
 3. Verify workflows run successfully

@@ -17,6 +17,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 **Copy the output** - you'll need it in the next step.
 
 **Example output:**
+
 ```
 a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
 ```
@@ -55,6 +56,7 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
 ### Verification
 
 You should now see 3 secrets listed:
+
 - ✅ JWT_SECRET
 - ✅ JWT_EXPIRES_IN
 - ✅ NEXT_PUBLIC_API_URL
@@ -86,6 +88,7 @@ git push
 4. Check that all jobs show ✅ (green checkmark)
 
 **Expected workflows:**
+
 - ✅ CI (with jobs: lint, type-check, build, test-backend, test-frontend, e2e-tests)
 - ✅ Security Audit
 - ✅ Dependency Update Check
@@ -106,9 +109,11 @@ git push
 **Enable these settings:**
 
 ✅ **Require a pull request before merging**
+
 - Require approvals: **1**
 
 ✅ **Require status checks to pass before merging**
+
 - ✅ Require branches to be up to date before merging
 - Select these checks (they'll appear after workflows run):
   - `lint`
@@ -140,11 +145,13 @@ Click **"Create"** or **"Save changes"**
 ### Test with a Pull Request
 
 1. Create a test branch:
+
    ```bash
    git checkout -b test/ci-verification
    ```
 
 2. Make a small change:
+
    ```bash
    echo "# Test" >> README.md
    git add README.md
@@ -169,6 +176,7 @@ Click **"Create"** or **"Save changes"**
 **Error:** Workflow fails with "Secret not found"
 
 **Solution:**
+
 - Verify secret names match exactly (case-sensitive: `JWT_SECRET` not `jwt_secret`)
 - Check that secrets are in: Settings → Secrets and variables → Actions
 - Ensure you're using the correct repository
@@ -178,6 +186,7 @@ Click **"Create"** or **"Save changes"**
 **Problem:** Can't select status checks in branch protection
 
 **Solution:**
+
 1. Complete Step 3 first (push and let workflows run)
 2. Wait for workflows to complete
 3. Refresh the branch protection settings page
@@ -188,6 +197,7 @@ Click **"Create"** or **"Save changes"**
 **Problem:** No workflows appear in Actions tab
 
 **Solution:**
+
 - Verify workflow files are in `.github/workflows/`
 - Check that you pushed the changes
 - Verify repository has Actions enabled (Settings → Actions → General)
@@ -197,6 +207,7 @@ Click **"Create"** or **"Save changes"**
 **Problem:** Tests fail in CI
 
 **Solution:**
+
 - Check workflow logs for specific errors
 - Verify secrets are set correctly
 - Ensure database migrations run successfully
@@ -207,21 +218,25 @@ Click **"Create"** or **"Save changes"**
 ## Quick Reference
 
 ### Generate JWT_SECRET
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### Test Workflows
+
 ```bash
 git commit --allow-empty -m "test: trigger CI"
 git push
 ```
 
 ### View Workflows
+
 - GitHub → Actions tab
 - See all runs and their status
 
 ### Required Secrets Checklist
+
 - [ ] `JWT_SECRET` - 64-char hex string
 - [ ] `JWT_EXPIRES_IN` - `7d`
 - [ ] `NEXT_PUBLIC_API_URL` - Your API URL

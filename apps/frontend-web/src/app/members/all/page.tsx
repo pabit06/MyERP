@@ -7,9 +7,9 @@ import { useAuth } from '@/contexts/AuthContext';
 
 import Link from 'next/link';
 import { removeDuplication } from '@/lib/utils';
-import { DataTable } from '@/components/ui/data-table';
+import { DataTable } from '@/features/components/shared';
 import { ColumnDef } from '@tanstack/react-table';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/features/components/shared';
 import { ArrowUpDown, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -18,7 +18,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/features/components/shared';
 import { toast } from 'sonner';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';

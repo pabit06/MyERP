@@ -5,6 +5,7 @@ This guide will help you set up branch protection rules to ensure code quality a
 ## Why Branch Protection?
 
 Branch protection rules:
+
 - ✅ Require pull request reviews
 - ✅ Require CI checks to pass
 - ✅ Prevent force pushes
@@ -22,6 +23,7 @@ Branch protection rules:
 ### Step 2: Configure Rule for `main` Branch
 
 #### Branch Name Pattern
+
 ```
 main
 ```
@@ -29,12 +31,14 @@ main
 #### Protection Settings
 
 **1. Require a pull request before merging**
+
 - ✅ Check this box
 - ✅ Require approvals: **1** (or more based on your team size)
 - ✅ Dismiss stale pull request approvals when new commits are pushed
 - ✅ Require review from Code Owners (if you have a CODEOWNERS file)
 
 **2. Require status checks to pass before merging**
+
 - ✅ Check this box
 - ✅ Require branches to be up to date before merging
 - ✅ Select the following required status checks:
@@ -46,34 +50,42 @@ main
   - `e2e-tests` (E2E Tests job) - Optional, can be made non-blocking
 
 **3. Require conversation resolution before merging**
+
 - ✅ Check this box (recommended)
 - Ensures all PR comments are addressed
 
 **4. Do not allow bypassing the above settings**
+
 - ✅ Check this box (recommended)
 - Prevents admins from bypassing rules
 
 **5. Restrict who can push to matching branches**
+
 - ✅ Check this box (optional but recommended)
 - Only allow specific teams/users to push directly
 
 **6. Allow force pushes**
+
 - ❌ Leave unchecked
 - Prevents rewriting history
 
 **7. Allow deletions**
+
 - ❌ Leave unchecked
 - Prevents accidental branch deletion
 
 **8. Require linear history**
+
 - ⚠️ Optional (recommended for cleaner history)
 - Prevents merge commits
 
 **9. Include administrators**
+
 - ✅ Check this box (recommended)
 - Applies rules to admins too
 
 **10. Allow specified actors to bypass required pull requests**
+
 - ⚠️ Optional
 - Only if you have automated bots that need to push
 
@@ -82,11 +94,13 @@ main
 If you use a `develop` branch:
 
 **Branch Name Pattern:**
+
 ```
 develop
 ```
 
 **Settings:**
+
 - Similar to `main` but can be less strict
 - Require 1 approval (instead of 2)
 - All status checks required
@@ -184,6 +198,7 @@ After setting up branch protection:
 **Problem:** Required status checks don't show up in the dropdown.
 
 **Solution:**
+
 1. Make sure workflows have run at least once
 2. Push a change to trigger workflows
 3. Wait for workflows to complete
@@ -195,6 +210,7 @@ After setting up branch protection:
 **Problem:** PR shows "Required status checks must pass" but all checks passed.
 
 **Solution:**
+
 1. Check if branch is up to date
 2. Click "Update branch" if needed
 3. Wait for new checks to complete
@@ -205,6 +221,7 @@ After setting up branch protection:
 **Problem:** Admin cannot merge even though they should be able to.
 
 **Solution:**
+
 1. Check "Do not allow bypassing" setting
 2. If checked, even admins must follow rules
 3. Uncheck if you want admins to bypass (not recommended)

@@ -271,8 +271,8 @@ export default function AssetsPage() {
           'Accounts migrated successfully! Old accounts have been consolidated into NFRS format.'
         );
       } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to migrate accounts');
+        const responseData = await response.json();
+        setError(responseData.error || 'Failed to migrate accounts');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to migrate accounts');

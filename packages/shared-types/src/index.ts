@@ -96,6 +96,7 @@ export const updateMemberSchema = z.object({
   middleName: z.string().optional().nullable(),
   fullName: z.string().optional(),
   fullNameNepali: z.string().optional().nullable(),
+  institutionName: z.string().min(1, 'Institution name is required').optional(),
   email: z.union([z.string().email('Invalid email format'), z.literal('')]).optional(),
   phone: z.string().optional(),
   isActive: z.boolean().optional(),

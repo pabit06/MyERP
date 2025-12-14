@@ -8,6 +8,7 @@
 ## What This Means
 
 The browser is showing the "Get started with GitHub Actions" page, which typically appears when:
+
 1. ✅ Workflow files exist in `.github/workflows/`
 2. ⏳ No workflows have run yet
 3. ⏳ GitHub is still detecting the workflow files
@@ -23,8 +24,7 @@ The browser is showing the "Get started with GitHub Actions" page, which typical
 
 1. **Branch mismatch:** Workflows trigger on `main`, `develop`, or `upgrade/**` branches
    - Check which branch you pushed to
-   
-2. **GitHub processing delay:** 
+2. **GitHub processing delay:**
    - GitHub may take 1-3 minutes to detect new workflow files
    - Refresh the page after waiting
 
@@ -35,25 +35,32 @@ The browser is showing the "Get started with GitHub Actions" page, which typical
 ## What to Do
 
 ### Option 1: Wait and Refresh (Recommended)
+
 1. Wait 2-3 minutes
 2. Refresh the Actions page: https://github.com/pabit06/MyERP/actions
 3. Workflows should appear
 
 ### Option 2: Check Branch
+
 Verify you pushed to a branch that triggers workflows:
+
 - `main`
-- `develop`  
+- `develop`
 - `upgrade/**`
 
 ### Option 3: Verify Workflow Files
+
 Check that workflow files are in the repository:
+
 - `.github/workflows/ci.yml`
 - `.github/workflows/cd.yml`
 - `.github/workflows/security-audit.yml`
 - `.github/workflows/dependency-update.yml`
 
 ### Option 4: Manual Trigger
+
 Once workflows appear, you can manually trigger them:
+
 1. Go to Actions tab
 2. Click on a workflow (e.g., "CI")
 3. Click "Run workflow"

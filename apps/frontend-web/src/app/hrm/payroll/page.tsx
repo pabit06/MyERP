@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import PayrollPreviewModal from '@/components/PayrollPreviewModal';
+import PayrollPreviewModal from '@/features/hrm/components/PayrollPreviewModal';
 import { apiClient } from '@/lib/api';
 
 interface PayrollPreview {

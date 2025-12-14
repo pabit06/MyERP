@@ -41,12 +41,7 @@ export default function Home() {
           >
             Sign In
           </Link>
-          <Link
-            href="/register"
-            className="px-6 py-3 bg-white text-indigo-600 border-2 border-indigo-600 rounded-lg font-medium hover:bg-indigo-50 transition"
-          >
-            Register
-          </Link>
+          {/* Register button removed - registration is now handled by system admin */}
         </div>
       </div>
     </main>

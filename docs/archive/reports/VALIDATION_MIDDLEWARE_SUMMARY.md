@@ -7,6 +7,7 @@ The request validation middleware has been successfully implemented and is ready
 ## ✅ What Was Created
 
 ### Core Files
+
 1. **`apps/backend/src/middleware/validate.ts`** - Main validation middleware
    - `validate()` - Body validation
    - `validateQuery()` - Query parameter validation
@@ -26,31 +27,41 @@ The request validation middleware has been successfully implemented and is ready
    - Added `req.validated`, `req.validatedQuery`, `req.validatedParams`
 
 ### Documentation
+
 - ✅ `VALIDATION_MIDDLEWARE_GUIDE.md` - Complete usage guide
 - ✅ `VALIDATION_IMPLEMENTATION_COMPLETE.md` - Implementation details
 
 ## 🚀 Quick Start
 
 ### Before (Old Pattern):
+
 ```typescript
-router.post('/members', asyncHandler(async (req, res) => {
-  const validation = createMemberSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const data = validation.data;
-  // ... handler
-}));
+router.post(
+  '/members',
+  asyncHandler(async (req, res) => {
+    const validation = createMemberSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const data = validation.data;
+    // ... handler
+  })
+);
 ```
 
 ### After (New Pattern):
+
 ```typescript
 import { validate } from '../middleware/validate.js';
 
-router.post('/members', validate(createMemberSchema), asyncHandler(async (req, res) => {
-  const data = req.validated; // Type-safe!
-  // ... handler
-}));
+router.post(
+  '/members',
+  validate(createMemberSchema),
+  asyncHandler(async (req, res) => {
+    const data = req.validated; // Type-safe!
+    // ... handler
+  })
+);
 ```
 
 ## 📊 Benefits
@@ -64,24 +75,31 @@ router.post('/members', validate(createMemberSchema), asyncHandler(async (req, r
 ## 📝 Example Migration
 
 **Migrated Route:**
+
 - ✅ `PUT /api/members/:id` - Now uses `validateAll()`
 
 **Before:**
+
 ```typescript
-router.put('/:id', asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const validation = updateMemberSchema.safeParse(req.body);
-  if (!validation.success) {
-    throw new ValidationError('Validation failed', validation.error.errors);
-  }
-  const data = validation.data;
-  // ...
-}));
+router.put(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const validation = updateMemberSchema.safeParse(req.body);
+    if (!validation.success) {
+      throw new ValidationError('Validation failed', validation.error.errors);
+    }
+    const data = validation.data;
+    // ...
+  })
+);
 ```
 
 **After:**
+
 ```typescript
-router.put('/:id', 
+router.put(
+  '/:id',
   validateAll({
     params: z.object({ id: z.string().min(1) }),
     body: updateMemberSchema,

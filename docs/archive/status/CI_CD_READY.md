@@ -13,6 +13,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 **Example output:**
+
 ```
 a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
 ```
@@ -43,6 +44,7 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2
    - Click "Add secret"
 
 **Quick Link:** Replace `YOUR_USERNAME` and `YOUR_REPO`:
+
 ```
 https://github.com/YOUR_USERNAME/YOUR_REPO/settings/secrets/actions
 ```
@@ -125,16 +127,19 @@ Once all items are checked, your CI/CD pipeline is fully operational!
 ## 🆘 Troubleshooting
 
 ### Secrets Not Found
+
 - Verify secret names match exactly (case-sensitive)
 - Check Settings → Secrets and variables → Actions
 - Ensure secrets are added to the correct repository
 
 ### Workflows Not Running
+
 - Verify workflow files are in `.github/workflows/`
 - Check that you pushed the changes
 - Ensure Actions are enabled (Settings → Actions → General)
 
 ### Tests Failing
+
 - Check workflow logs for specific errors
 - Verify secrets are set correctly
 - Review test setup and database configuration
@@ -142,6 +147,7 @@ Once all items are checked, your CI/CD pipeline is fully operational!
 ## 🚀 What's Next?
 
 After setup:
+
 1. Monitor workflow runs
 2. Configure deployment (edit `.github/workflows/cd.yml`)
 3. Set up notifications

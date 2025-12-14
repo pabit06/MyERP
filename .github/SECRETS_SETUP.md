@@ -19,6 +19,7 @@ These secrets are required for the CI workflows to run successfully.
 **Purpose:** PostgreSQL connection string for running tests
 
 **Value:**
+
 ```
 postgresql://postgres:postgres@localhost:5432/myerp_test
 ```
@@ -32,6 +33,7 @@ postgresql://postgres:postgres@localhost:5432/myerp_test
 **Value:** Generate a secure random string (at least 32 characters)
 
 **Generate:**
+
 ```bash
 # Using Node.js
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -41,6 +43,7 @@ openssl rand -hex 32
 ```
 
 **Example:**
+
 ```
 a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
 ```
@@ -50,6 +53,7 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
 **Purpose:** JWT token expiration time
 
 **Value:**
+
 ```
 7d
 ```
@@ -59,11 +63,13 @@ a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
 **Purpose:** Backend API URL for frontend builds
 
 **Value (Development/Staging):**
+
 ```
 http://localhost:4000/api
 ```
 
 **Value (Production):**
+
 ```
 https://api.yourdomain.com/api
 ```
@@ -77,6 +83,7 @@ These secrets are only needed if you want to deploy automatically.
 **Purpose:** Backend deployment URL (for environment configuration)
 
 **Value:**
+
 ```
 https://api.yourdomain.com
 ```
@@ -86,6 +93,7 @@ https://api.yourdomain.com
 **Purpose:** Frontend deployment URL (for environment configuration)
 
 **Value:**
+
 ```
 https://yourdomain.com
 ```
@@ -97,33 +105,43 @@ Choose the secrets based on your deployment method:
 ### For SSH Deployment
 
 #### 7. HOST
+
 **Purpose:** Server hostname or IP address
 
 **Value:**
+
 ```
 your-server.com
 ```
+
 or
+
 ```
 192.168.1.100
 ```
 
 #### 8. USERNAME
+
 **Purpose:** SSH username for deployment
 
 **Value:**
+
 ```
 deploy
 ```
+
 or
+
 ```
 ubuntu
 ```
 
 #### 9. SSH_KEY
+
 **Purpose:** SSH private key for authentication
 
 **How to generate:**
+
 ```bash
 # Generate SSH key pair
 ssh-keygen -t ed25519 -C "github-actions" -f ~/.ssh/github_actions
@@ -134,16 +152,19 @@ cat ~/.ssh/github_actions
 
 **Value:** Paste the entire private key (including `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----`)
 
-**Important:** 
+**Important:**
+
 - Never commit this key to the repository
 - Add the public key to your server's `~/.ssh/authorized_keys`
 
 ### For Vercel Deployment
 
 #### 10. VERCEL_TOKEN
+
 **Purpose:** Vercel API token
 
 **How to get:**
+
 1. Go to https://vercel.com/account/tokens
 2. Create a new token
 3. Copy the token
@@ -151,18 +172,22 @@ cat ~/.ssh/github_actions
 **Value:** Your Vercel token
 
 #### 11. VERCEL_ORG_ID
+
 **Purpose:** Vercel organization ID
 
 **How to get:**
+
 1. Go to your Vercel team settings
 2. Copy the Organization ID
 
 **Value:** Your organization ID
 
 #### 12. VERCEL_PROJECT_ID
+
 **Purpose:** Vercel project ID
 
 **How to get:**
+
 1. Go to your project settings in Vercel
 2. Copy the Project ID
 
@@ -171,11 +196,13 @@ cat ~/.ssh/github_actions
 ### For Docker Hub Deployment
 
 #### 13. DOCKER_USERNAME
+
 **Purpose:** Docker Hub username
 
 **Value:** Your Docker Hub username
 
 #### 14. DOCKER_PASSWORD
+
 **Purpose:** Docker Hub password or access token
 
 **Value:** Your Docker Hub password or access token
@@ -183,19 +210,23 @@ cat ~/.ssh/github_actions
 ### For AWS Deployment
 
 #### 15. AWS_ACCESS_KEY_ID
+
 **Purpose:** AWS access key ID
 
 **Value:** Your AWS access key
 
 #### 16. AWS_SECRET_ACCESS_KEY
+
 **Purpose:** AWS secret access key
 
 **Value:** Your AWS secret key
 
 #### 17. AWS_REGION
+
 **Purpose:** AWS region
 
 **Value:**
+
 ```
 us-east-1
 ```
@@ -203,9 +234,11 @@ us-east-1
 ### For Production Database
 
 #### 18. PROD_DATABASE_URL
+
 **Purpose:** Production database connection string
 
 **Value:**
+
 ```
 postgresql://user:password@prod-db-host:5432/myerp_prod
 ```
@@ -219,6 +252,7 @@ You can create different secrets for different environments:
 ### Staging Environment
 
 Create secrets with `_STAGING` suffix:
+
 - `DATABASE_URL_STAGING`
 - `JWT_SECRET_STAGING`
 - etc.
@@ -226,11 +260,13 @@ Create secrets with `_STAGING` suffix:
 ### Production Environment
 
 Create secrets with `_PROD` suffix:
+
 - `DATABASE_URL_PROD`
 - `JWT_SECRET_PROD`
 - etc.
 
 Then reference them in workflows using:
+
 ```yaml
 env:
   DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
@@ -280,6 +316,7 @@ After adding secrets, verify they're set:
 ### Secret Not Found Error
 
 If you see `Secret not found` errors:
+
 - Verify the secret name matches exactly (case-sensitive)
 - Check that the secret is added to the repository
 - Ensure you're using the correct secret name in workflows
@@ -287,6 +324,7 @@ If you see `Secret not found` errors:
 ### Secret Value Issues
 
 If workflows fail with configuration errors:
+
 - Verify secret values are correct
 - Check for extra spaces or newlines
 - Ensure URLs are properly formatted

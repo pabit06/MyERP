@@ -8,13 +8,14 @@ Get your CI/CD pipeline up and running in 5 minutes!
 2. Click **New repository secret**
 3. Add these **required** secrets:
 
-| Secret Name | Value | How to Generate |
-|------------|-------|----------------|
-| `JWT_SECRET` | Random 32+ character string | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
-| `JWT_EXPIRES_IN` | `7d` | - |
-| `NEXT_PUBLIC_API_URL` | `https://api.yourdomain.com/api` | Your backend API URL |
+| Secret Name           | Value                            | How to Generate                                                            |
+| --------------------- | -------------------------------- | -------------------------------------------------------------------------- |
+| `JWT_SECRET`          | Random 32+ character string      | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `JWT_EXPIRES_IN`      | `7d`                             | -                                                                          |
+| `NEXT_PUBLIC_API_URL` | `https://api.yourdomain.com/api` | Your backend API URL                                                       |
 
 **Quick Copy-Paste:**
+
 ```bash
 # Generate JWT_SECRET
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
@@ -62,6 +63,7 @@ Add required secrets for your deployment method.
 ## ✅ Done!
 
 Your CI/CD pipeline is now:
+
 - ✅ Running tests on every push/PR
 - ✅ Building applications
 - ✅ Checking for security issues

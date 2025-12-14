@@ -49,7 +49,7 @@ import { metricsMiddleware } from './middleware/metrics.js';
 import { performanceMiddleware } from './middleware/performance.js';
 
 // Initialize Sentry BEFORE creating Express app
-// initializeSentry();
+// Sentry initialization is handled in sentry.ts via expressIntegration()
 
 const app = express();
 const PORT = env.PORT;

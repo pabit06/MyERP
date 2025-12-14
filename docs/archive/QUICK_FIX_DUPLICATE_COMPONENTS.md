@@ -1,7 +1,9 @@
 # Quick Fix: Remove Duplicate Components
 
 ## Problem
+
 Components exist in two locations:
+
 - `apps/frontend-web/src/components/shared/` (OLD - DELETE)
 - `apps/frontend-web/src/features/components/shared/` (NEW - KEEP)
 
@@ -59,6 +61,7 @@ These components exist in both locations - ensure all imports use the NEW locati
 ## Import Path Reference
 
 **Correct imports (use these):**
+
 ```typescript
 // Using path alias (recommended)
 import { NepaliDatePicker } from '@/features/components/shared';
@@ -69,6 +72,7 @@ import { NepaliDatePicker } from '@/features/components/shared/NepaliDatePicker'
 ```
 
 **Wrong imports (should not exist):**
+
 ```typescript
 // ❌ OLD - Don't use
 import NepaliDatePicker from '@/components/shared/NepaliDatePicker';

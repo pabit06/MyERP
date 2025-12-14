@@ -164,12 +164,25 @@ export class MemberPortalController extends BaseController {
       throw new NotFoundError('Account', accountId);
     }
 
-    // 2. Fetch Transactions (Journal Entries)
+    // 2. Fetch Transactions (Journal Entries) with Ledgers
     // Filtering by description containing account number
     const transactions = await this.prisma.journalEntry.findMany({
       where: {
         description: {
           contains: account.accountNumber,
+        },
+      },
+      include: {
+        ledgers: {
+          include: {
+            account: {
+              select: {
+                id: true,
+                code: true,
+                type: true,
+              },
+            },
+          },
         },
       },
       orderBy: {
@@ -178,16 +191,49 @@ export class MemberPortalController extends BaseController {
       take: 50, // Limit to last 50
     });
 
+    // Get savings product GL mapping to identify relevant ledger entries
+    const productGLMap = await this.prisma.productGLMap.findFirst({
+      where: {
+        productId: account.productId,
+        productType: 'saving',
+      },
+    });
+
     res.json({
       accountNumber: account.accountNumber,
-      transactions: transactions.map((t) => ({
-        id: t.id,
-        date: t.date,
-        description: t.description,
-        amount: 0, // TODO: Parse amount from ledgers if needed, or description
-        // For MVP, we pass the raw description which usually has info.
-        // To get actual amount, we need to join Ledgers.
-      })),
+      transactions: transactions.map((t) => {
+        // Calculate amount from ledgers
+        // For savings accounts, look for ledger entries related to the deposit GL
+        // If GL mapping exists, use it; otherwise, calculate net change from all ledgers
+        let amount = 0;
+
+        if (productGLMap?.depositGLCode) {
+          // Find ledger entry for the deposit GL account
+          const depositLedger = t.ledgers.find(
+            (l) => l.account.code === productGLMap.depositGLCode
+          );
+          if (depositLedger) {
+            // For liability accounts (savings), credit increases balance, debit decreases
+            amount = Number(depositLedger.credit) - Number(depositLedger.debit);
+          }
+        } else {
+          // Fallback: Calculate net change from all ledgers
+          // This is less accurate but better than 0
+          const netChange = t.ledgers.reduce((sum, ledger) => {
+            return sum + Number(ledger.credit) - Number(ledger.debit);
+          }, 0);
+          // For savings (liability), positive net change means deposit
+          amount = netChange;
+        }
+
+        return {
+          id: t.id,
+          date: t.date,
+          description: t.description,
+          amount: Math.abs(amount), // Return absolute value for display
+          type: amount >= 0 ? 'credit' : 'debit', // Indicate if it's a deposit or withdrawal
+        };
+      }),
     });
   }
 

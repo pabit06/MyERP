@@ -9,6 +9,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ## 1. Code Organization & Architecture
 
 ### ✅ Strengths
+
 - Well-structured monorepo with pnpm workspaces
 - Clear separation between backend, frontend, and shared packages
 - Feature-based structure migration in progress
@@ -17,15 +18,19 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ### 🔧 Improvements Needed
 
 #### 1.1 Complete Frontend Feature Migration
+
 **Status**: Partially complete (components exist in both `components/` and `features/`)
 
 **Issues**:
+
 - Duplicate components in `components/` and `features/components/shared/`
 - Inconsistent import paths across the codebase
 - 78+ files still need import updates
 
 **Recommendations**:
+
 1. **Complete the migration systematically**:
+
    ```bash
    # Priority order:
    # 1. Update all app/* pages to use feature imports
@@ -35,6 +40,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Create a migration script** to automate import path updates:
+
    ```typescript
    // scripts/migrate-imports.ts
    // Automatically update import paths from old to new structure
@@ -55,10 +61,13 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 #### 1.2 Backend Service Layer Organization
+
 **Current**: Services are well-organized but could benefit from better separation
 
 **Recommendations**:
+
 1. **Implement Repository Pattern** for database access:
+
    ```typescript
    // Example structure:
    // repositories/MemberRepository.ts
@@ -67,6 +76,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Create DTOs (Data Transfer Objects)** for API requests/responses:
+
    ```typescript
    // dto/member.dto.ts
    export interface CreateMemberDTO {
@@ -85,7 +95,9 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ## 2. Testing Coverage
 
 ### ⚠️ Critical Gap
+
 **Current State**: Only 4 test files found
+
 - `BaseController.test.ts`
 - `AccountingController.test.ts`
 - `accounting.test.ts`
@@ -94,6 +106,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 **Recommendations**:
 
 1. **Increase Test Coverage** (Target: 70%+):
+
    ```typescript
    // Priority areas:
    // 1. Critical business logic (financial calculations, EMI, interest)
@@ -103,6 +116,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Set up Test Infrastructure**:
+
    ```json
    // package.json
    {
@@ -119,6 +133,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    - Test: Login, Member Creation, Loan Application, Payment Processing
 
 4. **Test Examples to Add**:
+
    ```typescript
    // Backend tests needed:
    - Authentication middleware tests
@@ -126,7 +141,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    - Financial calculation tests (EMI, interest)
    - Error handling tests
    - Rate limiting tests
-   
+
    // Frontend tests needed:
    - Component unit tests
    - Form validation tests
@@ -141,6 +156,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ### 3.1 Database Query Optimization
 
 **Issues Found**:
+
 - Potential N+1 query problems in report builders
 - Missing database indexes on frequently queried fields
 - No query result caching for expensive operations
@@ -148,6 +164,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 **Recommendations**:
 
 1. **Add Database Indexes**:
+
    ```prisma
    // Add to schema.prisma for frequently queried fields:
    model Member {
@@ -158,6 +175,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Implement Query Result Caching**:
+
    ```typescript
    // Use node-cache (already installed) for:
    // - Member statistics
@@ -167,6 +185,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 3. **Add Pagination** to all list endpoints:
+
    ```typescript
    // Standard pagination interface:
    interface PaginatedResponse<T> {
@@ -176,7 +195,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
        limit: number;
        total: number;
        totalPages: number;
-       };
+     };
    }
    ```
 
@@ -192,6 +211,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 **Recommendations**:
 
 1. **Implement Code Splitting**:
+
    ```typescript
    // Use dynamic imports for heavy components:
    const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
@@ -200,6 +220,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Add React Query/SWR** for data fetching:
+
    ```typescript
    // Benefits:
    // - Automatic caching
@@ -209,10 +230,11 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 3. **Optimize Bundle Size**:
+
    ```bash
    // Analyze bundle:
    npm run build -- --analyze
-   
+
    // Remove unused dependencies
    // Use tree-shaking friendly imports
    ```
@@ -228,6 +250,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ## 4. Security Enhancements
 
 ### ✅ Good Practices Already in Place
+
 - Rate limiting implemented
 - Helmet security headers
 - JWT authentication
@@ -237,6 +260,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 ### 🔧 Additional Recommendations
 
 1. **Add Request Validation Middleware**:
+
    ```typescript
    // middleware/validate.ts
    export const validate = (schema: z.ZodSchema) => {
@@ -252,6 +276,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Implement CSRF Protection**:
+
    ```typescript
    // For state-changing operations
    // Use csrf tokens or SameSite cookies
@@ -262,12 +287,14 @@ This document provides a comprehensive analysis of your MyERP project with actio
    - ⚠️ Review any raw SQL queries
 
 4. **Implement Content Security Policy** (CSP):
+
    ```typescript
    // Enhance helmet config with stricter CSP
    // Add nonce for inline scripts if needed
    ```
 
 5. **Add Security Headers**:
+
    ```typescript
    // Additional headers:
    // - X-Content-Type-Options: nosniff
@@ -276,6 +303,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 6. **Implement Audit Logging**:
+
    ```typescript
    // Log all sensitive operations:
    // - Login attempts (success/failure)
@@ -308,16 +336,18 @@ This document provides a comprehensive analysis of your MyERP project with actio
    - Migrate all routes to use `asyncHandler` and custom error classes
 
 2. **Add Error Tracking**:
+
    ```typescript
    // Integrate Sentry or similar:
    import * as Sentry from '@sentry/node';
-   
+
    // Track errors in production
    ```
 
 ### 5.2 Code Duplication
 
 **Issues Found**:
+
 - Duplicate components (ConfirmModal, NepaliDatePicker, etc.)
 - Similar validation logic repeated across routes
 - Repeated API call patterns
@@ -325,6 +355,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 **Recommendations**:
 
 1. **Create Shared Validation Schemas**:
+
    ```typescript
    // validators/common.ts
    export const paginationSchema = z.object({
@@ -334,6 +365,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Extract Common API Patterns**:
+
    ```typescript
    // lib/api-helpers.ts
    export async function paginatedQuery<T>(
@@ -358,6 +390,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
 **Recommendations**:
 
 1. **Stricter TypeScript Configuration**:
+
    ```json
    {
      "compilerOptions": {
@@ -371,6 +404,7 @@ This document provides a comprehensive analysis of your MyERP project with actio
    ```
 
 2. **Add Type Guards**:
+
    ```typescript
    // utils/type-guards.ts
    export function isUser(obj: any): obj is User {
@@ -390,18 +424,21 @@ This document provides a comprehensive analysis of your MyERP project with actio
 Found several TODO comments that need attention:
 
 1. **`apps/backend/src/routes/auth.ts:181`**:
+
    ```typescript
    // TODO: Implement proper member password authentication
    ```
 
 2. **`apps/backend/src/routes/hrm.ts:792`**:
+
    ```typescript
    const fiscalYear = '2082/83'; // TODO: Calculate from startDate
    ```
 
 3. **`apps/backend/src/routes/hrm.ts:880`**:
+
    ```typescript
-   0 // TODO: Get loan deduction from loan module
+   0; // TODO: Get loan deduction from loan module
    ```
 
 4. **`apps/backend/src/services/hrm/payroll-calculator.ts:196`**:
@@ -414,6 +451,7 @@ Found several TODO comments that need attention:
 ## 6. Documentation
 
 ### ✅ Good
+
 - Comprehensive README
 - Well-organized docs folder
 - Migration guides
@@ -444,19 +482,21 @@ Found several TODO comments that need attention:
 **Recommendations**:
 
 1. **Regular Updates**:
+
    ```bash
    // Check for outdated packages:
    pnpm outdated
-   
+
    // Update dependencies:
    pnpm update
    ```
 
 2. **Security Audits**:
+
    ```bash
    // Run security audit:
    pnpm audit
-   
+
    // Fix vulnerabilities:
    pnpm audit --fix
    ```
@@ -470,6 +510,7 @@ Found several TODO comments that need attention:
 **Current**: Some dependencies use `^` (allows minor updates)
 
 **Recommendation**: For production, consider:
+
 - Pinning exact versions for critical packages
 - Using `^` for non-critical packages
 - Documenting upgrade procedures
@@ -483,6 +524,7 @@ Found several TODO comments that need attention:
 **Recommendations**:
 
 1. **Add Missing Indexes** (based on query patterns):
+
    ```prisma
    // Add indexes for:
    // - Foreign keys (if not already indexed)
@@ -525,6 +567,7 @@ Found several TODO comments that need attention:
 ### Recommendations:
 
 1. **Add Application Monitoring**:
+
    ```typescript
    // Integrate:
    // - APM (Application Performance Monitoring)
@@ -533,6 +576,7 @@ Found several TODO comments that need attention:
    ```
 
 2. **Add Health Checks**:
+
    ```typescript
    // Enhance /health endpoint:
    // - Database connectivity
@@ -542,6 +586,7 @@ Found several TODO comments that need attention:
    ```
 
 3. **Add Metrics**:
+
    ```typescript
    // Track:
    // - Request rates
@@ -567,6 +612,7 @@ Found several TODO comments that need attention:
 ### Recommendations:
 
 1. **Set up CI/CD Pipeline**:
+
    ```yaml
    # .github/workflows/ci.yml
    # - Run tests on PR
@@ -596,6 +642,7 @@ Found several TODO comments that need attention:
 ### Recommendations:
 
 1. **API Versioning**:
+
    ```typescript
    // Add versioning:
    // /api/v1/members
@@ -603,6 +650,7 @@ Found several TODO comments that need attention:
    ```
 
 2. **Consistent Response Format**:
+
    ```typescript
    // Standardize all responses:
    interface ApiResponse<T> {
@@ -657,6 +705,7 @@ Found several TODO comments that need attention:
 **Recommendations**:
 
 1. **Create Reusable Form Components**:
+
    ```typescript
    // components/forms/FormField.tsx
    // components/forms/FormSelect.tsx
@@ -673,6 +722,7 @@ Found several TODO comments that need attention:
 **Recommendations**:
 
 1. **Add ARIA Labels**:
+
    ```tsx
    <button aria-label="Close modal">×</button>
    ```
@@ -691,6 +741,7 @@ Found several TODO comments that need attention:
 ## Priority Action Items
 
 ### High Priority (Do First)
+
 1. ✅ Complete frontend feature migration (remove duplicates)
 2. ✅ Add comprehensive test coverage (start with critical paths)
 3. ✅ Address TODO items in code
@@ -698,6 +749,7 @@ Found several TODO comments that need attention:
 5. ✅ Implement API request validation middleware
 
 ### Medium Priority (Next Sprint)
+
 1. ✅ Add monitoring and error tracking
 2. ✅ Implement pagination for all list endpoints
 3. ✅ Add API documentation (OpenAPI/Swagger)
@@ -705,6 +757,7 @@ Found several TODO comments that need attention:
 5. ✅ Add E2E tests for critical flows
 
 ### Low Priority (Future)
+
 1. ✅ Implement CI/CD pipeline
 2. ✅ Add performance monitoring
 3. Consider state management library
@@ -748,5 +801,5 @@ Focus on high-priority items first, then gradually work through medium and low-p
 
 ---
 
-*Generated: $(date)*
-*Project: MyERP - Modular Multi-Tenant SaaS ERP System*
+_Generated: $(date)_
+_Project: MyERP - Modular Multi-Tenant SaaS ERP System_

@@ -7,6 +7,7 @@ Comprehensive security enhancements have been successfully implemented for the M
 ## What Was Implemented
 
 ### 1. CSRF Protection ✅
+
 - **File:** `apps/backend/src/middleware/csrf.ts`
 - **Features:**
   - Token-based CSRF protection for state-changing operations
@@ -16,6 +17,7 @@ Comprehensive security enhancements have been successfully implemented for the M
 - **Usage:** Apply `csrfProtection` middleware to POST/PUT/PATCH/DELETE routes
 
 ### 2. Input Sanitization ✅
+
 - **File:** `apps/backend/src/lib/sanitize.ts`
 - **Features:**
   - HTML sanitization (XSS prevention)
@@ -27,6 +29,7 @@ Comprehensive security enhancements have been successfully implemented for the M
 - **Dependencies:** `isomorphic-dompurify` (added to package.json)
 
 ### 3. Audit Logging ✅
+
 - **File:** `apps/backend/src/lib/audit-log.ts`
 - **Features:**
   - Comprehensive audit logging for sensitive operations
@@ -36,6 +39,7 @@ Comprehensive security enhancements have been successfully implemented for the M
 - **Actions Tracked:** Authentication, user management, permissions, financial transactions, data operations, system administration
 
 ### 4. Enhanced Security Headers ✅
+
 - **File:** `apps/backend/src/middleware/security.ts` (modified)
 - **New Headers:**
   - `X-Content-Type-Options: nosniff`
@@ -58,23 +62,27 @@ Comprehensive security enhancements have been successfully implemented for the M
 ## Next Steps
 
 1. **Install dependencies:**
+
    ```bash
    pnpm install
    ```
 
 2. **Add CSRF token endpoint** to your routes:
+
    ```typescript
    import { getCsrfToken } from '../middleware/csrf.js';
    router.get('/csrf-token', getCsrfToken);
    ```
 
 3. **Apply CSRF protection** to state-changing routes:
+
    ```typescript
    import { csrfProtection } from '../middleware/csrf.js';
    router.post('/members', csrfProtection, createMember);
    ```
 
 4. **Integrate audit logging** in sensitive operations:
+
    ```typescript
    import { createAuditLog, AuditAction } from '../lib/audit-log.js';
    await createAuditLog({ action: AuditAction.MEMBER_CREATED, ... });
@@ -89,6 +97,7 @@ Comprehensive security enhancements have been successfully implemented for the M
 ## Configuration
 
 ### Environment Variables
+
 ```env
 # CSRF Protection (optional, default: enabled)
 ENABLE_CSRF_PROTECTION=true

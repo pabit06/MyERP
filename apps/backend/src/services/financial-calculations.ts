@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+// Prisma types are referenced in comments but not imported
 
 /**
  * Calculate Balance Sheet from Chart of Accounts/Ledger

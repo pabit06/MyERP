@@ -5,6 +5,7 @@
 **URL:** https://github.com/pabit06/MyERP/settings/secrets/actions
 
 **Page Status:**
+
 - ✅ Successfully navigated to GitHub secrets page
 - ✅ Page shows: "This repository has no secret."
 - ✅ "New repository secret" link is visible
@@ -13,6 +14,7 @@
 ## What I Can See
 
 The browser is on the GitHub Actions secrets page for your repository. The page indicates:
+
 - No secrets are currently configured
 - The "New repository secret" button/link is available
 
@@ -21,6 +23,7 @@ The browser is on the GitHub Actions secrets page for your repository. The page 
 Since browser automation may require authentication, here are your options:
 
 ### Option 1: Manual Entry (Recommended)
+
 1. The browser is already on the correct page
 2. Click "New repository secret" manually
 3. Add the 3 secrets:
@@ -29,7 +32,9 @@ Since browser automation may require authentication, here are your options:
    - `NEXT_PUBLIC_API_URL` = `https://api.yourdomain.com/api`
 
 ### Option 2: Generate JWT Secret First
+
 Run this command in your terminal to generate the JWT_SECRET:
+
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```

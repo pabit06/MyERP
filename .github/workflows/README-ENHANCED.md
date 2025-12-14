@@ -5,9 +5,11 @@ This directory contains automated CI/CD workflows for the MyERP project.
 ## 📋 Available Workflows
 
 ### 1. **CI Enhanced** (`ci-enhanced.yml`)
+
 **Triggers:** Push to main/develop/feature/fix branches, Pull Requests
 
 Comprehensive continuous integration pipeline that includes:
+
 - ✅ **Linting** - Code style and quality checks
 - ✅ **Type Checking** - TypeScript validation
 - ✅ **Integration Tests** - NEW! Tests for AuthController, LoansController, AccountingController
@@ -16,15 +18,18 @@ Comprehensive continuous integration pipeline that includes:
 - ✅ **Test Summary** - Aggregated test results
 
 **Key Features:**
+
 - Parallel execution for faster feedback
 - Caching for dependencies and build artifacts
 - Separate integration and unit test jobs
 - Automatic test result uploads
 
 ### 2. **CD Enhanced** (`cd-enhanced.yml`)
-**Triggers:** Push to main, Version tags (v*.*.*), Manual dispatch
+
+**Triggers:** Push to main, Version tags (v*.*.\*), Manual dispatch
 
 Automated deployment pipeline:
+
 - 🐳 **Docker Build & Push** - Multi-service container builds
 - 🚀 **Staging Deployment** - Automatic deployment to staging
 - 🎯 **Production Deployment** - Tag-based production releases
@@ -32,13 +37,16 @@ Automated deployment pipeline:
 - 📢 **Notifications** - Deployment status updates
 
 **Environments:**
+
 - `staging` - Auto-deploy from main branch
 - `production` - Deploy from version tags or manual trigger
 
 ### 3. **Security Enhanced** (`security-enhanced.yml`)
+
 **Triggers:** Daily at 2 AM UTC, Push to main, Pull Requests
 
 Security and compliance checks:
+
 - 🔒 **Security Audit** - npm/pnpm vulnerability scanning
 - 🔍 **CodeQL Analysis** - Advanced code security analysis
 - 📜 **License Compliance** - Open source license validation
@@ -46,9 +54,11 @@ Security and compliance checks:
 - 📈 **Security Reports** - Automated security summaries
 
 ### 4. **Original CI** (`ci.yml`)
+
 The existing comprehensive CI workflow with E2E tests using Playwright.
 
 ### 5. **Original CD** (`cd.yml`)
+
 The existing deployment workflow.
 
 ## 🚀 Quick Start
@@ -56,6 +66,7 @@ The existing deployment workflow.
 ### Running Workflows Locally
 
 #### Test Integration Tests Locally:
+
 ```bash
 # Run all integration tests
 pnpm --filter backend exec vitest run tests/integration/
@@ -68,6 +79,7 @@ pnpm --filter backend exec vitest run tests/integration/ --coverage
 ```
 
 #### Simulate CI Environment:
+
 ```bash
 # Set up test database
 docker run -d \
@@ -102,11 +114,13 @@ Add these to your README.md:
 Set these in GitHub Settings → Secrets and variables → Actions:
 
 #### For CI:
+
 - `DATABASE_URL` - PostgreSQL connection string (optional, has fallback)
 - `JWT_SECRET` - JWT signing secret (optional, has fallback)
 - `NEXT_PUBLIC_API_URL` - Frontend API URL (optional, has fallback)
 
 #### For CD:
+
 - `GITHUB_TOKEN` - Automatically provided by GitHub
 - Additional secrets based on your deployment target:
   - `DEPLOY_SSH_KEY` - SSH key for server deployment
@@ -114,6 +128,7 @@ Set these in GitHub Settings → Secrets and variables → Actions:
   - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` - For AWS deployments
 
 #### For Notifications (Optional):
+
 - `SLACK_WEBHOOK_URL` - Slack notifications
 - `DISCORD_WEBHOOK_URL` - Discord notifications
 
@@ -122,22 +137,27 @@ Set these in GitHub Settings → Secrets and variables → Actions:
 Configure in GitHub Settings → Environments:
 
 **Staging Environment:**
+
 - `ENVIRONMENT_URL`: https://staging.myerp.example.com
 - Protection rules: None (auto-deploy)
 
 **Production Environment:**
+
 - `ENVIRONMENT_URL`: https://myerp.example.com
 - Protection rules: Required reviewers, wait timer
 
 ## 📈 Monitoring & Debugging
 
 ### View Workflow Runs
+
 - Go to Actions tab in GitHub
 - Click on specific workflow
 - View logs, artifacts, and test results
 
 ### Download Artifacts
+
 Workflows upload useful artifacts:
+
 - **Integration Test Coverage** - Test coverage reports
 - **Build Artifacts** - Compiled code
 - **Playwright Reports** - E2E test results
@@ -145,12 +165,14 @@ Workflows upload useful artifacts:
 ### Common Issues
 
 #### 1. Integration Tests Failing
+
 ```bash
 # Check if mocks are properly set up
 # Ensure vi.hoisted is used for mock initialization
 ```
 
 #### 2. Build Failures
+
 ```bash
 # Clear cache and rebuild
 pnpm clean
@@ -159,6 +181,7 @@ pnpm build
 ```
 
 #### 3. Deployment Issues
+
 ```bash
 # Check deployment logs
 # Verify environment variables
@@ -170,6 +193,7 @@ pnpm build
 ### For Contributors
 
 1. **Always run tests locally before pushing:**
+
    ```bash
    pnpm test
    pnpm lint
@@ -219,6 +243,7 @@ To add new integration tests to CI:
 ## 🆘 Support
 
 If you encounter issues with workflows:
+
 1. Check workflow logs in GitHub Actions tab
 2. Review this documentation
 3. Check existing GitHub Issues

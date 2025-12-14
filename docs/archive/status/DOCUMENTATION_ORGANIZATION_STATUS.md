@@ -17,6 +17,7 @@
 ## ⚠️ Issue Encountered
 
 The `docs/setup` file (database setup guide) was conflicting with creating a `docs/setup/` directory. This has been resolved by:
+
 - Saving the content as `docs/DATABASE_SETUP.md`
 - Deleting the `docs/setup` file
 - Creating `docs/setup/` directory

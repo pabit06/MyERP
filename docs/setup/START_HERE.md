@@ -44,6 +44,7 @@ git push
 ```
 
 Then:
+
 1. Go to the **Actions** tab in GitHub
 2. Watch workflows run
 3. Wait 5-10 minutes

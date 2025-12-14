@@ -40,11 +40,13 @@ docker-compose up -d --build
 ## 🔧 Individual Service Commands
 
 ### Build Backend
+
 ```bash
 docker build -f apps/backend/Dockerfile -t myerp-backend .
 ```
 
 ### Build Frontend
+
 ```bash
 docker build -f apps/frontend-web/Dockerfile \
   --build-arg NEXT_PUBLIC_API_URL=http://localhost:4000/api \
@@ -52,6 +54,7 @@ docker build -f apps/frontend-web/Dockerfile \
 ```
 
 ### Run Backend
+
 ```bash
 docker run -p 4000:4000 \
   -e DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5432/myerp \
@@ -60,6 +63,7 @@ docker run -p 4000:4000 \
 ```
 
 ### Run Frontend
+
 ```bash
 docker run -p 3000:3000 \
   -e NEXT_PUBLIC_API_URL=http://localhost:4000/api \
@@ -69,6 +73,7 @@ docker run -p 3000:3000 \
 ## 📋 Environment Variables
 
 ### Backend (.env)
+
 ```env
 DATABASE_URL=postgresql://user:password@host:5432/myerp
 JWT_SECRET=your-secret-key-minimum-32-characters
@@ -78,6 +83,7 @@ PORT=4000
 ```
 
 ### Frontend (.env)
+
 ```env
 NEXT_PUBLIC_API_URL=https://api.myerp.com/api
 NODE_ENV=production
@@ -134,6 +140,7 @@ kubectl logs -f deployment/myerp-backend -n myerp
 ## 🔍 Troubleshooting
 
 ### Check Container Logs
+
 ```bash
 docker-compose logs backend
 docker-compose logs frontend
@@ -141,6 +148,7 @@ docker-compose logs postgres
 ```
 
 ### Access Container Shell
+
 ```bash
 docker exec -it myerp-backend sh
 docker exec -it myerp-frontend sh
@@ -148,6 +156,7 @@ docker exec -it myerp-postgres psql -U postgres
 ```
 
 ### Health Checks
+
 ```bash
 # Backend health
 curl http://localhost:4000/health
@@ -162,6 +171,7 @@ docker exec myerp-postgres pg_isready -U postgres
 ### Common Issues
 
 #### Port Already in Use
+
 ```bash
 # Find process using port
 lsof -i :4000
@@ -172,6 +182,7 @@ kill -9 <PID>
 ```
 
 #### Database Connection Failed
+
 ```bash
 # Check PostgreSQL is running
 docker-compose ps postgres
@@ -184,6 +195,7 @@ docker-compose restart postgres
 ```
 
 #### Build Failures
+
 ```bash
 # Clean build cache
 docker system prune -a
@@ -201,6 +213,7 @@ Our Dockerfiles use multi-stage builds:
 3. **Production Stage**: Only production dependencies and built code
 
 **Benefits:**
+
 - ✅ Smaller image size (~200MB vs ~1GB)
 - ✅ Faster deployment
 - ✅ More secure (no dev dependencies)
@@ -217,6 +230,7 @@ Our Dockerfiles use multi-stage builds:
 ## 📈 Performance Optimization
 
 ### Build Optimization
+
 ```bash
 # Use BuildKit for faster builds
 DOCKER_BUILDKIT=1 docker build -f apps/backend/Dockerfile .
@@ -226,6 +240,7 @@ docker-compose build --parallel
 ```
 
 ### Image Optimization
+
 ```bash
 # Check image size
 docker images | grep myerp
@@ -240,6 +255,7 @@ docker image prune -a
 ## 🎯 CI/CD Integration
 
 The CD workflow (`.github/workflows/cd.yml`) automatically:
+
 1. Builds Docker images on push to main
 2. Pushes to GitHub Container Registry
 3. Deploys to staging environment

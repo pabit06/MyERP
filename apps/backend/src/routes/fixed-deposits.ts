@@ -100,6 +100,20 @@ router.post(
 );
 
 /**
+ * GET /api/fixed-deposits/accounts
+ * List all active FD Accounts
+ */
+router.get(
+  '/accounts',
+  asyncHandler(async (req: Request, res: Response) => {
+    const tenantId = req.user!.tenantId;
+    const memberId = req.query.memberId as string | undefined;
+    const result = await fixedDepositController.getAccounts(tenantId!, memberId);
+    res.json(result);
+  })
+);
+
+/**
  * POST /api/fixed-deposits/accounts/:id/close
  * Close FD Account
  */

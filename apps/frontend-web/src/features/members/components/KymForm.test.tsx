@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { KymForm } from '@/components/KymForm';
+import { KymForm } from './KymForm';
 import { describe, it, expect, vi } from 'vitest';
 
 // Mock components that might cause issues in tests

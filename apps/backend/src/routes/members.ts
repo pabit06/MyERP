@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma.js';
 import { authenticate } from '../middleware/auth.js';
 import { requireTenant } from '../middleware/tenant.js';
@@ -12,12 +13,17 @@ import {
   KymFormSchema,
   InstitutionKymFormSchema,
 } from '@myerp/shared-types';
+import {
+  memberIdParamSchema,
+  memberListQuerySchema,
+  upcomingBirthdaysQuerySchema,
+  memberSimpleListQuerySchema,
+} from '../validators/member.validator.js';
 import { postEntryFee, getCurrentSharePrice } from '../services/accounting.js';
 import { NotFoundError, ValidationError, BadRequestError } from '../lib/errors.js';
-import { paginationWithSearchSchema } from '../validators/common.js';
 import { applyPagination, createPaginatedResponse, applySorting } from '../lib/pagination.js';
 import { asyncHandler } from '../middleware/error-handler.js';
-import { validate, validateAll, validateQuery } from '../middleware/validate.js';
+import { validate, validateAll, validateQuery, validateParams } from '../middleware/validate.js';
 import { csrfProtection } from '../middleware/csrf.js';
 import { createAuditLog, AuditAction } from '../lib/audit-log.js';
 import { sanitizeText, sanitizeEmail } from '../lib/sanitize.js';
@@ -34,13 +40,14 @@ router.use(requireTenant);
  */
 router.get(
   '/:id/kym',
+  validateParams(memberIdParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     if (!tenantId) {
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { id: memberId } = req.params;
+    const { id: memberId } = req.validatedParams!;
 
     const member = await prisma.member.findFirst({
       where: { id: memberId, cooperativeId: tenantId! },
@@ -688,9 +695,10 @@ router.get(
  */
 router.get(
   '/upcoming-birthdays',
+  validateQuery(upcomingBirthdaysQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const daysAhead = parseInt(req.query.daysAhead as string) || 30;
+    const { daysAhead } = req.validatedQuery!;
 
     if (!tenantId) {
       throw new BadRequestError('Cooperative ID is required');
@@ -709,16 +717,17 @@ router.get(
  */
 router.get(
   '/list',
+  validateQuery(memberSimpleListQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const includeInactive = req.query.includeInactive === 'true';
+    const { includeInactive } = req.validatedQuery!;
 
     if (!tenantId) {
       throw new BadRequestError('Cooperative ID is required');
     }
 
     const { getMemberList } = await import('../services/member-statistics.js');
-    const memberList = await getMemberList(tenantId, includeInactive);
+    const memberList = await getMemberList(tenantId, includeInactive || false);
 
     res.json(memberList);
   })
@@ -733,35 +742,9 @@ router.get(
  *   - isActive: Filter by active status (true/false)
  *   - search: Search across member fields
  */
-/**
- * GET /api/members
- * Get all members (with optional filters and pagination)
- * Query parameters:
- *   - page: Page number (default: 1)
- *   - limit: Items per page (default: 20, max: 100)
- *   - isActive: Filter by active status (true/false)
- *   - search: Search across member fields
- *   - workflowStatus: Filter by workflow status
- *   - riskCategory: Filter by risk category
- *   - province: Filter by permanent province
- *   - district: Filter by permanent district (municipality/city for fuzzy match)
- *   - joinedStart: Filter by join date (start)
- *   - joinedEnd: Filter by join date (end)
- */
 router.get(
   '/',
-  validateQuery(
-    paginationWithSearchSchema.extend({
-      isActive: z.string().optional(),
-      hasMemberNumber: z.string().optional(),
-      workflowStatus: z.string().optional(),
-      riskCategory: z.string().optional(),
-      province: z.string().optional(),
-      district: z.string().optional(),
-      joinedStart: z.string().optional(), // ISO Date string
-      joinedEnd: z.string().optional(), // ISO Date string
-    })
-  ),
+  validateQuery(memberListQuerySchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     if (!tenantId) {
@@ -784,7 +767,7 @@ router.get(
       joinedEnd,
     } = req.validatedQuery!;
 
-    const where: any = {
+    const where: Prisma.MemberWhereInput = {
       cooperativeId: tenantId!,
     };
 
@@ -874,13 +857,14 @@ router.get(
  */
 router.get(
   '/:id',
+  validateParams(memberIdParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
     if (!tenantId) {
       res.status(403).json({ error: 'Tenant context required' });
       return;
     }
-    const { id } = req.params;
+    const { id } = req.validatedParams!;
 
     const member = await prisma.member.findFirst({
       where: {
@@ -933,18 +917,20 @@ router.get(
       }),
     ]);
 
+    const shareAccountData = shareAccount
+      ? {
+          totalKitta: shareAccount.totalKitta,
+          unitPrice: shareAccount.unitPrice,
+          totalAmount: shareAccount.totalAmount,
+        }
+      : null;
+
     res.json({
       member: {
         ...member,
         savingAccounts: savingAccounts || [],
         loanApplications: loanApplications || [],
-        shareAccount: shareAccount
-          ? {
-              totalKitta: shareAccount.totalKitta,
-              unitPrice: shareAccount.unitPrice,
-              totalAmount: shareAccount.totalAmount,
-            }
-          : null,
+        shareAccount: shareAccountData,
       },
     });
   })
@@ -1346,7 +1332,7 @@ router.put(
       generatedFullName = nameParts.join(' ').toUpperCase();
     }
 
-    const updateData: any = {
+    const updateData: Prisma.MemberUpdateInput = {
       email: email !== undefined ? email || null : existing.email,
       phone: phone !== undefined ? phone || null : existing.phone,
       isActive: isActive !== undefined ? isActive : existing.isActive,
@@ -1357,7 +1343,7 @@ router.put(
       updateData.middleName = middleName ? middleName.toUpperCase() : null;
     if (lastName !== undefined) updateData.lastName = lastName.toUpperCase();
     if (generatedFullName !== undefined) updateData.fullName = generatedFullName;
-    if (fullNameNepali !== undefined) updateData.fullNameNepali = fullNameNepali || null;
+    if (fullNameNepali !== undefined) updateData.fullNameNepali = fullNameNepali || '';
 
     // Sanitize inputs
     if (email !== undefined) {
@@ -1367,7 +1353,7 @@ router.put(
       updateData.phone = phone ? sanitizeText(phone) : null;
     }
     if (fullNameNepali !== undefined) {
-      updateData.fullNameNepali = fullNameNepali ? sanitizeText(fullNameNepali) : null;
+      updateData.fullNameNepali = fullNameNepali ? sanitizeText(fullNameNepali) : '';
     }
 
     const member = await prisma.member.update({
@@ -1401,9 +1387,10 @@ router.put(
 router.delete(
   '/:id',
   csrfProtection,
+  validateParams(memberIdParamSchema),
   asyncHandler(async (req: Request, res: Response) => {
     const tenantId = req.user!.tenantId;
-    const { id } = req.params;
+    const { id } = req.validatedParams!;
 
     // Verify member belongs to cooperative
     const existing = await prisma.member.findFirst({

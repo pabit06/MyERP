@@ -3,9 +3,11 @@
 ## ✅ Completed Tasks
 
 ### 1. Path Aliases Configuration
+
 **File:** `apps/frontend-web/tsconfig.json`
 
 Added the following path aliases:
+
 ```json
 {
   "paths": {
@@ -18,21 +20,27 @@ Added the following path aliases:
 ```
 
 ### 2. Import Updates
+
 ✅ **Updated Files:**
+
 - `app/layout.tsx` - Now uses `@/features/components/shared`
 - `components/KymForm.tsx` - Updated to use shared component imports
 - `components/KYMInstitutionForm.tsx` - Updated to use shared component imports
 - Most app pages already use the new import pattern
 
 ### 3. Component Structure Created
+
 ✅ **New Locations:**
+
 - `features/members/components/MemberWorkflow.tsx` - Created with updated imports
-- `features/members/components/SourceOfFundsModal.tsx` - Created with updated imports  
+- `features/members/components/SourceOfFundsModal.tsx` - Created with updated imports
 - `features/members/components/KymForm.test.tsx` - Created with updated imports
 - `features/members/index.ts` - Updated to export named exports for KymForm and KYMInstitutionForm
 
 ### 4. Export Configuration
+
 ✅ **Barrel Exports Updated:**
+
 - `features/members/index.ts` - Now correctly exports:
   - `KymForm` (named export)
   - `KYMInstitutionForm` (named export)
@@ -44,6 +52,7 @@ Added the following path aliases:
 Due to file system operations, the following files need to be manually copied:
 
 ### Step 1: Copy Member Components
+
 ```powershell
 # Navigate to the source directory
 cd apps/frontend-web/src
@@ -56,6 +65,7 @@ Copy-Item components\KYMInstitutionForm.tsx features\members\components\KYMInsti
 ```
 
 ### Step 2: Copy Chart Components
+
 ```powershell
 # Ensure dashboard components directory exists
 New-Item -ItemType Directory -Path features\dashboard\components -Force
@@ -65,7 +75,9 @@ Copy-Item -Path components\charts\* -Destination features\dashboard\components\ 
 ```
 
 ### Step 3: Verify Files
+
 After copying, verify these files exist:
+
 - ✅ `features/members/components/KymForm.tsx`
 - ✅ `features/members/components/KYMInstitutionForm.tsx`
 - ✅ `features/members/components/MemberWorkflow.tsx`
@@ -79,6 +91,7 @@ After copying, verify these files exist:
 - ✅ `features/dashboard/components/WorkflowBreakdownChart.tsx`
 
 ### Step 4: Test the Build
+
 ```bash
 # Type check
 pnpm --filter frontend-web type-check
@@ -91,7 +104,9 @@ pnpm --filter frontend-web build
 ```
 
 ### Step 5: Remove Old Files (After Verification)
+
 Once everything is working, remove duplicates:
+
 ```powershell
 # Remove old member components
 Remove-Item components\KymForm.tsx
@@ -112,6 +127,7 @@ Remove-Item components\charts -Recurse -Force
 **Overall Progress: ~85% Complete**
 
 ### What's Working:
+
 - ✅ Path aliases configured
 - ✅ Import patterns updated
 - ✅ Component structure in place
@@ -119,6 +135,7 @@ Remove-Item components\charts -Recurse -Force
 - ✅ Test file updated
 
 ### What's Remaining:
+
 - ⏳ Copy large component files (KymForm.tsx, KYMInstitutionForm.tsx)
 - ⏳ Copy chart components
 - ⏳ Verify all imports work

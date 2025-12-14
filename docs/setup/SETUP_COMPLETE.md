@@ -19,6 +19,7 @@ pnpm generate:secrets
 ```
 
 This will output:
+
 - A secure `JWT_SECRET` (copy this!)
 - Instructions for other secrets
 
@@ -28,10 +29,10 @@ This will output:
 2. Click **"New repository secret"**
 3. Add these 3 secrets:
 
-   | Name | Value |
-   |------|-------|
-   | `JWT_SECRET` | (Copy from script output) |
-   | `JWT_EXPIRES_IN` | `7d` |
+   | Name                  | Value                            |
+   | --------------------- | -------------------------------- |
+   | `JWT_SECRET`          | (Copy from script output)        |
+   | `JWT_EXPIRES_IN`      | `7d`                             |
    | `NEXT_PUBLIC_API_URL` | `https://api.yourdomain.com/api` |
 
 4. Click **"Add secret"** for each
@@ -49,6 +50,7 @@ git push
 ```
 
 Then:
+
 1. Go to **Actions** tab in GitHub
 2. Watch workflows run
 3. Verify all jobs pass ✅
@@ -96,8 +98,8 @@ git push
 
 - ✅ Workflows configured
 - ✅ Documentation complete
-- ⚠️  Secrets need to be added (5 min)
-- ⚠️  Workflows need to be tested (2 min)
-- ⚠️  Branch protection optional (3 min)
+- ⚠️ Secrets need to be added (5 min)
+- ⚠️ Workflows need to be tested (2 min)
+- ⚠️ Branch protection optional (3 min)
 
 **Total setup time: ~10 minutes**

@@ -20,19 +20,34 @@ import {
   Settings,
   HelpCircle,
 } from 'lucide-react';
-import MemberGrowthChart from '@/components/charts/MemberGrowthChart';
-import TrendsChart from '@/components/charts/TrendsChart';
+import { MemberGrowthChart, TrendsChart } from '@/features/components/shared/charts';
 import { format } from 'date-fns';
-import OnboardingWizard from '@/components/onboarding/OnboardingWizard';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { OnboardingWizard } from '@/features/onboarding';
+import { Card, CardContent, CardHeader, CardTitle, Button } from '@/features/components/shared';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 interface Stats {
   members?: number;
   savingsAccounts?: number;
   loans?: number;
   employees?: number;
+}
+
+/**
+ * Get time-based greeting based on current hour
+ */
+function getTimeBasedGreeting(): string {
+  const hour = new Date().getHours();
+
+  if (hour >= 5 && hour < 12) {
+    return 'Good Morning';
+  } else if (hour >= 12 && hour < 17) {
+    return 'Good Afternoon';
+  } else if (hour >= 17 && hour < 21) {
+    return 'Good Evening';
+  } else {
+    return 'Good Night';
+  }
 }
 
 export default function DashboardPage() {
@@ -133,7 +148,9 @@ export default function DashboardPage() {
           <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
 
           <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-2">Good Morning, {user?.firstName}! 👋</h2>
+            <h2 className="text-2xl font-bold mb-2">
+              {getTimeBasedGreeting()}, {user?.firstName}! 👋
+            </h2>
             <p className="text-primary-foreground/90 max-w-xl text-lg">
               Here is what&apos;s happening in{' '}
               <span className="font-semibold">{cooperative?.name}</span> today. You have{' '}

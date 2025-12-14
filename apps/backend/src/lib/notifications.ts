@@ -352,37 +352,84 @@ async function sendPushNotification(data: NotificationData): Promise<Notificatio
 
     if (fcmAdmin) {
       // FCM is configured - attempt to send push notification
-      // Note: You need to store device tokens in your database
-      // Example query:
-      // const deviceTokens = await prisma.userDeviceToken.findMany({
-      //   where: { userId: data.userId, isActive: true },
-      //   select: { token: true, platform: true },
-      // });
+      // Get user's device tokens from database
+      // Note: This assumes a UserDeviceToken model exists in the schema
+      // If the model doesn't exist, this will throw an error and the notification will remain PENDING
+      let deviceTokens: Array<{ token: string; platform?: string }> = [];
 
-      // For now, log that FCM is configured
-      console.log(`[Push Notification] FCM configured. User: ${data.userId}, Title: ${data.title}`);
-      console.log(
-        `[Push Notification] To send actual push, store device tokens in UserDeviceToken table`
-      );
+      try {
+        // Try to fetch device tokens - this will work once the UserDeviceToken model is added to schema
+        // @ts-expect-error - UserDeviceToken model may not exist in Prisma client yet
+        const tokens = await prisma.userDeviceToken.findMany({
+          where: { userId: data.userId, isActive: true },
+          select: { token: true, platform: true },
+        });
+        deviceTokens = tokens;
+      } catch (error) {
+        // Model doesn't exist yet - log and continue
+        logger.warn(
+          `UserDeviceToken model not found. Add it to schema to enable push notifications. Error: ${error}`
+        );
+      }
 
-      // Example FCM send code (uncomment when device tokens are available):
-      // if (deviceTokens.length > 0) {
-      //   const tokens = deviceTokens.map((dt) => dt.token);
-      //   const message = {
-      //     notification: {
-      //       title: data.title,
-      //       body: data.message,
-      //     },
-      //     data: {
-      //       type: data.type,
-      //       notificationId: notification.id,
-      //       ...data.metadata,
-      //     },
-      //     tokens,
-      //   };
-      //   const response = await fcmAdmin.messaging().sendEachForMulticast(message);
-      //   console.log(`[Push Notification] Sent to ${response.successCount} devices`);
-      // }
+      if (deviceTokens.length > 0) {
+        const tokens = deviceTokens.map((dt) => dt.token);
+        const message = {
+          notification: {
+            title: data.title,
+            body: data.message,
+          },
+          data: {
+            type: data.type,
+            notificationId: notification.id,
+            ...(data.metadata || {}),
+          },
+          tokens,
+        };
+
+        try {
+          const response = await fcmAdmin.messaging().sendEachForMulticast(message);
+          logger.info(
+            `[Push Notification] Sent to ${response.successCount}/${tokens.length} devices for user ${data.userId}`
+          );
+
+          // Update notification status if at least one device received it
+          if (response.successCount > 0) {
+            await updateNotificationStatus(notification.id, NotificationStatus.SENT);
+            return notification;
+          } else {
+            // All failed - log errors
+            response.responses.forEach((resp: any, idx: number) => {
+              if (!resp.success) {
+                logger.error(
+                  `[Push Notification] Failed to send to device ${idx}: ${resp.error?.message}`
+                );
+              }
+            });
+            await updateNotificationStatus(
+              notification.id,
+              NotificationStatus.FAILED,
+              'All device tokens failed'
+            );
+            return notification;
+          }
+        } catch (error) {
+          logger.error(`[Push Notification] FCM send error: ${error}`);
+          await updateNotificationStatus(
+            notification.id,
+            NotificationStatus.FAILED,
+            error instanceof Error ? error.message : 'Unknown FCM error'
+          );
+          return notification;
+        }
+      } else {
+        // No device tokens available
+        logger.info(
+          `[Push Notification] No device tokens found for user ${data.userId}. Notification kept as PENDING.`
+        );
+        // Keep as PENDING so it can be sent when device tokens are registered
+        return notification;
+      }
     } else {
       // FCM not configured - log to console
       // Keep as PENDING since notification was not actually sent to external service
@@ -396,17 +443,8 @@ async function sendPushNotification(data: NotificationData): Promise<Notificatio
       return notification;
     }
 
-    // Mark as sent only after actual push is sent (when FCM is configured and device tokens are available)
-    // For now, if FCM is configured but no device tokens are available, keep as PENDING
-    // NOTE: Device token management needs to be implemented:
-    // - Store device tokens in database (e.g., UserDeviceToken model)
-    // - Register tokens when users log in from mobile apps
-    // - Uncomment the following when device tokens are implemented:
-    // if (deviceTokens.length > 0 && response.successCount > 0) {
-    //   await updateNotificationStatus(notification.id, NotificationStatus.SENT);
-    // }
-
-    // For now, keep as PENDING since we're not actually sending
+    // Device token management is now implemented above
+    // To complete the implementation, add the UserDeviceToken model to the Prisma schema
     return notification;
   } catch (error: unknown) {
     const errorMessage =
@@ -666,6 +704,18 @@ export async function sendBulkNotification(
           if (channel === 'EMAIL' && !recipient.email) return;
           if ((channel === 'IN_APP' || channel === 'PUSH') && !recipient.userId) return;
 
+          // Template substitution: Replace {name}, {phone}, {email} placeholders
+          let personalizedMessage = message;
+          if (recipient.name) {
+            personalizedMessage = personalizedMessage.replace(/{name}/g, recipient.name);
+          }
+          if (recipient.phone) {
+            personalizedMessage = personalizedMessage.replace(/{phone}/g, recipient.phone);
+          }
+          if (recipient.email) {
+            personalizedMessage = personalizedMessage.replace(/{email}/g, recipient.email);
+          }
+
           await sendNotification({
             cooperativeId,
             userId: recipient.userId,
@@ -673,7 +723,7 @@ export async function sendBulkNotification(
             email: recipient.email,
             type: 'bulk_announcement',
             title,
-            message, // TODO: Template substitution if needed (e.g. Hello {name})
+            message: personalizedMessage,
             channel,
             metadata,
           });

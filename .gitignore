@@ -21,6 +21,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+*.log
 
 # Local env files
 .env
@@ -35,6 +36,13 @@ CREDENTIALS.md
 JWT_SECRET*.txt
 GENERATED_SECRETS.txt
 # Note: pnpm-lock.yaml is intentionally tracked (doesn't match *.txt pattern)
+
+# Secrets and sensitive files in docs
+docs/setup/*.txt
+docs/setup/GENERATED_SECRETS.txt
+docs/setup/JWT_SECRET*.txt
+*.secret
+*.key
 
 # Vercel
 .vercel

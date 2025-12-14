@@ -40,7 +40,7 @@ console.log('==========================================');
 console.log('OPTIONAL SECRETS FOR CD (Deployment)');
 console.log('==========================================');
 console.log('');
-console.log('Add these only if you\'re setting up deployment:');
+console.log("Add these only if you're setting up deployment:");
 console.log('');
 console.log('See .github/SECRETS_SETUP.md for complete list');
 console.log('');
@@ -57,7 +57,7 @@ console.log('');
 try {
   const { execSync } = require('child_process');
   const platform = process.platform;
-  
+
   if (platform === 'darwin') {
     execSync(`echo "${jwtSecret}" | pbcopy`);
     console.log('✅ JWT_SECRET copied to clipboard (macOS)!');

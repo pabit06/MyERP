@@ -41,17 +41,18 @@ export const apiLimiter = rateLimit({
 
 /**
  * Stricter rate limiter for authentication endpoints
- * Limits each IP to 5 login attempts per 15 minutes
+ * Limits each IP to 10 failed login attempts per 15 minutes
  * Only counts failed requests (skipSuccessfulRequests: true)
+ * Successful logins don't count towards the limit
  */
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 10, // Limit each IP to 10 failed requests per windowMs (increased from 5)
   message: {
     error: 'Too many login attempts, please try again later.',
     code: 'AUTH_RATE_LIMIT_EXCEEDED',
   },
-  skipSuccessfulRequests: true, // Don't count successful requests
+  skipSuccessfulRequests: true, // Don't count successful requests towards the limit
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
